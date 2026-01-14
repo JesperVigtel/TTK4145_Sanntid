@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"time"
-	"TTK4145_Sanntid_1/Exercise2-master/Ex_2/1_UDP/src/localIP"
 )
 
 func main() {
