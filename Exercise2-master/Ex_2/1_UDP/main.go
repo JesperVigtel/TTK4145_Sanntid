@@ -16,6 +16,9 @@ func main() {
 	// fmt.Println("Server IP found:", name)
 
 	UDP_Send()
+	wait := make(chan int)
+	Udp_receive()
+	<-wait
 }
 
 func findServerIP() (string, error) {
@@ -42,6 +45,24 @@ func findServerIP() (string, error) {
 	return senderAddr.IP.String(), nil
 }
 
+func Udp_receive() {
+	buffer := make([]byte, 1024)
+	ServerAddr, _ := net.ResolveUDPAddr("udp", ":30000")
+	conn, _ := net.ListenUDP("udp", ServerAddr)
+	var localIP, _ = findServerIP()
+	fmt.Println("LOCAL IP: " + localIP)
+	for {
+		fmt.Println("step1")
+		n, addr, err := conn.ReadFromUDP(buffer)
+		fmt.Println("\tHER: ", err)
+		fmt.Println("step2")
+		if addr.String() != localIP {
+			fmt.Println(string(buffer[0:n]))
+		}
+	}
+
+}
+
 func UDP_Send() {
 
 	serverIP, err := findServerIP()
@@ -65,55 +86,24 @@ func UDP_Send() {
 
 func sendUDP(serverIP string, port int) error {
 	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", serverIP, port))
-	if err != nil {
-		return err
-	}
+	if err != nil { return err}
 
 	conn, err := net.DialUDP("udp", nil, addr)
-	if err != nil {
-		return err
-	}
+	if err != nil { return err}
 	defer conn.Close()
 
 	message := "Hello from workspace 7"
 	_, err = conn.Write([]byte(message))
-	if err != nil {
-		return err
-	}
+	if err != nil { return err}
 
 	conn.SetReadDeadline(time.Now().Add(20 * time.Second))
 	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
 
-	if err != nil {
-		return fmt.Errorf("no reply: %w", err)
-	}
+	n, err := conn.Read(buf)
+	if err != nil { return fmt.Errorf("no reply: %w", err)}
 
 	fmt.Printf("Received reply: %s\n", string(buf[:n]))
-
 	return nil
 }
 
-func readUDP() (string, error) {
-	addr, err := net.ResolveUDPAddr("udp", ":30000")
-	if err != nil {
-		return "", err
-	}
 
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-
-	buffer := make([]byte, 1024)
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-
-	n, senderAddr, err := conn.ReadFromUDP(buffer)
-	if err != nil {
-		return "", err
-	}
-
-	_ = string(buffer[:n]) // optional: use message
-	return senderAddr.IP.String(), nil
-}
