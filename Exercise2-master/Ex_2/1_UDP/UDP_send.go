@@ -7,13 +7,13 @@ import (
 )
 func main() {
 
-	// serverIP, err := findServerIP()
-	// if err != nil {
-	// 	fmt.Println("Could not find server IP:", err)
-	// 	return
-	// }
-	// fmt.Println("Server IP found:", serverIP)
-	serverIP := "255.255.255.255"
+	serverIP, err := findServerIP()
+	if err != nil {
+		fmt.Println("Could not find server IP:", err)
+		return
+	}
+	fmt.Println("Server IP found:", serverIP)
+	//serverIP := "255.255.255.255"
 
 	fmt.Println("Server IP found:", serverIP)
 

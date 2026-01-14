@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
-// func main() {
-// 	findServerIP()
-// }
+ func main() { 	
+	findServerIP()
+	
+}
