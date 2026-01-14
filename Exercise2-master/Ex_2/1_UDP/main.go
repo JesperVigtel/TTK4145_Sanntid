@@ -55,8 +55,7 @@ func findServerIP() (string, error) {
 }
 
 func Udp_receive(serverIP string) {
-    workspaceNumber := 7
-    port := 20001 // Server sender svar til 20001 (eller 20000 + workspaceNumber hvis asymmetrisk)
+    port := 20007 // Server sender svar til 20007 (eller 20000 + workspaceNumber hvis asymmetrisk)
 
     addr, _ := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
     conn, _ := net.ListenUDP("udp", addr)
