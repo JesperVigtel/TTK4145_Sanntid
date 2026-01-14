@@ -8,7 +8,7 @@ import (
 
 const (
     SERVER_IP         = "10.100.23.242"
-    LOCAL_IP          = "10.100.23.233"
+    LOCAL_IP          = "10.100.23.17"
     LOCAL_LISTEN_PORT = 34934
 )
 
