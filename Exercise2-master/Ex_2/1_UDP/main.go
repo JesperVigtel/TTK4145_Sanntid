@@ -1,109 +1,110 @@
 package main
 
 import (
-	"fmt"
-	"net"
-	"time"
+    "fmt"
+    "net"
+    "time"
 )
 
 func main() {
-	// time.Sleep(5 * time.Second)
-	// name, err := findServerIP()
-	// if err != nil {
-	// 	fmt.Println("Could not find server IP:", err)
-	// 	return
-	// }
-	// fmt.Println("Server IP found:", name)
+    // Finn server IP først (én gang)
+    serverIP, err := findServerIP()
+    if err != nil {
+        fmt.Println("Could not find server IP:", err)
+        return
+    }
+    fmt.Println("Server IP found:", serverIP)
 
-	UDP_Send()
-	wait := make(chan int)
-	Udp_receive()
-	<-wait
+    // Start mottaks-tråd
+    go Udp_receive(serverIP)
+
+    // Vent litt før vi begynner å sende
+    time.Sleep(1 * time.Second)
+
+    // Send meldinger
+    UDP_Send(serverIP)
+
+    // Hold programmet kjørende
+    wait := make(chan int)
+    <-wait
 }
 
 func findServerIP() (string, error) {
-	addr, err := net.ResolveUDPAddr("udp", ":30000")
-	if err != nil {
-		return "", err
-	}
+    addr, err := net.ResolveUDPAddr("udp", ":30000")
+    if err != nil {
+        return "", err
+    }
 
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
+    conn, err := net.ListenUDP("udp", addr)
+    if err != nil {
+        return "", err
+    }
+    defer conn.Close()
 
-	buffer := make([]byte, 1024)
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+    buffer := make([]byte, 1024)
+    conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 
-	n, senderAddr, err := conn.ReadFromUDP(buffer)
-	if err != nil {
-		return "", err
-	}
+    n, senderAddr, err := conn.ReadFromUDP(buffer)
+    if err != nil {
+        return "", err
+    }
 
-	_ = string(buffer[:n]) // optional: use message
-	return senderAddr.IP.String(), nil
+    message := string(buffer[:n])
+    fmt.Printf("Received broadcast: %s\n", message)
+    return senderAddr.IP.String(), nil
 }
 
-func Udp_receive() {
-	buffer := make([]byte, 1024)
-	ServerAddr, _ := net.ResolveUDPAddr("udp", ":30000")
-	conn, _ := net.ListenUDP("udp", ServerAddr)
-	var localIP, _ = findServerIP()
-	fmt.Println("LOCAL IP: " + localIP)
-	for {
-		fmt.Println("step1")
-		n, addr, err := conn.ReadFromUDP(buffer)
-		fmt.Println("\tHER: ", err)
-		fmt.Println("step2")
-		if addr.String() != localIP {
-			fmt.Println(string(buffer[0:n]))
-		}
-	}
+func Udp_receive(serverIP string) {
+    workspaceNumber := 7
+    port := 20001 // Server sender svar til 20001 (eller 20000 + workspaceNumber hvis asymmetrisk)
 
+    addr, _ := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
+    conn, _ := net.ListenUDP("udp", addr)
+    defer conn.Close()
+
+    fmt.Printf("Listening for server replies on port %d...\n", port)
+    buffer := make([]byte, 1024)
+
+    for {
+        n, remoteAddr, err := conn.ReadFromUDP(buffer)
+        if err != nil {
+            fmt.Println("Receive error:", err)
+            continue
+        }
+
+        // Filtrer ut meldinger som ikke kommer fra serveren
+        if remoteAddr.IP.String() == serverIP {
+            fmt.Printf("Received from server: %s\n", string(buffer[:n]))
+        }
+    }
 }
 
-func UDP_Send() {
+func UDP_Send(serverIP string) {
+    workspaceNumber := 7
+    port := 20000 + workspaceNumber
 
-	serverIP, err := findServerIP()
-	if err != nil {
-		fmt.Println("Could not find server IP:", err)
-		return
-	}
-	fmt.Println("Server IP found:", serverIP)
-	//serverIP := "255.255.255.255"
+    addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", serverIP, port))
+    if err != nil {
+        fmt.Println("Error resolving address:", err)
+        return
+    }
 
-	workspaceNumber := 7
-	port := 20000 + workspaceNumber
+    conn, err := net.DialUDP("udp", nil, addr)
+    if err != nil {
+        fmt.Println("Error creating connection:", err)
+        return
+    }
+    defer conn.Close()
 
-	if err := sendUDP(serverIP, port); err != nil {
-		fmt.Println("Error sending UDP message:", err)
-		return
-	}
-	time.Sleep(300 * time.Millisecond)
-	fmt.Println("UDP message sent successfully")
+    // Send meldinger med intervaller
+    for i := 1; i <= 5; i++ {
+        message := fmt.Sprintf("Hello from workspace 7 - message %d", i)
+        _, err = conn.Write([]byte(message))
+        if err != nil {
+            fmt.Println("Error sending:", err)
+            return
+        }
+        fmt.Printf("Sent: %s\n", message)
+        time.Sleep(2 * time.Second) // Vær snill mot nettverket
+    }
 }
-
-func sendUDP(serverIP string, port int) error {
-	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", serverIP, port))
-	if err != nil { return err}
-
-	conn, err := net.DialUDP("udp", nil, addr)
-	if err != nil { return err}
-	defer conn.Close()
-
-	message := "Hello from workspace 7"
-	_, err = conn.Write([]byte(message))
-	if err != nil { return err}
-
-	conn.SetReadDeadline(time.Now().Add(20 * time.Second))
-	buf := make([]byte, 1024)
-
-	n, err := conn.Read(buf)
-	if err != nil { return fmt.Errorf("no reply: %w", err)}
-
-	fmt.Printf("Received reply: %s\n", string(buf[:n]))
-	return nil
-}
-
-
