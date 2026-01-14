@@ -5,52 +5,52 @@ import (
 	"net"
 	"time"
 )
-func main() {
+// func UDP_Send() {
 
-	serverIP, err := findServerIP()
-	if err != nil {
-		fmt.Println("Could not find server IP:", err)
-		return
-	}
-	fmt.Println("Server IP found:", serverIP)
-	//serverIP := "255.255.255.255"
+// 	serverIP, err := findServerIP()
+// 	if err != nil {
+// 		fmt.Println("Could not find server IP:", err)
+// 		return
+// 	}
+// 	fmt.Println("Server IP found:", serverIP)
+// 	//serverIP := "255.255.255.255"
 
-	fmt.Println("Server IP found:", serverIP)
+// 	fmt.Println("Server IP found:", serverIP)
 
-	workspaceNumber := 7
-	port := 20000 + workspaceNumber
+// 	workspaceNumber := 7
+// 	port := 20000 + workspaceNumber
 
-	if err:= sendUDP(serverIP, port); err != nil {
-		fmt.Println("Error sending UDP message:", err)
-		return
-	}
+// 	if err:= sendUDP(serverIP, port); err != nil {
+// 		fmt.Println("Error sending UDP message:", err)
+// 		return
+// 	}
 
-	fmt.Println("UDP message sent successfully")
-}
+// 	fmt.Println("UDP message sent successfully")
+// }
 
 
-func sendUDP(serverIP string, port int) error {
-	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", serverIP, port))
-	if err != nil {
-		return err
-	}
+// func sendUDP(serverIP string, port int) error {
+// 	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", serverIP, port))
+// 	if err != nil {
+// 		return err
+// 	}
 
-	conn, err := net.DialUDP("udp", nil, addr)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
+// 	conn, err := net.DialUDP("udp", nil, addr)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer conn.Close()
 
-	message := "Hello from workspace 7"
-	_, err = conn.Write([]byte(message))
-	if err != nil {return err}
+// 	message := "Hello from workspace 7"
+// 	_, err = conn.Write([]byte(message))
+// 	if err != nil {return err}
 
-	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
-	if err != nil { return fmt.Errorf("no reply: %w", err) }
+// 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+// 	buf := make([]byte, 1024)
+// 	n, err := conn.Read(buf)
+// 	if err != nil { return fmt.Errorf("no reply: %w", err) }
 
-	fmt.Printf("Received reply: %s\n", string(buf[:n]))
+// 	fmt.Printf("Received reply: %s\n", string(buf[:n]))
 
-	return nil
-}
+// 	return nil
+// }
