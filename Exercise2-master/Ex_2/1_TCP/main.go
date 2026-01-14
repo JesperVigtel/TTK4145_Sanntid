@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SERVER_IP         = "10.100.23.242"
+	SERVER_IP         = "10.100.23.11"
 	LOCAL_IP          = "10.100.23.17"
 	LOCAL_LISTEN_PORT = 33546
 )
@@ -15,10 +15,16 @@ const (
 func receiver(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	for {
-		n, _ := conn.Read(buffer)
+		n, err := conn.Read(buffer)
+		if err != nil {
+			return // Avslutt når tilkobling lukkes
+		}
 		fmt.Printf("Mottatt: %s\n", string(buffer[:n]))
 	}
 }
+
+/*Reciver leser av informasjonen fra serveren*/
+
 
 func sender(conn net.Conn, messages []string) {
 	for _, msg := range messages {
@@ -28,21 +34,24 @@ func sender(conn net.Conn, messages []string) {
 	}
 }
 
+/*sender informasjon til serveren*/
+
 func main() {
-	// Del 1: Direkte tilkobling
-	fmt.Println("--- Del 1: Direkte tilkobling ---")
+
 	conn1, err := net.Dial("tcp", SERVER_IP+":34933")
 	if err != nil {
 		fmt.Println("Feil ved tilkobling til server:", err)
 		return
 	}
 	go receiver(conn1)
-	sender(conn1, []string{"Hallo fra Go", "Melding 2", "Melding 3"})
+	sender(conn1, []string{"Pussycats", "mjaumjau", "Sinna"})
 	time.Sleep(2 * time.Second)
 	conn1.Close()
 
-	// Del 2: Server kobler seg til oss
-	fmt.Println("\n--- Del 2: Server kobler seg til oss ---")
+	/*Del 1: Direkte tilkobling til serveren. tar ibruk go-rutine for at meldinger kan mottas samtidig som de sendes*/
+
+	// Reverse connection
+
 	listener, err := net.Listen("tcp", ":"+fmt.Sprint(LOCAL_LISTEN_PORT))
 	if err != nil {
 		fmt.Println("Feil ved oppstart av server:", err)
@@ -55,6 +64,7 @@ func main() {
 		listener.Close()
 		return
 	}
+
 	conn2.Write([]byte(fmt.Sprintf("Connect to: %s:%d\x00", LOCAL_IP, LOCAL_LISTEN_PORT)))
 	conn2.Close()
 
@@ -65,9 +75,10 @@ func main() {
 		return
 	}
 	go receiver(connServer)
-	sender(connServer, []string{"Svar fra reverse connection", "Takk for tilkoblingen"})
+	sender(connServer, []string{"Svar fra reverse connection"})
 	time.Sleep(2 * time.Second)
 
 	connServer.Close()
 	listener.Close()
 }
+/*Del 2 forteller serveren at den skal koble seg tilbake til oss. Og hører på hva serveren sender tilbake*/
