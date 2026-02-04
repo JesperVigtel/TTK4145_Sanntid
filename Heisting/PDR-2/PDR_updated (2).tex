@@ -1,0 +1,128 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf-8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+
+\geometry{margin=1in}
+\setstretch{1.15}
+
+% ============================================================================
+% TITLE PAGE
+% ============================================================================
+
+\begin{document}
+
+\thispagestyle{empty}
+
+\vspace*{2cm}
+
+\begin{center}
+
+{\LARGE \textbf{Preliminary Design Report}}
+
+\vspace{0.5cm}
+
+{\Large TTK4145: Real-Time Programming}
+
+\vspace{0.5cm}
+
+{\Large Distributed Elevator Control System}
+
+\vspace{2cm}
+
+\end{center}
+
+\vspace{1cm}
+
+\begin{flushleft}
+
+\textbf{Lab Session:} [Your lab session] \\
+\textbf{Workstation/Desk:} [Desk number] \\
+\textbf{Group Number:} [Group number]
+
+\vspace{2cm}
+
+\textbf{Group Members:} \\
+[Student Name 1] -- [email@ntnu.no] \\
+[Student Name 2] -- [email@ntnu.no] \\
+[Student Name 3] -- [email@ntnu.no]
+
+\vspace{4cm}
+
+{\small \textit{Norwegian University of Science and Technology (NTNU)} \\
+Trondheim, Norway \\
+\today}
+
+\end{flushleft}
+
+\newpage
+
+% ============================================================================
+% CONTENT PAGE
+% ============================================================================
+
+\section*{Design Overview}
+
+Our system is designed as a fully distributed peer-to-peer architecture in which all elevators execute identical control logic and continuously exchange state information. Communication is implemented via UDP broadcast in a logical full-mesh topology, enabling direct elevator-to-elevator communication without centralized coordination. This topology choice directly addresses the requirement that no calls are lost under failure conditions, as state replication ensures that any active elevator can assume responsibility for unserved requests.
+
+Fault tolerance is achieved through periodic broadcasting of versioned state, allowing elevators to discard stale information and handle duplicate or out-of-order messages through eventual consistency semantics. The versioned broadcasts enable all elevators to converge to an identical view of system topology and active nodes; only after this convergence do elevators execute the hall request assigner (HRA), a deterministic cost function that ensures consistent button light assignments across all workspaces. Each elevator transmits a heartbeat signal at regular intervals; the absence of heartbeats over a defined detection window indicates a node failure, triggering immediate reassignment of its active hall requests by the remaining elevators through HRA recomputation. To mitigate network packet loss and transient communication failures, critical state information is transmitted repeatedly, ensuring that information propagates despite unreliable links.
+
+\section*{Failure Recovery and Call Persistence}
+
+Cab orders are persisted synchronously to disk, enabling automatic recovery upon software restart without manual intervention. This design leverages atomic writes to ensure that the system state is recoverable from any point of failure. Hall requests are managed through a consensus-based acknowledgment protocol: orders are retained only when all online elevators acknowledge completion, preventing duplicate service during network partitions and enabling transparent redistribution when elevators join or leave the system.
+
+When a node fails, its assigned hall requests are redistributed within a bounded time window via HRA recomputation. The acknowledgment protocol ensures that when a failed node recovers and rejoins, stale acknowledgments are discarded and the node participates in state synchronization with the current system view, preventing duplicate service of previously completed orders. This multi-layer approach---combining heartbeat detection, progress monitoring, and state versioning---ensures timely identification of failed nodes and rapid takeover of their responsibilities.
+
+\section*{Modular Architecture and Control Logic}
+
+The system is decomposed into functionally distinct modules: a finite state machine (FSM) managing elevator motion and door operations, a network module handling UDP broadcast and state synchronization, an assigner module executing the HRA and managing request acknowledgments, a lights module tracking button states, and a hardware driver abstraction. This separation of concerns facilitates testing, enables concurrent execution without shared mutable state, and simplifies verification of critical invariants.
+
+The FSM respects directional semantics: an elevator announces its direction of travel by serving only requests in its current heading, preventing user confusion and ensuring predictable behavior. Direction reversals are signaled by clearing buttons in the opposite direction before changing course, maintaining clear communication with passengers. Persistent obstruction signals trigger graceful degradation: the elevator disconnects from the network and continues serving only cab orders, enabling other elevators to assume responsibility for unserved hall requests through HRA reassignment.
+
+\section*{Implementation Approach}
+
+The system is implemented in Go, leveraging goroutines and channels to manage concurrent networking, state synchronization, and control logic. This language choice enables straightforward concurrent patterns without explicit lock management, supporting the peer-to-peer communication model and facilitating clean separation between modules.
+
+The design prioritizes robustness over complexity: eventual consistency is accepted as the failure model, with repeated broadcasts ensuring information propagation despite packet loss. The system recovers from transient failures autonomously, requiring no manual restart or intervention under conditions specified by the project assumptions. The design assumes no simultaneous network partitioning at multiple locations, ensuring that at most one disconnected elevator operates in isolation, thus preventing conflicting reassignments and duplicate service.
+
+\newpage
+
+% ============================================================================
+% SUGGESTED UML DIAGRAMS
+% ============================================================================
+
+\section*{Recommended UML Diagrams}
+
+To strengthen design documentation and clarify implementation responsibilities, the following UML diagrams are recommended:
+
+\subsection*{1. State Machine Diagram (Elevator FSM)}
+
+Illustrate the elevator states: IDLE, MOVING, and DOOR\_OPEN. Show transition triggers such as ``new request at current floor,'' ``all passengers exited,'' ``obstruction cleared,'' and ``no active requests.'' Include guard conditions for direction validation (e.g., ``only clear buttons matching current direction'') and obstruction handling (door remains open while obstructed, then transitions to MOVING upon clearance). This diagram clarifies the control flow and ensures directional semantics are enforced correctly.
+
+\subsection*{2. Component Diagram}
+
+Display the modular decomposition with dependencies between FSM, Network, Assigner, Lights, and Driver modules. Arrows should indicate message flow (button events to Assigner, state updates from Network to FSM, HRA assignments back to Lights). Emphasize the absence of direct cyclic dependencies, enforcing loose coupling and clear information flow.
+
+\subsection*{3. Sequence Diagram: Normal Hall Request}
+
+Model the interaction during a typical hall request: button press triggers Lights and Assigner, HRA runs after state convergence, Assigner sends assignment to FSM, FSM moves elevator and clears button upon arrival, then broadcasts acknowledgment. Timeline annotations should highlight when buttons turn on (within one broadcast interval) and when they turn off (after all elevators acknowledge). This diagram demonstrates the button light contract.
+
+\subsection*{4. Sequence Diagram: Node Failure and Recovery}
+
+Illustrate failure detection and recovery: an active elevator disappears (no heartbeat), Heartbeat Detector identifies the failure, HRA redistributes its hall requests to remaining elevators, and those elevators assume service. Later, show the failed elevator rejoining: Network synchronizes state including the versioned ACK table, duplicate service is prevented, and the system converges. This diagram validates that calls are never lost and that recovery is deterministic.
+
+\subsection*{5. Deployment Diagram}
+
+Show the distributed topology: multiple elevator instances connected via network links in a full-mesh broadcast pattern. Highlight the absence of a central broker or coordinator, illustrating peer-to-peer symmetry. Include annotations indicating that each elevator broadcasts state independently and receives broadcasts from all peers.
+
+\end{document}
