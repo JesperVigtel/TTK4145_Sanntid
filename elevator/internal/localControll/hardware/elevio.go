@@ -23,9 +23,10 @@ var _conn           net.Conn
 
 type ButtonEvent struct {
 	Floor  int
-	Button ButtonType
+	Button types.ButtonType
 	
 }
+
 
 
 
