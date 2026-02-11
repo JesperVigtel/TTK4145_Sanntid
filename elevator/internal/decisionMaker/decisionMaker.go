@@ -1,6 +1,13 @@
-package assigner
+package decisionMaker
+
+
+import (
+	"elevator/internal/config"
+)
 
 // Kostnadsfunksjon. Bestemmer hvilken heis som skal ta en hall-ordre.
-// Implementerer logikk for å beregne ventetid basert på avstand, retning og eksisterende ordrer.
 
-// TODO: Implementer kostnadsfunksjon for ordre-tildeling
+// ------------------------------------------------------------------------------------
+//	This module makes decisions for witch elevator to take a hall order
+// ------------------------------------------------------------------------------------
+

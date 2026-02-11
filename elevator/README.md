@@ -44,4 +44,15 @@ Et distribuert heis-system implementert i Go, basert på `golang-standards/proje
 - **Testabilitet:** Funksjonal oppdeling gjør enhetstest lett
 - **Best practices:** Følger offisiell Go-prosjektstruktur
 
+## Navnekonvensjoner i Go
+
+I Go er det flere standardnavnekonvensjoner:
+
+1. **PascalCase**: Brukes for offentlige (exported) typer og funksjoner. Eksempel: `MyFunction`, `MyType`.
+2. **camelCase**: Brukes for private (unexported) variabler og funksjoner. Eksempel: `myVariable`, `myFunction`.
+3. **snake_case**: Brukes sjeldnere, men kan sees i filnavn og pakker. Eksempel: `my_package`.
+4. **Forkortelser**: Forkortelser skal skrives med store bokstaver. Eksempel: `HTTPServer`, `URLParser`.
+
+Disse konvensjonene bidrar til lesbarhet og konsistens i Go-kode.
+
 
