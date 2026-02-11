@@ -10,8 +10,10 @@ Et distribuert heis-system implementert i Go, basert på `golang-standards/proje
 │   └── elevator/
 │       └── main.go              Programmets inngangspunkt
 ├── internal/
-│   ├── fsm/
-│   │   └── fsm.go               Tilstandsmaskinen (FSM)
+│   ├── localControll/
+│   │   └── localControll.go      Tilstandsmaskinen (FSM)
+│   │   └── hardware/
+│   │       └── elevio.go         Driver-grensesnitt mot maskinvare
 │   ├── network/
 │   │   ├── network.go           Nettverksinitialisering
 │   │   ├── peers.go             Peer discovery (online/offline)
@@ -20,10 +22,6 @@ Et distribuert heis-system implementert i Go, basert på `golang-standards/proje
 │   │   └── assigner.go          Kostnadsfunksjon for ordre-fordeling
 │   ├── lights/
 │   │   └── lights.go            Synkronisering av knappelys
-│   ├── hardware/
-│   │   └── elevio.go            Driver-grensesnitt mot maskinvare
-│   ├── store/
-│   │   └── store.go             Persistens av kabinordrer
 │   └── types/
 │       └── types.go             Felles datatyper og konstanter
 └── README.md                    Denne filen
