@@ -1,7 +1,7 @@
 package types
 
 import (
-	."elevator/internal/config"
+	. "elevator/internal/config"
 )
 
 // Felles datatyper, structs og konstanter brukt på tvers av alle pakker.
@@ -20,35 +20,33 @@ const (
 	Up
 )
 
-
 type Elevator struct {
-	CurrentFloor 		int
-	MotorDirection 		motordirection
-	Request 			[NFloors][NButtons]bool
-	Behaviour 	ElevatorBehaviour
-	ActiveSatus 		bool
+	CurrentFloor   int
+	MotorDirection motordirection
+	Request        [NFloors][NButtons]bool
+	Behaviour      ElevatorBehaviour
+	ActiveSatus    bool
 }
 
 type ButtonType int
 
 const (
-	BT_HallUp   ButtonType = iota
+	BT_HallUp ButtonType = iota
 	BT_HallDown
 	BT_Cab
 )
 
 //Network types START:
 
-type Message struct{
-	SenderID int
-	ElevatorList  [NElevators] int //ElevatorState??
-	HallOrderList [NElevators][NFloors][NButtons] int //ButtonState??
-	AliveStatus bool
+type Message struct {
+	SenderID      int
+	ElevatorList  [NElevators]int                    //ElevatorState??
+	HallOrderList [NElevators][NFloors][NButtons]int //ButtonState??
+	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
 
 //Network types END:
-
 
 // ------------------------------------------------------------------------------------
 //	enum types from elevator_algorithm
@@ -83,7 +81,6 @@ type LocalElevatorState struct {
 	Direction   motordirection
 	CabRequests []bool
 }
-
 
 type Req struct {
 	Active     bool

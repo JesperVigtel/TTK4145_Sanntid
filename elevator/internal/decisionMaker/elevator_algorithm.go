@@ -5,8 +5,7 @@ package decisionMaker
 // ------------------------------------------------------------------------------------
 
 import (
-	"elevator/internal/config"
-	"elevator/internal/types"
+	."elevator/internal/config"
 	"errors"
 	"sort"
 )
