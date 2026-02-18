@@ -8,11 +8,12 @@ package localControl
 
 import(
 	"elevator/internal/config"
-	"elevator/internal/hardware"
-	"internal/localcontrol/timer"
+	"elevator/internal/localControll/hardware"
+	"elevator/internal/types"
 )
 
 func localControl(
+
 
 )
 

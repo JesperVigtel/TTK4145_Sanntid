@@ -1,0 +1,318 @@
+================================================================================
+UPDATED LOCAL CONTROL IMPLEMENTATION CHECKLIST
+Based on actual code structure found in your project
+================================================================================
+
+Project: Elevator System - Distributed Controller  
+Module: LocalControl (FSM)  
+Date: 18. februar 2026
+
+================================================================================
+FILE 1: timer/timer.go - MOSTLY COMPLETE
+================================================================================
+
+PACKAGE & IMPORTS
+[ ] Package: timer
+[ ] Imports: config, time
+
+TIMERTYPE ENUM
+[ ] DoorTimer constant
+[ ] WatchDogTimer constant
+
+TIMER() FUNCTION
+Function Signature:
+[ ] doorOpenChan <-chan bool - Receive door open events
+[ ] doorClosedChan chan<- bool - Send door closed events
+[ ] motorActiveChan <-chan bool - Receive motor active events
+[ ] motorInactiveChan chan<- bool - Send motor inactive events
+
+State Variables:
+[ ] doorActive bool - Track door state
+[ ] watchDogActive bool - Track motor state
+
+Timer Initialization:
+[ ] Create doorTimer: time.NewTimer(config.DoorOpenTime)
+[ ] Create motorTimer: time.NewTimer(config.MotorTimeout)
+[ ] Stop both timers immediately
+[ ] Drain both timers to prevent stale events
+
+Main Select Loop:
+[ ] Case: doorOpenChan - Start/stop door timer
+[ ] Case: motorActiveChan - Start/stop motor watchdog
+[ ] Case: doorTimer.C - Send doorClosedChan <- true
+[ ] Case: motorTimer.C - Send motorInactiveChan <- true
+
+Helper Function:
+[ ] stopAndDrain() - Safely stop timer and drain channel
+
+================================================================================
+FILE 2: types.go - NEEDS UPDATES
+================================================================================
+
+CURRENT ISSUES FOUND:
+[ ] ButtonType constants use old names:
+    [ ] Change BTHallUp to match elevio.go usage
+    [ ] Change BTHallDown to match elevio.go usage
+    [ ] Verify BTCab matches
+
+[ ] ElevatorBehavior has typo:
+    [ ] ElevatorBehavior defined but code uses ElevatorBehaviour
+    [ ] Standardize spelling (British Behaviour is used elsewhere)
+    [ ] Check if idle should be ElevatorIdle
+
+MISSING EVENT TYPES:
+[ ] OrderEvent struct (timer/localControl <- decisionMaker):
+    [ ] Floor int
+    [ ] Button ButtonType
+
+[ ] ElevatorStateEvent struct (localControl -> decisionMaker):
+    [ ] CurrentFloor int
+    [ ] Direction MotorDirection
+    [ ] Behaviour ElevatorBehaviour
+    [ ] DoorOpen bool
+    [ ] Obstructed bool
+    [ ] ButtonPressed *ButtonEvent
+    [ ] Requests [NFloors][NButtons]bool
+    [ ] Error bool
+    [ ] Message string
+
+================================================================================
+FILE 3: localControll.go - NEEDS IMPLEMENTATION
+================================================================================
+
+PACKAGE & IMPORTS
+[ ] Package: localControl
+[ ] Imports:
+    [ ] elevator/internal/config
+    [ ] elevator/internal/localControll/hardware
+    [ ] elevator/internal/localControll/timer - NEEDS TO BE ADDED
+    [ ] elevator/internal/types
+    [ ] time - NEEDS TO BE ADDED
+    [ ] fmt - NEEDS TO BE ADDED
+
+MAIN STATE VARIABLES
+[ ] currentFloor int
+[ ] direction types.MotorDirection
+[ ] behaviour types.ElevatorBehaviour
+[ ] requests [config.NFloors][config.NButtons]bool
+[ ] obstructed bool
+
+CHANNEL VARIABLES (FROM TIMER)
+[ ] doorOpenChan chan<- bool - Send to timer when door opens
+[ ] doorClosedChan <-chan bool - Receive when door timer expires
+[ ] motorActiveChan chan<- bool - Send to timer when motor starts
+[ ] motorInactiveChan <-chan bool - Receive when motor times out
+
+OTHER CHANNELS (FROM HARDWARE)
+[ ] floorSensor chan int - From hardware.PollFloorSensor()
+[ ] buttonPress chan types.ButtonEvent - From hardware.PollButtons()
+[ ] obstruction chan bool - From hardware.PollObstructionSwitch()
+
+INIT() FUNCTION
+Initialize Hardware:
+[ ] hardware.Init(config.Addr, config.NFloors)
+
+Initialize State:
+[ ] Set all requests[f][b] = false
+[ ] Set behaviour = Idle
+[ ] Set direction = Stop
+[ ] Set currentFloor = -1
+[ ] Set obstructed = false
+
+Create Channels:
+[ ] floorSensor = make(chan int, config.ChannelBufferSize)
+[ ] buttonPress = make(chan types.ButtonEvent, config.ChannelBufferSize)
+[ ] obstruction = make(chan bool, config.ChannelBufferSize)
+[ ] doorOpenChan = make(chan bool, 1)
+[ ] doorClosedChan = make(chan bool, 1)
+[ ] motorActiveChan = make(chan bool, 1)
+[ ] motorInactiveChan = make(chan bool, 1)
+
+Start Polling Goroutines:
+[ ] go hardware.PollFloorSensor(floorSensor)
+[ ] go hardware.PollButtons(buttonPress)
+[ ] go hardware.PollObstructionSwitch(obstruction)
+
+Start Timer Goroutine:
+[ ] go timer.Timer(doorOpenChan, doorClosedChan, motorActiveChan, motorInactiveChan)
+
+Find Initial Floor:
+[ ] Set motor down: hardware.SetMotorDirection(types.Down)
+[ ] Wait: floor := <-floorSensor
+[ ] Update: currentFloor = floor
+[ ] Stop motor: hardware.SetMotorDirection(types.Stop)
+[ ] Update indicator: hardware.SetFloorIndicator(currentFloor)
+
+RUN() FUNCTION
+Function Signature:
+[ ] func Run(orderChan <-chan types.OrderEvent, stateChan chan<- types.ElevatorStateEvent)
+
+Main Select Loop - Case 1: Order from DecisionMaker
+case order := <-orderChan:
+[ ] Store: requests[order.Floor][order.Button] = true
+[ ] Lamp on: hardware.SetButtonLamp(order.Button, order.Floor, true)
+[ ] If behaviour == Idle:
+    [ ] Calculate: direction = chooseDirection()
+    [ ] Start motor: hardware.SetMotorDirection(direction)
+    [ ] Start watchdog: motorActiveChan <- true
+    [ ] Set: behaviour = Moving
+[ ] Send state update to stateChan
+
+Main Select Loop - Case 2: Floor Arrival
+case floor := <-floorSensor:
+[ ] Update: currentFloor = floor
+[ ] Indicator: hardware.SetFloorIndicator(floor)
+[ ] If shouldStop(floor, direction):
+    [ ] Stop motor: hardware.SetMotorDirection(types.Stop)
+    [ ] Stop watchdog: motorActiveChan <- false
+    [ ] Open door: hardware.SetDoorOpenLamp(true)
+    [ ] Start door timer: doorOpenChan <- true
+    [ ] Clear requests: clearRequestsAtFloor(floor)
+    [ ] Set: behaviour = DoorOpen
+[ ] Send state update to stateChan
+
+Main Select Loop - Case 3: Door Timer Expired
+case <-doorClosedChan:
+[ ] Close door: hardware.SetDoorOpenLamp(false)
+[ ] Calculate: direction = chooseDirection()
+[ ] If direction != Stop:
+    [ ] Start motor: hardware.SetMotorDirection(direction)
+    [ ] Start watchdog: motorActiveChan <- true
+    [ ] Set: behaviour = Moving
+[ ] Else:
+    [ ] Set: behaviour = Idle
+[ ] Send state update to stateChan
+
+Main Select Loop - Case 4: Motor Watchdog Timeout
+case <-motorInactiveChan:
+[ ] Create error event:
+    [ ] Error = true
+    [ ] Message = "Motor watchdog timeout"
+[ ] Send to stateChan
+[ ] Log error: fmt.Println("ERROR: Motor timeout at floor", currentFloor)
+
+Main Select Loop - Case 5: Obstruction Switch
+case obs := <-obstruction:
+[ ] Update: obstructed = obs
+[ ] If obs && behaviour == DoorOpen:
+    [ ] Restart timer: doorOpenChan <- true
+[ ] Send state update to stateChan
+
+Main Select Loop - Case 6: Button Pressed
+case btn := <-buttonPress:
+[ ] Store: requests[btn.Floor][btn.Button] = true
+[ ] Lamp on: hardware.SetButtonLamp(btn.Button, btn.Floor, true)
+[ ] If behaviour == Idle:
+    [ ] Calculate: direction = chooseDirection()
+    [ ] Start motor: hardware.SetMotorDirection(direction)
+    [ ] Start watchdog: motorActiveChan <- true
+    [ ] Set: behaviour = Moving
+[ ] Send state update with ButtonPressed = &btn
+
+HELPER FUNCTIONS
+
+shouldStop(floor int, dir MotorDirection) bool
+[ ] Return true if should stop at this floor
+[ ] Logic:
+    [ ] Always stop for cab buttons: if requests[floor][BTCab] return true
+    [ ] Stop for hall buttons in correct direction
+    [ ] Stop if no more requests ahead
+
+chooseDirection() MotorDirection
+[ ] Return next direction based on requests
+[ ] Logic:
+    [ ] Check above current floor -> return Up
+    [ ] Check below current floor -> return Down
+    [ ] No requests -> return Stop
+
+clearRequestsAtFloor(floor int)
+[ ] Loop through all buttons at floor
+[ ] Set requests[floor][b] = false
+[ ] Turn off lamps: hardware.SetButtonLamp(b, floor, false)
+
+sendStateUpdate() or inline
+[ ] Create complete ElevatorStateEvent
+[ ] Include all current state fields
+[ ] Send to stateChan (non-blocking preferred)
+
+================================================================================
+FILE 4: hardware/elevio.go
+================================================================================
+
+FIX BUTTONTYPE REFERENCE
+[ ] In PollButtons() line ~73:
+    [ ] Change: for b := ButtonType(0); ...
+    [ ] To: for b := types.ButtonType(0); ...
+
+================================================================================
+CONFIGURATION NOTES
+================================================================================
+
+From config.go:
+[X] DoorOpenTime = 3 * time.Second (was DoorOpenDuration)
+[X] MotorTimeout = 4 * time.Second
+[X] ChannelBufferSize = 100
+[X] Addr = "localhost:15657"
+
+================================================================================
+KEY ARCHITECTURAL CHANGES
+================================================================================
+
+TIMER PATTERN (ACTUAL IMPLEMENTATION)
+Your code uses a CENTRALIZED Timer() goroutine that:
+- Receives events on input channels
+- Manages internal timers
+- Sends completion events on output channels
+- localControl sends to timer and receives results
+
+This is DIFFERENT FROM the original checklist which had per-timer structs.
+
+INTEGRATION FLOW:
+localControl                Timer                Hardware
+     |                       |                       |
+     |--doorOpenChan------->|                        |
+     |                       |--Reset doorTimer       |
+     |                       |                        |
+     |                       |--doorClosedChan------>|
+     |                       |   (after 3 seconds)   |
+     |                       |                        |
+     |--motorActiveChan----->|                        |
+     |                       |--Reset motorTimer      |
+     |                       |                        |
+     |<--motorInactiveChan--|   (after 4 seconds)    |
+
+================================================================================
+STATE UPDATES TO DECISIONMAKER
+================================================================================
+
+[ ] Send ElevatorStateEvent after EVERY state change
+[ ] Always include complete state (floor, direction, behaviour, door, obstruction, requests)
+[ ] Use ButtonPressed field only when button event triggers the update
+[ ] Include error flag and message for watchdog timeouts
+
+================================================================================
+CHANNEL BUFFERING
+================================================================================
+
+[ ] Use buffered channels (size 100) to prevent blocking
+[ ] Consider non-blocking sends to stateChan if needed
+
+================================================================================
+THREAD SAFETY
+================================================================================
+
+[ ] All state variables accessed only in main Run() loop
+[ ] No mutex needed since single goroutine manages state
+
+================================================================================
+SUMMARY OF CHANGES
+================================================================================
+
+[X] Timer implementation is DONE (centralized approach)
+[ ] Types need updates (naming consistency)
+[ ] localControll.go needs full FSM implementation
+[ ] Integration between timer and localControl channels
+
+================================================================================
+END OF CHECKLIST
+================================================================================

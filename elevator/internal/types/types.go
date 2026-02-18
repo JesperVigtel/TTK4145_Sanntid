@@ -12,17 +12,17 @@ import (
 
 //Elevator types START:
 
-type motordirection int
+type MotorDirection int
 
 const (
-	Down motordirection = iota - 1
+	Down MotorDirection = iota - 1
 	Stop
 	Up
 )
 
 type Elevator struct {
 	CurrentFloor   int
-	MotorDirection motordirection
+	MotorDirection MotorDirection
 	Request        [NFloors][NButtons]bool
 	Behaviour      ElevatorBehaviour
 	ActiveSatus    bool
@@ -31,10 +31,24 @@ type Elevator struct {
 type ButtonType int
 
 const (
-	BT_HallUp ButtonType = iota
-	BT_HallDown
-	BT_Cab
+	BTHallUp ButtonType = iota
+	BTHallDown
+	BTCab
 )
+
+type ButtonEvent struct {
+	Floor int
+	Button ButtonType
+}
+
+type ElevatorBehavior int
+
+const (
+	idle ElevatorBehavior = iota
+	Moving
+	DoorOpen
+)
+//Elevator types stop
 
 //Network types START:
 
