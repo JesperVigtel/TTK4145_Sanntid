@@ -46,6 +46,8 @@ type Message struct {
 	AliveList     [NElevators]bool
 }
 
+
+
 //Network types END:
 
 // ------------------------------------------------------------------------------------

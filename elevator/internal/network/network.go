@@ -11,6 +11,8 @@ import (
 //sendt og motatt hele tiden.
 
 
+go broadcast.Sender()
+go broadcast.Reciever()
 
 
 
