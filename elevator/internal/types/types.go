@@ -94,7 +94,7 @@ const (
 type LocalElevatorState struct {
 	Behaviour   ElevatorBehaviour
 	Floor       int
-	Direction   motordirection
+	Direction   MotorDirection
 	CabRequests []bool
 }
 

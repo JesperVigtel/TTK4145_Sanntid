@@ -19,13 +19,13 @@ func Timer(
 	motorInactiveChan chan<- bool,
 ) {
 	var doorActive, watchDogActive bool
-	
+
 	doorTimer := time.NewTimer(config.DoorOpenTime)
 	doorTimer.Stop()
 	motorTimer := time.NewTimer(config.MotorTimeout)
 	motorTimer.Stop()
 
-	// We drain in case doortimer and motortimer ticked before 
+
 	select { 
 		case <-doorTimer.C: 
 		default: 
@@ -37,7 +37,8 @@ func Timer(
 
 	for {
 		select {
-		case doorActive := <-doorOpenChan:
+		case DA := <-doorOpenChan:
+			doorActive = DA
 			if doorActive {
 				stopAndDrain(doorTimer)
 				doorTimer.Reset(config.DoorOpenTime)
@@ -45,7 +46,8 @@ func Timer(
 				stopAndDrain(doorTimer)
 			}
 
-		case  watchDogActive := <-motorActiveChan:
+		case  WDA := <-motorActiveChan:
+			watchDogActive = WDA
 			if watchDogActive {
 				stopAndDrain(motorTimer)
 				motorTimer.Reset(config.MotorTimeout)
@@ -68,41 +70,11 @@ func Timer(
 	}
 }
 
-func stopAndDrain(t *time.Timer) {
-	if !t.Stop() {
+func stopAndDrain(timerInstance *time.Timer) {
+	if !timerInstance.Stop() {
 		select {
-		case <-t.C:
+		case <-timerInstance.C:
 		default:
 		}
 	}
 }
-
-//forsøk 1 (ble for komplisert timer)
-
-// type DoorTimer struct {
-// 	timeout time.Duration
-// 	timer *time.Timer
-// 	active bool
-// 	timerOut chan bool
-// }
-
-// // initialiserer ny versjon av structet, derfor returnerer den pointer
-// // Vi ønsker ikke flere versjoner av timeren, da er det bedre med en pointer til timeren som endres, hindrer kopiering
-// // no timer initilized here to combat
-// func NewDoorTimer(duration time.Duration) *DoorTimer {
-// 	timer := time.NewTimer(duration) // starter en timer
-// 	timer.Stop() //stopper den med en gang
-// 	return &DoorTimer{ 
-// 		timeout: duration,
-// 		timer: timer,
-// 		active: false,
-// 		timerOut: make(chan bool, 1),
-// 	}
-// }
-//  // starter selvfølgelig doortimer, løk
-// func (t *DoorTimer) StartDoorTimer() {
-// 	if !t.active {
-// 		t.timer.Reset(t.timeout)
-// 		t.active = true
-// 	}
-// }

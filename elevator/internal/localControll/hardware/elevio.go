@@ -66,7 +66,7 @@ func PollButtons(receiver chan<- types.ButtonEvent) {
 	for {
 		time.Sleep(_pollRate)
 		for f := 0; f < _numFloors; f++ {
-			for b := ButtonType(0); b < 3; b++ {
+			for b := types.ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v != false {
 					receiver <- types.ButtonEvent{Floor: f, Button: types.ButtonType(b)}
