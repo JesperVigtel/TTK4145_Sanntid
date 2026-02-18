@@ -8,7 +8,7 @@ const (
 	NElevators          = 3
 	PollRateMS          = 20 * time.Millisecond
 	BroadcastRate       = 50 * time.Millisecond
-	DoorOpenDuration    = 3 * time.Second
+	DoorOpenTime            = 3 * time.Second
 	MotorTimeout        = 4 * time.Second
 	BroadcastBufferSize = 4 * 1024
 	ChannelBufferSize   = 100

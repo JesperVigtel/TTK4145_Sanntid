@@ -9,9 +9,11 @@ package localControl
 import(
 	"elevator/internal/config"
 	"elevator/internal/localControll/hardware"
+	"elevator/internal/types"
 )
 
 func localControl(
+
 
 )
 
