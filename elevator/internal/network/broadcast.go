@@ -5,6 +5,8 @@ import (
 
 //func sender()
 //sender current state over nettverket(bradcaster over en kanal til de andre heisene)
+func Sender()
+
 
 
 
