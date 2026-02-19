@@ -36,18 +36,20 @@ const (
 	BTCab
 )
 
-type ButtonEvent struct {
+type ElevatorBehaviour int
+
+const (
+	ElevatorIdle ElevatorBehaviour = iota
+	ElevatorMoving
+	ElevatorDoorOpen
+)
+
+type OrderEvent struct {
 	Floor int
 	Button ButtonType
 }
 
-type ElevatorBehavior int
 
-const (
-	idle ElevatorBehavior = iota
-	Moving
-	DoorOpen
-)
 //Elevator types stop
 
 //Network types START:
@@ -76,13 +78,6 @@ const (
 	CallTypeCab
 )
 
-type ElevatorBehaviour int
-
-const (
-	ElevatorIdle ElevatorBehaviour = iota
-	ElevatorMoving
-	ElevatorDoorOpen
-)
 
 type ClearRequestType int
 
@@ -91,6 +86,7 @@ const (
 	ClearInDirn
 )
 
+// bruke vanlig elevator isteden eller?? har en nesten lik struct over (Andreas)
 type LocalElevatorState struct {
 	Behaviour   ElevatorBehaviour
 	Floor       int

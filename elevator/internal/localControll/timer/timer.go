@@ -14,8 +14,8 @@ const (
 
 func Timer(
 	doorOpenChan <-chan bool,
-	doorClosedChan chan<- bool,
 	motorActiveChan <-chan bool,
+	doorClosedChan chan<- bool,
 	motorInactiveChan chan<- bool,
 ) {
 	var doorActive, watchDogActive bool

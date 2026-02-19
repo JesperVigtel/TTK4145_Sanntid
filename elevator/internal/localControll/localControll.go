@@ -10,10 +10,18 @@ import(
 	"elevator/internal/config"
 	"elevator/internal/localControll/hardware"
 	"elevator/internal/types"
+	"elevator/internal/localControll/timer"
+	"time"
+	"fmt"
 )
 
 func localControl(
+	newOrder <- chan [NFloor][NButton]bool
+	elevatorEvents chan <- fromLocalToDM
 	
+	var {
+		
+	}
 )
 
 
