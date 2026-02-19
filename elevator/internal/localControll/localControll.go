@@ -16,13 +16,25 @@ import(
 )
 
 func localControl(
-	newOrder <- chan [NFloor][NButton]bool
-	elevatorEvents chan <- fromLocalToDM
-	
-	var {
-		
-	}
-)
+	newOrder <-chan [config.NFloors][config.NButtons]bool,
+	elevatorEvents chan<- fromLocalToDM,
+) {
+	var (
+		currentFloor int = -1
+		direction    types.MotorDirection = types.Stop
+		behaviour    types.ElevatorBehaviour = types.ElevatorIdle
+		obstructed   bool
+		requests     [config.NFloors][config.NButtons]bool
+
+		floorChan         = make(chan int, config.ChannelBufferSize)
+		doorOpenChan      = make(chan bool, 1) // localControl -> timer
+		motorActiveChan   = make(chan bool, 1) // localControl -> timer
+		doorClosedChan    = make(chan bool, 1) // timer -> localControl
+		motorInactiveChan = make(chan bool, 1) // timer -> localControl
+		obstructionChan   = make(chan bool, config.ChannelBufferSize)
+		buttonPressChan   = make(chan types.ButtonEvent, config.ChannelBufferSize)
+	)
+}
 
 
 // Sjekker en array av noe slag som får inn ordre fra decisionMaker, 
