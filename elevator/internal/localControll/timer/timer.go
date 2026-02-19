@@ -14,8 +14,8 @@ const (
 
 func Timer(
 	doorOpenChan <-chan bool,
-	doorClosedChan chan<- bool,
 	motorActiveChan <-chan bool,
+	doorClosedChan chan<- bool,
 	motorInactiveChan chan<- bool,
 ) {
 	var doorActive, watchDogActive bool
@@ -37,8 +37,8 @@ func Timer(
 
 	for {
 		select {
-		case DA := <-doorOpenChan:
-			doorActive = DA
+		case isDoorOpen := <-doorOpenChan:
+			doorActive = isDoorOpen
 			if doorActive {
 				stopAndDrain(doorTimer)
 				doorTimer.Reset(config.DoorOpenTime)
@@ -46,8 +46,8 @@ func Timer(
 				stopAndDrain(doorTimer)
 			}
 
-		case  WDA := <-motorActiveChan:
-			watchDogActive = WDA
+		case  isMotorActive := <-motorActiveChan:
+			watchDogActive = isMotorActive
 			if watchDogActive {
 				stopAndDrain(motorTimer)
 				motorTimer.Reset(config.MotorTimeout)

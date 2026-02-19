@@ -6,15 +6,49 @@ package localControl
 
 // TODO: Implementer FSM-logikk
 
-import(
+import (
 	"elevator/internal/config"
 	"elevator/internal/localControll/hardware"
+	"elevator/internal/localControll/timer"
 	"elevator/internal/types"
+	"fmt"
+	"time"
 )
 
 func localControl(
-	
-)
+	newOrder <-chan [config.NFloors][config.NButtons]bool,
+	elevatorEvents chan<- types.FromLocalToDM,
+) {
+	var (
+		floorChan         = make(chan int, config.ChannelBufferSize)
+		doorOpenChan      = make(chan bool, 1) // localControl -> timer
+		motorActiveChan   = make(chan bool, 1) // localControl -> timer
+		doorClosedChan    = make(chan bool, 1) // timer -> localControl
+		motorInactiveChan = make(chan bool, 1) // timer -> localControl
+		obstructionChan   = make(chan bool, config.ChannelBufferSize)
+		buttonPressChan   = make(chan types.OrderEvent, config.ChannelBufferSize)
+		obstruction  bool
+	)
+
+	go hardware.PollFloorSensor(floorChan)
+	go hardware.PollObstructionSwitch(obstructionChan)
+	go hardware.PollButtons(buttonPressChan)
+
+	go timer.Timer(doorOpenChan, motorActiveChan, doorClosedChan, motorInactiveChan)
+
+	elevator := elevatorInit()
+
+	for {
+		select {
+		case floor:= <-floorChan:
+			elevator.CurrentFloor = floor
+		}
+		
+	}
+
+
+
+}
 
 
 // Sjekker en array av noe slag som får inn ordre fra decisionMaker, 
