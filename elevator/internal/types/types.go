@@ -65,7 +65,7 @@ type Message struct {
 //Network types END:
 
 // ------------------------------------------------------------------------------------
-//	enum types from elevator_algorithm
+//	enum types for decisionMaker
 // ------------------------------------------------------------------------------------
 
 type CallType int
@@ -94,7 +94,7 @@ const (
 type LocalElevatorState struct {
 	Behaviour   ElevatorBehaviour
 	Floor       int
-	Direction   motordirection
+	Direction   MotorDirection
 	CabRequests []bool
 }
 
@@ -117,3 +117,15 @@ type State struct {
 // 	DirnUp   Dirn = 1
 // )
 //Erstattes med types.motorDirection
+
+
+type OrderState int
+
+const (
+	NoOrder OrderState = iota
+	PendingOrder
+	AssignedOrder
+	CompletedOrder
+)
+
+type HallOrderTable [NFloors][NButtons]OrderState
