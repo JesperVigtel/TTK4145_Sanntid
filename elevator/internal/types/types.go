@@ -25,7 +25,7 @@ type Elevator struct {
 	MotorDirection MotorDirection
 	Request        [NFloors][NButtons]bool
 	Behaviour      ElevatorBehaviour
-	ActiveSatus    bool
+	ActiveStatus    bool
 }
 
 type ButtonType int
@@ -47,6 +47,11 @@ const (
 type OrderEvent struct {
 	Floor int
 	Button ButtonType
+}
+
+type FromLocalToDM struct {
+	Elevator Elevator
+	CompletedOrder [NFloors][NButtons]bool
 }
 
 

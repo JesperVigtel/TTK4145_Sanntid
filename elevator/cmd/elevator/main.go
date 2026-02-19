@@ -6,5 +6,6 @@ package main
 
 func main() {
 	// TODO: Implementer initialisering av kanaler, driver og goroutiner
+	hardware.Init(config.Addr, config.NFloors) 
 
 }
