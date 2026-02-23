@@ -37,12 +37,24 @@ func localControl(
 	go timer.Timer(doorOpenChan, motorActiveChan, doorClosedChan, motorInactiveChan)
 
 	elevator := elevatorInit()
+	hardware.SetMotorDirection(types.Down)
 
 	for {
 		select {
 		case floor:= <-floorChan:
 			elevator.CurrentFloor = floor
+			elevator.ActiveStatus = true
+			elevator.Behaviour = types.ElevatorMoving
+
+		case orders := <-newOrder:
+			elevator.Request = orders
+		case <- doorClosedChan:
+		case <- motorInactiveChan:
+		case obstruction = <- obstructionChan:
+		case <- buttonPressChan:
+		
 		}
+
 		
 	}
 
