@@ -3,9 +3,15 @@ import (
 	"elevator/internal/config"
 )
 
+
+//Sender og Reciever blir 2 gorutiner i network.go og vil jobbe i bakgrunnen
+//disse vil håndtere all nettverkskommunikasjon
 //func sender()
-//sender current state over nettverket(bradcaster over en kanal til de andre heisene)
+// Jobben til sender er å lytte til kanalen i 
 func Sender()
+
+
+func Reciever()
 
 
 
