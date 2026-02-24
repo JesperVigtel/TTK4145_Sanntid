@@ -29,7 +29,7 @@ func Lights(
 		select {
 
 		case local := <-localLights:
-			for floor := 0; floor < config.NFloors; floor++ {
+			for floor := range config.NFloors{
 				hardware.SetButtonLamp(types.BTCab, floor, local.CabLights[floor])
 			}
 			if local.CurrentFloor >= 0 {
@@ -39,7 +39,7 @@ func Lights(
 
 		case hall := <-hallLights:
 
-			for floor := 0; floor < config.NFloors; floor++ {
+			for floor := range config.NFloors {
 				hardware.SetButtonLamp(types.BTHallUp, floor, hall.HallUp[floor])
 				hardware.SetButtonLamp(types.BTHallDown, floor, hall.HallDown[floor])
 			}
