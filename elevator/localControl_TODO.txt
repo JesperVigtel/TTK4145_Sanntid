@@ -18,10 +18,15 @@ LOCALCONTROL SENDER TIL DECISIONMAKER:
 - NewButtonPress      → Knapptrykk (cab + hall) - nil hvis ingen ny
 - CompletedOrder      → Hvilke ordrer som er fullført
 - Elevator state      → Floor, Direction, Behaviour, ActiveStatus
+- Obstructed          → true/false - dør blokkert
 
 ActiveStatus brukes til:
-- true  = Heisen fungerer normalt
-- false = Watchdog timeout (heis stuck) ELLER dør obstruksjon over tid
+- true  = Heisen fungerer (når floorChan mottas)
+- false = Watchdog timeout (heis stuck)
+
+Obstructed brukes til:
+- true  = Dør blokkert, kan ikke lukkes
+- false = Normal drift
 
 DECISIONMAKER STYRER:
 - Hall call lights    → Basert på global state og redundans
@@ -34,6 +39,7 @@ type FromLocalToDM struct {
     Elevator       Elevator
     CompletedOrder [NFloors][NButtons]bool
     NewButtonPress *OrderEvent  // nil hvis ingen ny, ellers selve trykket
+    Obstructed     bool         // true hvis dør blokkert
 }
 
 Merk: ActiveStatus ligger i Elevator struct
@@ -70,6 +76,7 @@ Steg-for-steg:
 [ ] 2.7  Send til DM: elevatorEvents <- types.FromLocalToDM{
              Elevator:       elevator,
              CompletedOrder: completed,  // eller tom hvis ikke stoppet
+             Obstructed:     obstruction,
          }
 
 Eksempelkode:
@@ -113,6 +120,7 @@ case floor := <-floorChan:
     elevatorEvents <- types.FromLocalToDM{
         Elevator:       elevator,
         CompletedOrder: completed,
+        Obstructed:     obstruction,
     }
 ```
 
@@ -160,7 +168,8 @@ case orders := <-newOrder:
     }
     
     elevatorEvents <- types.FromLocalToDM{
-        Elevator: elevator,
+        Elevator:   elevator,
+        Obstructed: obstruction,
     }
 ```
 
@@ -174,6 +183,7 @@ Steg-for-steg:
 [ ] 4.1  Sjekk obstruction:
          [ ] Hvis obstruction == true:
              [ ] doorOpenChan <- true  (restart timer, hold åpen)
+             [ ] Send state med Obstructed=true til DM
              [ ] continue
 [ ] 4.2  Slå av door light: hardware.SetDoorOpenLamp(false) ← LOKAL LYS
 [ ] 4.3  Velg retning: dir := chooseDirection(elevator)
@@ -187,6 +197,10 @@ Eksempelkode:
 case <-doorClosedChan:
     if obstruction {
         doorOpenChan <- true  // Hold døren åpen
+        elevatorEvents <- types.FromLocalToDM{
+            Elevator:   elevator,
+            Obstructed: true,
+        }
         continue
     }
     
@@ -203,7 +217,8 @@ case <-doorClosedChan:
     }
     
     elevatorEvents <- types.FromLocalToDM{
-        Elevator: elevator,
+        Elevator:   elevator,
+        Obstructed: obstruction,
     }
 ```
 
@@ -230,7 +245,8 @@ case <-motorInactiveChan:
     fmt.Println("ERROR: Motor watchdog timeout - elevator not alive")
     
     elevatorEvents <- types.FromLocalToDM{
-        Elevator: elevator,
+        Elevator:   elevator,
+        Obstructed: obstruction,
     }
     
     // Valgfritt: Prøv å restarte etter en stund
@@ -246,7 +262,7 @@ Steg-for-steg:
 [ ] 6.1  Motta verdi: obstruction = <-obstructionChan (VIKTIG: motta verdien!)
 [ ] 6.2  Hvis obstruction == true OG Behaviour == DoorOpen:
          [ ] doorOpenChan <- true  (restart dørtimer, hold åpen)
-[ ] 6.3  (Valgfritt) Send state til DM hvis nødvendig
+[ ] 6.3  Send oppdatert state med Obstructed til DM
 
 Eksempelkode:
 ```go
@@ -255,6 +271,11 @@ case obs := <-obstructionChan:
     
     if obstruction && elevator.Behaviour == types.ElevatorDoorOpen {
         doorOpenChan <- true  // Restart timer, hold døren åpen
+    }
+    
+    elevatorEvents <- types.FromLocalToDM{
+        Elevator:   elevator,
+        Obstructed: obstruction,
     }
 ```
 
@@ -282,6 +303,7 @@ case btn := <-buttonPressChan:
     elevatorEvents <- types.FromLocalToDM{
         Elevator:       elevator,
         NewButtonPress: &btn,  // Send knapptrykk til DM
+        Obstructed:     obstruction,
     }
 ```
 
@@ -472,22 +494,27 @@ FromLocalToDM sendes ved:
 ┌─────────────────────┬──────────────────────────────────────────────────┐
 │ Event               │ Innhold                                          │
 ├─────────────────────┼──────────────────────────────────────────────────┤
-│ floorChan           │ Elevator, CompletedOrder                         │
-│ newOrder            │ Elevator                                         │
-│ doorClosedChan      │ Elevator                                         │
-│ motorInactiveChan   │ Elevator (ActiveStatus=false)                    │
-│ buttonPressChan     │ Elevator, NewButtonPress                         │
+│ floorChan           │ Elevator, CompletedOrder, Obstructed             │
+│ newOrder            │ Elevator, Obstructed                             │
+│ doorClosedChan      │ Elevator, Obstructed                             │
+│ motorInactiveChan   │ Elevator (ActiveStatus=false), Obstructed        │
+│ obstructionChan     │ Elevator, Obstructed                             │
+│ buttonPressChan     │ Elevator, NewButtonPress, Obstructed             │
 └─────────────────────┴──────────────────────────────────────────────────┘
 
 ActiveStatus brukes til:
 - true  = Heisen fungerer (når floorChan mottas)
 - false = Heisen er stuck (når motorInactiveChan mottas)
 
+Obstructed brukes til:
+- true  = Dør blokkert, kan ikke lukkes
+- false = Normal drift
+
 ================================================================================
 PRIORITERT IMPLEMENTASJONSREKKEFØLGE
 ================================================================================
 1. [X] Initialisering
-2. [X] Oppdater types.go med NewButtonPress felt
+2. [X] Oppdater types.go med NewButtonPress og Obstructed felt
 3. [ ] Hjelpefunksjoner i helpers.go
 4. [ ] floorChan case
 5. [ ] doorClosedChan case  

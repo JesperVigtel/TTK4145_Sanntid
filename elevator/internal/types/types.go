@@ -53,6 +53,7 @@ type FromLocalToDM struct {
 	Elevator       Elevator
 	CompletedOrder [NFloors][NButtons]bool
 	NewButtonPress *OrderEvent // nil hvis ingen ny, ellers selve trykket
+	Obstructed     bool        
 }
 
 //Elevator types stop
