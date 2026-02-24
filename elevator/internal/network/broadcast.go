@@ -1,6 +1,12 @@
 package network
 import (
-	"elevator/internal/config"
+	. "elevator/internal/config"
+	. "elevator/internal/types"
+	"network/conn"
+	"encoding/json"
+	"fmt"
+	"net"
+	"reflect"
 )
 
 
@@ -8,7 +14,17 @@ import (
 //disse vil håndtere all nettverkskommunikasjon
 //func sender()
 // Jobben til sender er å lytte til kanalen i 
-func Sender()
+func Sender(port int, messageOut <-chan Message){ //velger en enkel meldingstype som blir sendt hele tiden fremfor en "chans ... interface{}"" dette føles ryddigere
+	conn := conn.DialBroadcastUDP(port)
+	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
+	for message := range messageOut{
+		JsonBytes, _ := json.Marshal(message)
+		if len(JsonBytes) > BroadcastBufferSize{
+			panic(fmt.Sprintf("Tried to send a message longer than the buffer size"))
+		}
+	}
+
+}
 
 
 func Reciever()
