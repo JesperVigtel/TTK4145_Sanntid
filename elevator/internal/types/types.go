@@ -52,10 +52,19 @@ type OrderEvent struct {
 type FromLocalToDM struct {
 	Elevator       Elevator
 	CompletedOrder [NFloors][NButtons]bool
-	NewButtonPress *OrderEvent // nil hvis ingen ny, ellers selve trykket
+	NewButtonPress *OrderEvent 
 	Obstructed     bool        
 }
 
+type ButtonState int
+
+const (
+	initial ButtonState = iota
+	standby
+	ButtonPressed
+	OrderAssigned
+	OrderCompleted
+)
 //Elevator types stop
 
 //Network types START:
