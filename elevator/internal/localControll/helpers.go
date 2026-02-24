@@ -89,7 +89,7 @@ func shouldStopAtFloor(e types.Elevator, floor int) bool {
 		return true
 	}
 
-	// stopp for Hall only if direction matches announced direction, and both if idle
+	// stopp for Hall only if direction matches announced direction
 	switch e.MotorDirection {
 	case types.Up:
 		return e.Request[floor][int(types.BTHallUp)]
@@ -119,6 +119,9 @@ func localClearHallOrder(e *types.Elevator, floor int, dir types.MotorDirection)
 	}
 	return false
 }
+
+// usikker på om denne fungerer, men tror det, må se litt på DecisionMaker koden. altså den over
+
 func localClearCabOrder(
 	e *types.Elevator,
 	floor int,
@@ -136,3 +139,4 @@ func localClearCabOrder(
 	return false
 }
 
+//Fjerner local caborders lokalt, hvordan få dette inn i DecisionMaker
