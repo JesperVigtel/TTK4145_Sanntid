@@ -21,10 +21,12 @@ func localControl(
 ) {
 	var (
 		floorChan         = make(chan int, config.ChannelBufferSize)
-		doorOpenChan      = make(chan bool, 1) // localControl -> timer
-		motorActiveChan   = make(chan bool, 1) // localControl -> timer
-		doorClosedChan    = make(chan bool, 1) // timer -> localControl
-		motorInactiveChan = make(chan bool, 1) // timer -> localControl
+		doorOpenChan      = make(chan bool, 1) 
+		motorActiveChan   = make(chan bool, 1) 
+		recoveryEnableChan = make(chan bool, 1)
+		doorClosedChan    = make(chan bool, 1) 
+		motorInactiveChan = make(chan bool, 1) 
+		recoveryTickChan  = make(chan bool, 1) 
 		obstructionChan   = make(chan bool, config.ChannelBufferSize)
 		buttonPressChan   = make(chan types.OrderEvent, config.ChannelBufferSize)
 		obstruction  bool
@@ -34,7 +36,7 @@ func localControl(
 	go hardware.PollObstructionSwitch(obstructionChan)
 	go hardware.PollButtons(buttonPressChan)
 
-	go timer.Timer(doorOpenChan, motorActiveChan, doorClosedChan, motorInactiveChan)
+	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan,  doorClosedChan, motorInactiveChan, recoveryTickChan)
 
 	elevator := elevatorInit()
 	obstruction = false
