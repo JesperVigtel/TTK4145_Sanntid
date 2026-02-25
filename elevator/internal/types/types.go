@@ -23,7 +23,7 @@ const (
 type Elevator struct {
 	CurrentFloor   int
 	MotorDirection MotorDirection
-	Request        [NFloors][NButtons]bool
+	Request        CabOrderTable
 	Behaviour      ElevatorBehaviour
 	ActiveStatus   bool
 }
@@ -56,15 +56,6 @@ type FromLocalToDM struct {
 	Obstructed     bool        
 }
 
-type ButtonState int	//deklarert lengre ned som OrderState (jesper)
-
-const (
-	initial ButtonState = iota
-	standby
-	ButtonPressed
-	OrderAssigned
-	OrderCompleted
-)
 //Elevator types stop
 
 //Network types START:
