@@ -79,26 +79,7 @@ func switchDirection(e types.Elevator) types.MotorDirection {
 	}
 }
 
-func shouldStopAtFloor(e types.Elevator, floor int) bool {
-	if floor < 0 || floor >= config.NFloors {
-		return false
-	}
 
-	// Cab always stops
-	if e.Request[floor][int(types.BTCab)] {
-		return true
-	}
-
-	// stopp for Hall only if direction matches announced direction
-	switch e.MotorDirection {
-	case types.Up:
-		return e.Request[floor][int(types.BTHallUp)]
-	case types.Down:
-		return e.Request[floor][int(types.BTHallDown)]
-	default:
-		return false
-	}
-}
 
 func localClearHallOrder(e *types.Elevator, floor int, dir types.MotorDirection) bool {
 	if floor < 0 || floor >= config.NFloors {
@@ -140,3 +121,24 @@ func localClearCabOrder(
 }
 
 //Fjerner local caborders lokalt, hvordan få dette inn i DecisionMaker
+
+func shouldStopAtFloor(e types.Elevator, floor int) bool {
+	if floor < 0 || floor >= config.NFloors {
+		return false
+	}
+
+	// Cab always stops
+	if e.Request[floor][int(types.BTCab)] {
+		return true
+	}
+
+	// stopp for Hall only if direction matches announced direction
+	switch e.MotorDirection {
+	case types.Up:
+		return e.Request[floor][int(types.BTHallUp)]
+	case types.Down:
+		return e.Request[floor][int(types.BTHallDown)]
+	default:
+		return false
+	}
+}
