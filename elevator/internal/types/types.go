@@ -62,8 +62,8 @@ type FromLocalToDM struct {
 
 type Message struct {
 	SenderID      int
-	ElevatorList  [NElevators]int                    //ElevatorState??
-	HallOrderList [NElevators][NFloors][NButtons]int //ButtonState??
+	ElevatorList  [NElevators]int                    
+	HallOrderList HallOrderTable 
 	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
