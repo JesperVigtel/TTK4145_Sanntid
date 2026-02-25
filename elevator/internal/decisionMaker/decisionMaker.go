@@ -18,7 +18,7 @@ func RunDecisionMaker(
 	elevatorID int,
 ) {
 	var (
-		buttonEvents         = make(chan ButtonEvent)
+		orderEvents         = make(chan OrderEvent)
 		previousLocalOrders  [NFloors][NButtons]bool
 	)
 
@@ -28,11 +28,11 @@ func RunDecisionMaker(
 	localDecisionBasis := initializeLocalDecisionBasis(initialElevatorState, initialDecisionBasis, elevatorID)
 	decisionBasisUpdates <- localDecisionBasis
 
-	go hardware.PollButtons(buttonEvents)
+	go hardware.PollButtons(orderEvents)
 
 	for {
 		select {
-		case btnEvent := <-buttonEvents:
+		case btnEvent := <-orderEvents:
 			onButtonEvent(
 				&localDecisionBasis, elevatorID, btnEvent, decisionBasisUpdates,
 			)
@@ -54,10 +54,10 @@ func RunDecisionMaker(
 
 // initializeLocalWorldview creates the initial decision basis for this elevator.
 func initializeLocalDecisionBasis(
-	elevatorState localElevatorFromDriver,
-	globalDecisionBasis decisionBasisFromNetwork,
+	elevatorState LocalElevatorFromDriver,
+	globalDecisionBasis DecisionBasisFromNetwork,
 	elevatorID int,
-) decisionBasisFromAssigner {
+) DecisionBasisFromAssigner {
 	return initializeLocalDecisionBasis(elevatorState, globalDecisionBasis, elevatorID)
 }
 

@@ -9,10 +9,15 @@ import (
     "runtime"
 )
 
-func mergeNetworkHallOrders(){}
 
 
-func assignLocalOrders(decisionBasis globalDecisionBasis, elevatorID int) [NFloors][NButtons]bool {
+func mergeNetworkHallOrders(localDecisionBasis *DecisionBasisFromAssigner, consensusGlobalBasis DecisionBasisFromNetwork, elevatorID int) DecisionBasisFromAssigner{
+	return *localDecisionBasis 	//Placeholder
+}
+
+
+//Assignment based on deterministic HRA
+func assignLocalOrders(decisionBasis DecisionBasisFromNetwork, elevatorID int) [NFloors][NButtons]bool {
 	var orderTable [NFloors][NButtons]bool
 
 	hraExecutable := ""
