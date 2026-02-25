@@ -25,7 +25,7 @@ type Elevator struct {
 	MotorDirection MotorDirection
 	Request        [NFloors][NButtons]bool
 	Behaviour      ElevatorBehaviour
-	ActiveStatus    bool
+	ActiveStatus   bool
 }
 
 type ButtonType int
@@ -45,16 +45,26 @@ const (
 )
 
 type OrderEvent struct {
-	Floor int
+	Floor  int
 	Button ButtonType
 }
 
 type FromLocalToDM struct {
-	Elevator Elevator
+	Elevator       Elevator
 	CompletedOrder [NFloors][NButtons]bool
+	NewButtonPress *OrderEvent 
+	Obstructed     bool        
 }
 
+type ButtonState int
 
+const (
+	initial ButtonState = iota
+	standby
+	ButtonPressed
+	OrderAssigned
+	OrderCompleted
+)
 //Elevator types stop
 
 //Network types START:
@@ -66,8 +76,6 @@ type Message struct {
 	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
-
-
 
 //Network types END:
 
@@ -82,7 +90,6 @@ const (
 	CallTypeHallDown
 	CallTypeCab
 )
-
 
 type ClearRequestType int
 

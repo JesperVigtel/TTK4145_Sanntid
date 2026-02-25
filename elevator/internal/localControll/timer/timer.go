@@ -10,30 +10,31 @@ type TimerType int
 const (
 	DoorTimer TimerType = iota
 	WatchDogTimer
+	MotorRecoveryTimer
 )
 
 func Timer(
 	doorOpenChan <-chan bool,
 	motorActiveChan <-chan bool,
+	recoveryEnableChan <- chan bool,
+
 	doorClosedChan chan<- bool,
 	motorInactiveChan chan<- bool,
+	recoveryTickChan chan<- bool,
 ) {
-	var doorActive, watchDogActive bool
+	var doorActive, watchDogActive, recoveryActive bool
 
 	doorTimer := time.NewTimer(config.DoorOpenTime)
 	doorTimer.Stop()
 	motorTimer := time.NewTimer(config.MotorTimeout)
 	motorTimer.Stop()
+	motorRecoveryTimer := time.NewTimer(config.MotorRecoveryTime)
+	motorRecoveryTimer.Stop()
 
-
-	select { 
-		case <-doorTimer.C: 
-		default: 
-	}
-	select { 
-		case <-motorTimer.C: 
-		default: 
-	}
+// In case the timers already ticked, we drain the channels
+	select {case <-doorTimer.C: default: }
+	select { case <-motorTimer.C: default: }
+	select {case <- motorRecoveryTimer.C: default:}
 
 	for {
 		select {
@@ -54,6 +55,15 @@ func Timer(
 			} else {
 				stopAndDrain(motorTimer)
 			}
+		case isRecoveryActive := <-recoveryEnableChan:
+			recoveryActive = isRecoveryActive
+			if recoveryActive {
+				stopAndDrain(motorRecoveryTimer)
+				motorRecoveryTimer.Reset(config.MotorRecoveryTime)
+			} else {
+				stopAndDrain(motorRecoveryTimer)
+			}
+
 
 		case <-doorTimer.C:
 			if doorActive {
@@ -65,6 +75,13 @@ func Timer(
 			if watchDogActive {
 				watchDogActive = false
 				motorInactiveChan <- true
+			}
+// MotorRecovery should continoue to tick until we have a floor reading
+		case <-motorRecoveryTimer.C:
+			if recoveryActive{
+				recoveryTickChan <- true
+				stopAndDrain(motorRecoveryTimer)
+				motorRecoveryTimer.Reset(config.MotorRecoveryTime)
 			}
 		}
 	}
