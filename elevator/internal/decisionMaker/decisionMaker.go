@@ -1,31 +1,49 @@
 package decisionMaker
 
-
 import (
 	"elevator/internal/config"
-	."elevator/internal/types"
-)
+	"elevator/internal/localControll/hardware"
+	"elevator/internal/localControll/hardware/"
+	. "elevator/internal/types"
 
-// Kostnadsfunksjon. Bestemmer hvilken heis som skal ta en hall-ordre.
+	"golang.org/x/tools/go/callgraph/cha"
+)
 
 // ------------------------------------------------------------------------------------
 //	This module makes decisions for witch elevator to take a hall order
 // ------------------------------------------------------------------------------------
 
+
+
+
 type HallOrderTable [NFloors][NButtons]OrderState
 
 func decisionMaker(){
 
+	//Function parameters
 
+	
+	buttonEvent = make(chan ButtonEvent)
+
+	//worldView = initWorldView evt. decisionBasis
+	go hardware.PollButtons(buttonEvent)
+
+
+	//Three things can happen: localOrder, gloablOrder -> makeDecision, elevatorStatusUpdate
 
 	for{
-		switch{
-		case PendingOrder:
+		select{
 
-		case AssignedOrder:
+		case newElevatorPosision <- 
+		case LocalOrderPending <- buttonEvent:
+			localDescionBasis = updateDecisionBasis(LocalOrderPending)
+			globalDecisionBasis <- localDescionBasis
 
+		case GlobalOrderPending <- :
 
-		case CompletedOrder:
+		case OrderAssigned:
+
+		case OrderComplete:
 
 		}
 	}

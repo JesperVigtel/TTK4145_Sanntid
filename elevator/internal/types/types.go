@@ -60,6 +60,14 @@ type Message struct {
 	AliveList     [NElevators]bool
 }
 
+//Forslag?
+type NetworkMessage struct {
+		SenderID      int
+	ElevatorList  [NElevators]int                    
+	HallOrderList [NElevators][NFloors][NButtons]int 
+	AliveStatus   bool
+	AliveList     [NElevators]bool
+}
 
 
 //Network types END:
@@ -122,10 +130,10 @@ type State struct {
 type OrderState int
 
 const (
-	NoOrder OrderState = iota
-	PendingOrder
-	AssignedOrder
-	CompletedOrder
+	Standby OrderState = iota
+	OrderPending
+	OrderAssigned
+	OrderComplete
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
