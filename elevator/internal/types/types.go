@@ -156,7 +156,7 @@ type HRAInput struct {
 }
 
 
-type globalDecisionBasis struct {
+type decisionBasisFromNetwork struct {
 	AliveList    [NElevators]bool
 	ElevatorList  [NElevators]HRAElevState
 	HallOrderTable [NElevators][NFloors][NButtons]ButtonState
