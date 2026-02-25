@@ -25,7 +25,7 @@ type Elevator struct {
 	MotorDirection MotorDirection
 	Request        [NFloors][NButtons]bool
 	Behaviour      ElevatorBehaviour
-	ActiveSatus    bool
+	ActiveStatus   bool
 }
 
 type ButtonType int
@@ -36,17 +36,34 @@ const (
 	BTCab
 )
 
-type ButtonEvent struct {
-	Floor int
+type ElevatorBehaviour int
+
+const (
+	ElevatorIdle ElevatorBehaviour = iota
+	ElevatorMoving
+	ElevatorDoorOpen
+)
+
+type OrderEvent struct {
+	Floor  int
 	Button ButtonType
 }
 
-type ElevatorBehavior int
+type FromLocalToDM struct {
+	Elevator       Elevator
+	CompletedOrder [NFloors][NButtons]bool
+	NewButtonPress *OrderEvent 
+	Obstructed     bool        
+}
+
+type ButtonState int
 
 const (
-	idle ElevatorBehavior = iota
-	Moving
-	DoorOpen
+	initial ButtonState = iota
+	standby
+	ButtonPressed
+	OrderAssigned
+	OrderCompleted
 )
 //Elevator types stop
 
@@ -60,14 +77,6 @@ type Message struct {
 	AliveList     [NElevators]bool
 }
 
-//Forslag?
-type NetworkMessage struct {
-		SenderID      int
-	ElevatorList  [NElevators]int                    
-	HallOrderList [NElevators][NFloors][NButtons]int 
-	AliveStatus   bool
-	AliveList     [NElevators]bool
-}
 
 
 //Network types END:
@@ -84,14 +93,6 @@ const (
 	CallTypeCab
 )
 
-type ElevatorBehaviour int
-
-const (
-	ElevatorIdle ElevatorBehaviour = iota
-	ElevatorMoving
-	ElevatorDoorOpen
-)
-
 type ClearRequestType int
 
 const (
@@ -99,6 +100,7 @@ const (
 	ClearInDirn
 )
 
+// bruke vanlig elevator isteden eller?? har en nesten lik struct over (Andreas)
 type LocalElevatorState struct {
 	Behaviour   ElevatorBehaviour
 	Floor       int
