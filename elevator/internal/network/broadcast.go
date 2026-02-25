@@ -24,7 +24,6 @@ func Transmitter(port int, messageOut <-chan Message){ //velger en enkel melding
 		}
 		conn.WriteTo(jsonbytes, addr)
 	}
-
 }
 
 
