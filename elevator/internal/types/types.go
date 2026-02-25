@@ -156,13 +156,20 @@ type HRAInput struct {
 }
 
 
-type decisionBasisFromNetwork struct {
+type DecisionBasisFromNetwork struct {
 	AliveList    [NElevators]bool
 	ElevatorList  [NElevators]HRAElevState
 	HallOrderTable [NElevators][NFloors][NButtons]ButtonState
 }
 
-type localElevatorFromDriver struct{
+type LocalElevatorFromDriver struct{
 	Elevator Elevator
 	ExecutedOrders [NFloors][NButtons]bool
+}
+
+
+type DecisionBasisFromAssigner struct{	//Placeholder
+	AliveList    [NElevators]bool
+	ElevatorList  [NElevators]HRAElevState
+	HallOrderTable [NElevators][NFloors][NButtons]ButtonState
 }

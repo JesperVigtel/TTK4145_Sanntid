@@ -1,5 +1,9 @@
 package decisionMaker
 
+import( 
+	."elevator/internal/types"
+)
+
 
 // onButtonEvent processes a button press by updating the worldview and publishing it to the network.
 func onButtonEvent(
@@ -33,7 +37,7 @@ func onNetworkConsensus(
 	lightUpdateRequests chan<- [NFloors][NButtons]ButtonState,
 ) {
 	*&localDecisionBasis = mergeNetworkHallOrders(*&localDecisionBasis, consensusGlobalBasis, elevatorID)
-	localAssignedOrders := assignOrders(consensusGlobalBasis, elevatorID)
+	localAssignedOrders := assignLocalOrders(consensusGlobalBasis, elevatorID)
 	if localAssignedOrders != *previousLocalOrders {
 		newLocalOrders <- localAssignedOrders
 		*previousLocalOrders = localAssignedOrders

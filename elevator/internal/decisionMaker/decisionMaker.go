@@ -7,13 +7,13 @@ import (
 )
 
 
-// RunAssignmentController manages elevator order assignment and system worldview broadcasting.
+// RunAssignmentController manages elevator order assignment and system decision basis broadcasting.
 // It listens for button events, elevator hardware state updates, and network-wide consensus states.
 func RunDecisionMaker(
 	newLocalOrders chan<- [NFloors][NButtons]bool,
-	elevatorStateUpdates <-chan localElevatorFromDriver,
-	decisionBasisUpdates chan<- decisionBasisFromAssigner,
-	networkConsensusBasis <-chan decisionBasisFromNetwork,
+	elevatorStateUpdates <-chan LocalElevatorFromDriver,
+	decisionBasisUpdates chan<- DecisionBasisFromAssigner,
+	networkConsensusBasis <-chan DecisionBasisFromNetwork,
 	lightUpdateRequests chan<- [NFloors][NButtons]ButtonState,
 	elevatorID int,
 ) {
