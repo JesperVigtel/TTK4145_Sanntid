@@ -7,25 +7,23 @@ import (
     "runtime"
 )
 
+
+
+// ------------------------------------------------------------------------------------
+//	This module assignes orders to a local elevator
+// ------------------------------------------------------------------------------------
+
+
+
 // Struct members must be public in order to be accessible by json.Marshal/.Unmarshal
 // This means they must start with a capital letter, so we need to use field renaming struct tags to make them camelCase
 
 
-type HRAElevState struct {
-    Behavior    string      `json:"behaviour"`
-    Floor       int         `json:"floor"` 
-    Direction   string      `json:"direction"`
-    CabRequests []bool      `json:"cabRequests"`
-}
-
-type HRAInput struct {
-    HallRequests    [][2]bool                   `json:"hallRequests"`
-    States          map[string]HRAElevState     `json:"states"`
-}
 
 
 
-func costCalculator(){      //Må ta inn info for HallRequest og elevatorStates 
+func assignLocalOrders(decisionBasis globalDecisionBasis, elevatorID int) [NFloors][NButtons]bool{      //Må ta inn info for HallRequest og elevatorStates 
+    var orderTable [NFloors][NButtons]bool
 
     hraExecutable := ""
     switch runtime.GOOS {
@@ -66,4 +64,6 @@ func costCalculator(){      //Må ta inn info for HallRequest og elevatorStates
     for k, v := range *output {
         fmt.Printf("%6v :  %+v\n", k, v)
     }
+
+    return orderTable
 }

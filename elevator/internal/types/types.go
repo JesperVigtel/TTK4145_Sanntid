@@ -56,7 +56,7 @@ type FromLocalToDM struct {
 	Obstructed     bool        
 }
 
-type ButtonState int
+type ButtonState int	//deklarert lengre ned som OrderState (jesper)
 
 const (
 	initial ButtonState = iota
@@ -100,13 +100,15 @@ const (
 	ClearInDirn
 )
 
-// bruke vanlig elevator isteden eller?? har en nesten lik struct over (Andreas)
-type LocalElevatorState struct {
-	Behaviour   ElevatorBehaviour
-	Floor       int
-	Direction   MotorDirection
-	CabRequests []bool
-}
+
+
+// // bruke vanlig elevator isteden eller?? har en nesten lik struct over (Andreas)
+// type LocalElevatorState struct {
+// 	Behaviour   ElevatorBehaviour
+// 	Floor       int
+// 	Direction   MotorDirection
+// 	CabRequests []bool
+// }
 
 type Req struct {
 	Active     bool
@@ -115,7 +117,7 @@ type Req struct {
 
 type State struct {
 	ID    string
-	State LocalElevatorState
+	State Elevator
 	Time  int64
 }
 
@@ -132,10 +134,35 @@ type State struct {
 type OrderState int
 
 const (
-	Standby OrderState = iota
+	OrderStandby OrderState = iota
 	OrderPending
 	OrderAssigned
 	OrderComplete
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
+
+
+type HRAElevState struct {
+    Behavior    string      `json:"behaviour"`
+    Floor       int         `json:"floor"` 
+    Direction   string      `json:"direction"`
+    CabRequests []bool      `json:"cabRequests"`
+}
+
+type HRAInput struct {
+    HallRequests    [NFloors][2]bool           	`json:"hallRequests"`
+    States          map[string]HRAElevState     `json:"states"`
+}
+
+
+type globalDecisionBasis struct {
+	AliveList    [NElevators]bool
+	ElevatorList  [NElevators]HRAElevState
+	HallOrderTable [NElevators][NFloors][NButtons]ButtonState
+}
+
+type localElevatorFromDriver struct{
+	Elevator Elevator
+	ExecutedOrders [NFloors][NButtons]bool
+}
