@@ -32,8 +32,8 @@ func Timer(
 	motorRecoveryTimer.Stop()
 
 // In case the timers already ticked, we drain the channels
-	select {case <-doorTimer.C: default: }
-	select { case <-motorTimer.C: default: }
+	select {case <-doorTimer.C: default:}
+	select {case <-motorTimer.C: default:}
 	select {case <- motorRecoveryTimer.C: default:}
 
 	for {
