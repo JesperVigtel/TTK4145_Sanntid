@@ -51,7 +51,7 @@ type OrderEvent struct {
 
 type FromLocalToDM struct {
 	Elevator       Elevator
-	CompletedOrder [NFloors][NButtons]bool
+	CompletedOrder CabOrderTable
 	NewButtonPress *OrderEvent 
 	Obstructed     bool        
 }
