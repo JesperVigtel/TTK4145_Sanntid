@@ -31,7 +31,7 @@ func RunDecisionMaker(
 
 	for {
 		select {
-		case newButtonPress 	:= 	<-buttonEvent:
+		case newButtonPress := 	<-buttonEvent:
 			onButtonEvent(
 				&localDecisionBasis, elevatorID, newButtonPress, distributedDecisionBasis,
 			)

@@ -5,6 +5,10 @@ import (
 )
 
 
-func syncElevatorState(elevatorUpdate LocalElevatorFromDriver, localDecisionBasis *DecisionBasisFromAssigner, elevatorID int) DecisionBasisFromAssigner{
+func syncElevatorState(
+	elevatorUpdate LocalElevatorFromDriver, 
+	localDecisionBasis *DecisionBasisFromAssigner, 
+	elevatorID int) DecisionBasisFromAssigner {
+		
 	return *localDecisionBasis //Placeholder
 }

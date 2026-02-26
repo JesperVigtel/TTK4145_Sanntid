@@ -148,21 +148,22 @@ type HRAInput struct {
 }
 
 
-type DecisionBasisFromNetwork struct {
-	AliveList    	[NElevators]bool
-	ElevatorList  	[NElevators]HRAElevState
-	HallOrderTable 	HallOrderTable
-}
-
 type LocalElevatorFromDriver struct{
 	Elevator 		Elevator
 	ExecutedOrders 	CabOrderTable
 }
 
 
+//Pot mer DecisionBasis into one
+
+type DecisionBasisFromNetwork struct {
+	AliveList    	[NElevators]bool
+	ElevatorList  	[NElevators]HRAElevState
+	HallOrderTable 	[NElevators]HallOrderTable
+}
 
 type DecisionBasisFromAssigner struct{	//Placeholder, change from network based on Need 
-	AliveList    	[NElevators]bool
-	ElevatorStates  [NElevators]HRAElevState
+	AliveStatus    	bool
+	LocalState  	map[int]HRAElevState
 	HallRequests 	HallOrderTable
 }

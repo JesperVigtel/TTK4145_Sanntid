@@ -14,3 +14,7 @@ func initializeLocalDecisionBasis(
 		) DecisionBasisFromAssigner {
 	return initializeLocalDecisionBasis(elevatorState, globalDecisionBasis, elevatorID)
 }
+
+func updateLightStates(consensusGlobalBasis DecisionBasisFromNetwork, elevatorID int) HallOrderTable{
+	return consensusGlobalBasis.HallOrderTable[elevatorID]		//Placeholder
+}

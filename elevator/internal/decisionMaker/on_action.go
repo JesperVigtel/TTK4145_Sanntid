@@ -9,10 +9,10 @@ import(
 func onButtonEvent(
 	localDecisionBasis 				*DecisionBasisFromAssigner,
 	elevatorID 						int,
-	orderEvent 						OrderEvent,
+	buttonEvent 					ButtonEvent,
 	decisionBasisUpdates	chan<- 	DecisionBasisFromAssigner,
 ) {
-	*localDecisionBasis = handleButtonPressed(localDecisionBasis, elevatorID, orderEvent)
+	*localDecisionBasis = handleButtonPressed(localDecisionBasis, elevatorID, buttonEvent)
 	decisionBasisUpdates 	<- 	*localDecisionBasis
 }
 
@@ -30,22 +30,17 @@ func onElevatorHardwareUpdate(
 // onNetworkConsensus merges network-wide order data, assigns new local orders if needed, and updates button lights.
 func onNetworkConsensus(
 	localDecisionBasis 				*DecisionBasisFromAssigner,
-	consensusGlobalBasis 			DecisionBasisFromNetwork,
+	networkConsensusBasis 			DecisionBasisFromNetwork,
 	elevatorID 						int,
 	newLocalOrders 			chan<- 	CabOrderTable,
 	previousLocalOrders 			*CabOrderTable,
 	lightUpdateRequests 	chan<- 	HallOrderTable,
 ) {
-	*localDecisionBasis 	= 	mergeNetworkHallOrders(localDecisionBasis, consensusGlobalBasis, elevatorID)
-	localAssignedOrders 	:= 	assignLocalOrders(consensusGlobalBasis, elevatorID)
+	*localDecisionBasis 	= 	mergeNetworkHallOrders(localDecisionBasis, networkConsensusBasis, elevatorID)
+	localAssignedOrders 	:= 	assignLocalOrders(networkConsensusBasis, elevatorID)
 	if localAssignedOrders 	!= 	*previousLocalOrders {
 		newLocalOrders 		<- 	localAssignedOrders
 		*previousLocalOrders = 	localAssignedOrders
 	}
-	lightUpdateRequests 	<- 	updateLightStates(consensusGlobalBasis, elevatorID)
-}
-
-
-func updateLightStates(consensusGlobalBasis DecisionBasisFromNetwork, elevatorID int) HallOrderTable{
-	return consensusGlobalBasis.HallOrderTable[elevatorID]		//Placeholder
+	lightUpdateRequests 	<- 	updateLightStates(networkConsensusBasis, elevatorID)
 }
