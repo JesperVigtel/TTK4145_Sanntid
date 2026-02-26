@@ -28,7 +28,7 @@ func localControl(
 		motorInactiveChan = make(chan bool, 1) 
 		recoveryTickChan  = make(chan bool, 1) 
 		obstructionChan   = make(chan bool, config.ChannelBufferSize)
-		buttonPressChan   = make(chan types.OrderEvent, config.ChannelBufferSize)
+		buttonPressChan   = make(chan types.OrderEvent, config.ChannelBufferSize)	//Changed OrderEvent to ButtonEvent
 		obstruction  bool
 	)
 

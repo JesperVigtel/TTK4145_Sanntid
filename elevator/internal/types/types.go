@@ -44,7 +44,7 @@ const (
 	ElevatorDoorOpen
 )
 
-type OrderEvent struct {
+type ButtonEvent struct {	//Changed back to ButtonEvent for concistency (Jesper)
 	Floor  int
 	Button ButtonType
 }
@@ -52,7 +52,7 @@ type OrderEvent struct {
 type FromLocalToDM struct {
 	Elevator       Elevator
 	CompletedOrder CabOrderTable
-	NewButtonPress *OrderEvent 
+	NewButtonPress *ButtonEvent 
 	Obstructed     bool        
 }
 
