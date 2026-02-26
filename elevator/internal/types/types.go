@@ -132,7 +132,7 @@ const (
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
-type CabOrderTable [NFloors][NButtons]bool
+type CabOrderTable 	[NFloors][NButtons]bool
 
 
 type HRAElevState struct {
@@ -149,19 +149,20 @@ type HRAInput struct {
 
 
 type DecisionBasisFromNetwork struct {
-	AliveList    [NElevators]bool
-	ElevatorList  [NElevators]HRAElevState
-	HallOrderTable HallOrderTable
+	AliveList    	[NElevators]bool
+	ElevatorList  	[NElevators]HRAElevState
+	HallOrderTable 	HallOrderTable
 }
 
 type LocalElevatorFromDriver struct{
-	Elevator Elevator
-	ExecutedOrders CabOrderTable
+	Elevator 		Elevator
+	ExecutedOrders 	CabOrderTable
 }
 
 
+
 type DecisionBasisFromAssigner struct{	//Placeholder, change from network based on Need 
-	AliveList    [NElevators]bool
-	ElevatorList  [NElevators]HRAElevState
-	HallOrderTable HallOrderTable
+	AliveList    	[NElevators]bool
+	ElevatorStates  [NElevators]HRAElevState
+	HallRequests 	HallOrderTable
 }
