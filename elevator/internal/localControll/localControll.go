@@ -28,13 +28,14 @@ func localControl(
 		motorInactiveChan = make(chan bool, 1) 
 		recoveryTickChan  = make(chan bool, 1) 
 		obstructionChan   = make(chan bool, config.ChannelBufferSize)
-		buttonPressChan   = make(chan types.OrderEvent, config.ChannelBufferSize)	//Changed OrderEvent to ButtonEvent
+		buttonPressChan   = make(chan types.OrderEvent, config.ChannelBufferSize)
 		obstruction  bool
 	)
 
 	go hardware.PollFloorSensor(floorChan)
 	go hardware.PollObstructionSwitch(obstructionChan)
 	go hardware.PollButtons(buttonPressChan)
+	go hardware.PollStopButton(StopPressChan)
 
 	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan,  doorClosedChan, motorInactiveChan, recoveryTickChan)
 
@@ -49,7 +50,6 @@ func localControl(
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			elevator.Behaviour = types.ElevatorMoving
-			//sjekk om den 
 
 		case orders := <-newOrder:
 			elevator.Request = orders
