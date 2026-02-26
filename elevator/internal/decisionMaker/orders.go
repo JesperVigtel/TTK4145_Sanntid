@@ -33,8 +33,8 @@ func assignLocalOrders(decisionBasis DecisionBasisFromNetwork, elevatorID int) [
 
 	// Fyll inn input fra decisionBasis!
 	input := HRAInput{
-		HallRequests: decisionBasis.HallRequests, // ANTATT type er riktig
-		States:       decisionBasis.ElevatorStates, // ANTATT type er riktig
+		HallRequests: decisionBasis.HallRequests, 		// ANTATT type er riktig
+		States:       decisionBasis.ElevatorStates, 		// ANTATT type er riktig
 	}
 
 	jsonBytes, err := json.Marshal(input)

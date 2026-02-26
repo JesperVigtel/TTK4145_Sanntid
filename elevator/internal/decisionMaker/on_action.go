@@ -2,7 +2,6 @@ package decisionMaker
 
 import( 
 	."elevator/internal/types"
-	."elevator/internal/config"
 )
 
 
@@ -14,7 +13,7 @@ func onButtonEvent(
 	decisionBasisUpdates	chan<- 	DecisionBasisFromAssigner,
 ) {
 	*localDecisionBasis = handleButtonPressed(localDecisionBasis, elevatorID, orderEvent)
-	decisionBasisUpdates <- *localDecisionBasis
+	decisionBasisUpdates 	<- 	*localDecisionBasis
 }
 
 // onElevatorHardwareUpdate synchronizes the local worldview with current hardware state and notifies the network.
@@ -25,7 +24,7 @@ func onElevatorHardwareUpdate(
 	worldviewUpdates	chan<- 	DecisionBasisFromAssigner,
 ) {
 	*localWorldview = syncElevatorState(elevatorUpdate, localWorldview, elevatorID)
-	worldviewUpdates <- *localWorldview
+	worldviewUpdates 	<- 	*localWorldview
 }
 
 // onNetworkConsensus merges network-wide order data, assigns new local orders if needed, and updates button lights.
@@ -37,13 +36,13 @@ func onNetworkConsensus(
 	previousLocalOrders 			*CabOrderTable,
 	lightUpdateRequests 	chan<- 	HallOrderTable,
 ) {
-	*localDecisionBasis = mergeNetworkHallOrders(localDecisionBasis, consensusGlobalBasis, elevatorID)
-	localAssignedOrders := assignLocalOrders(consensusGlobalBasis, elevatorID)
-	if localAssignedOrders != *previousLocalOrders {
-		newLocalOrders <- localAssignedOrders
-		*previousLocalOrders = localAssignedOrders
+	*localDecisionBasis 	= 	mergeNetworkHallOrders(localDecisionBasis, consensusGlobalBasis, elevatorID)
+	localAssignedOrders 	:= 	assignLocalOrders(consensusGlobalBasis, elevatorID)
+	if localAssignedOrders 	!= 	*previousLocalOrders {
+		newLocalOrders 		<- 	localAssignedOrders
+		*previousLocalOrders = 	localAssignedOrders
 	}
-	lightUpdateRequests <- updateLightStates(consensusGlobalBasis, elevatorID)
+	lightUpdateRequests 	<- 	updateLightStates(consensusGlobalBasis, elevatorID)
 }
 
 

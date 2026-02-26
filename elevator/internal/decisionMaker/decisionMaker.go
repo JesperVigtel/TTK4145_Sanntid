@@ -1,43 +1,42 @@
 package decisionMaker
 
 import (
-	."elevator/internal/config"
 	."elevator/internal/types"
-	"elevator/internal/localControll/hardware"
 )
 
 
 // RunAssignmentController manages elevator order assignment and system decision basis broadcasting.
 // It listens for button events, elevator hardware state updates, and network-wide consensus states.
 func RunDecisionMaker(
-	newLocalOrders chan<- [NFloors][NButtons]bool,
-	elevatorStateUpdates <-chan LocalElevatorFromDriver,
-	decisionBasisUpdates chan<- DecisionBasisFromAssigner,
-	networkConsensusBasis <-chan DecisionBasisFromNetwork,
-	lightUpdateRequests chan<- [NFloors][NButtons]ButtonState,
-	elevatorID int,
+	newLocalOrders 			chan<- 	CabOrderTable,
+	decisionBasisUpdates 	chan<- 	DecisionBasisFromAssigner,
+	lightUpdateRequests 	chan<- 	HallOrderTable,
+	elevatorStateUpdates 	<-chan 	LocalElevatorFromDriver,
+	networkConsensusBasis 	<-chan 	DecisionBasisFromNetwork,
+	orderEvent 				<-chan	OrderEvent,
+	elevatorID 						int,
 ) {
 	var (
-		orderEvents         = make(chan OrderEvent)
-		previousLocalOrders  [NFloors][NButtons]bool
+		//orderEvents         = make(chan OrderEvent)
+		previousLocalOrders  CabOrderTable
 	)
 
 	// Perform initial synchronization with hardware and network consensus.
-	initialElevatorState := <-elevatorStateUpdates
-	initialDecisionBasis := <-networkConsensusBasis
-	localDecisionBasis := initializeLocalDecisionBasis(initialElevatorState, initialDecisionBasis, elevatorID)
-	decisionBasisUpdates <- localDecisionBasis
+	initialElevatorState 	:= <-elevatorStateUpdates
+	initialDecisionBasis 	:= <-networkConsensusBasis
+	localDecisionBasis 		:= initializeLocalDecisionBasis(initialElevatorState, initialDecisionBasis, elevatorID)
+	decisionBasisUpdates 	<- localDecisionBasis
 
-	go hardware.PollButtons(orderEvents)
+	//go hardware.PollButtons(orderEvents)
 
 	for {
 		select {
-		case btnEvent := <-orderEvents:
+		case btnEvent 	:= 	<-orderEvent:
 			onButtonEvent(
 				&localDecisionBasis, elevatorID, btnEvent, decisionBasisUpdates,
 			)
 
-		case elevState := <-elevatorStateUpdates:
+		case elevState 	:= 	<-elevatorStateUpdates:
 			onElevatorHardwareUpdate(
 				&localDecisionBasis, elevatorID, elevState, decisionBasisUpdates,
 			)
@@ -54,10 +53,10 @@ func RunDecisionMaker(
 
 // initializeLocalWorldview creates the initial decision basis for this elevator.
 func initializeLocalDecisionBasis(
-	elevatorState LocalElevatorFromDriver,
+	elevatorState 		LocalElevatorFromDriver,
 	globalDecisionBasis DecisionBasisFromNetwork,
-	elevatorID int,
-) DecisionBasisFromAssigner {
+	elevatorID 			int,
+		) DecisionBasisFromAssigner {
 	return initializeLocalDecisionBasis(elevatorState, globalDecisionBasis, elevatorID)
 }
 
