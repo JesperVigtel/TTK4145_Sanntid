@@ -154,7 +154,7 @@ type LocalElevatorFromDriver struct{
 }
 
 
-//Pot mer DecisionBasis into one
+//Ønsker å endre DecisonBasis til SystemState. Skal visstnok være mer korrekt (Jesper)
 
 type DecisionBasisFromNetwork struct {
 	AliveList    	[NElevators]bool

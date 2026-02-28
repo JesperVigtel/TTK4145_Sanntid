@@ -18,13 +18,13 @@ func onButtonEvent(
 
 // onElevatorHardwareUpdate synchronizes the local worldview with current hardware state and notifies the network.
 func onElevatorHardwareUpdate(
-	localWorldview 				*DecisionBasisFromAssigner,
-	elevatorID 					int,
-	elevatorUpdate 				LocalElevatorFromDriver,
-	worldviewUpdates	chan<- 	DecisionBasisFromAssigner,
+	localDecisionBasis 				*DecisionBasisFromAssigner,
+	elevatorID 						int,
+	elevatorUpdate 					LocalElevatorFromDriver,
+	decisionBasisUpdates	chan<- 	DecisionBasisFromAssigner,
 ) {
-	*localWorldview = syncElevatorState(elevatorUpdate, localWorldview, elevatorID)
-	worldviewUpdates 	<- 	*localWorldview
+	*localDecisionBasis = syncElevatorState(elevatorUpdate, localDecisionBasis, elevatorID)
+	decisionBasisUpdates 	<- 	*localDecisionBasis
 }
 
 // onNetworkConsensus merges network-wide order data, assigns new local orders if needed, and updates button lights.

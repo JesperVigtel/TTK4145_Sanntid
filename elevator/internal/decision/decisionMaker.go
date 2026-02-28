@@ -21,7 +21,6 @@ func RunDecisionMaker(
 		previousLocalOrders  CabOrderTable
 	)
 
-	// Perform initial synchronization with hardware and network consensus.
 	initialElevatorState 		:= 	<-	elevatorStateUpdates
 	initialDecisionBasis 		:= 	<-	networkConsensusBasis
 	localDecisionBasis 			:= 		initializeLocalDecisionBasis(initialElevatorState, initialDecisionBasis, elevatorID)
@@ -31,9 +30,9 @@ func RunDecisionMaker(
 
 	for {
 		select {
-		case newButtonPress := 	<-buttonEvent:
+		case newButtonEvent := 	<-buttonEvent:
 			onButtonEvent(
-				&localDecisionBasis, elevatorID, newButtonPress, distributedDecisionBasis,
+				&localDecisionBasis, elevatorID, newButtonEvent, distributedDecisionBasis,
 			)
 
 		case newElevState 	:= 	<-elevatorStateUpdates:

@@ -6,7 +6,6 @@ import (
     "os/exec"
     "fmt"
     "encoding/json"
-    "runtime"
 )
 
 
@@ -73,15 +72,7 @@ func assignLocalOrders(decisionBasis DecisionBasisFromNetwork, elevatorID int) C
 		return localOrderTable
 	}
 
-	// Tolke outputen for denne elevator, for elevID
-	key := fmt.Sprintf("%d", elevatorID)
-	assignedOrders, exists := output[key]
-	if !exists {
-		fmt.Printf("No orders assigned for elevator %d\n", elevatorID)
-		return localOrderTable
-	}
-
-	localOrderTable := BuildOrderTable(input, output, elevatorID)
+	localOrderTable = BuildOrderTable(input, output, elevatorID)
 
 	return localOrderTable
 }
@@ -90,18 +81,17 @@ func assignLocalOrders(decisionBasis DecisionBasisFromNetwork, elevatorID int) C
 
 
 func BuildOrderTable(
-	hraOutput map[string][][2]bool,
-	elevatorID string, 
-	cabRequests []bool
-	) 
+	input HRAInput,
+	output map[string][][2]bool,
+	elevatorID int,
+) CabOrderTable {
 
-	CabOrderTable {
     var orderTable CabOrderTable
 
-	cabRequests := input.States[elevatorIDStr].CabRequests
 	elevatorIDStr := fmt.Sprintf("elevator_%d", elevatorID)
+	cabRequests := input.States[elevatorIDStr].CabRequests
 
-    if assignedOrders, found := hraOutput[elevatorID]; found {
+    if assignedOrders, found := output[elevatorIDStr]; found {
         for floor := 0; floor < NFloors && floor < len(assignedOrders); floor++ {
             for btn := BTHallUp; btn < BTCab; btn++ {
                 orderTable[floor][btn] = assignedOrders[floor][btn]
@@ -123,3 +113,4 @@ func BuildOrderTable(
 // 		fmt.Println("OS not supported")
 // 		return orderTable
 // 	}
+
