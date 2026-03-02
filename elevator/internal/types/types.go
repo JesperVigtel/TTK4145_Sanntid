@@ -75,10 +75,10 @@ type Message struct {
 }
 
 
-type NetworkNodeRegistry struct {
-    Nodes []int // all currently active nodes
-    New   []int // nodes that just came online
-    Lost  []int // nodes that just went offline
+type GlobalNodeRegistry struct {
+    Nodes []int 
+    New   []int 
+    Lost  []int 
 }
 
 
