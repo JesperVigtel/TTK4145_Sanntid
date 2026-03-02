@@ -56,16 +56,29 @@ type FromLocalToDM struct {
 	Obstructed     bool        
 }
 
+
+type LocalElevatorFromDriver struct{
+	Elevator 		Elevator
+	ExecutedOrders 	CabOrderTable
+}
+
 //Elevator types stop
 
 //Network types START:
 
 type Message struct {
 	SenderID      int
-	ElevatorList  [NElevators]int                    
+	ElevatorList  [NElevators]HRAElevState                   
 	HallOrderList HallOrderTable 
 	AliveStatus   bool
 	AliveList     [NElevators]bool
+}
+
+
+type NetworkNodeRegistry struct {
+    Nodes []int // all currently active nodes
+    New   []int // nodes that just came online
+    Lost  []int // nodes that just went offline
 }
 
 
@@ -148,22 +161,20 @@ type HRAInput struct {
 }
 
 
-type LocalElevatorFromDriver struct{
-	Elevator 		Elevator
-	ExecutedOrders 	CabOrderTable
-}
-
-
 //Ønsker å endre DecisonBasis til SystemState. Skal visstnok være mer korrekt (Jesper)
 
-type DecisionBasisFromNetwork struct {
+
+// Flows: DecisionMaker → ConsensusManager
+type AgreedSystemState struct {
 	AliveList    	[NElevators]bool
 	ElevatorList  	[NElevators]HRAElevState
 	HallOrderTable 	[NElevators]HallOrderTable
 }
 
-type DecisionBasisFromAssigner struct{	//Placeholder, change from network based on Need 
+
+// Flows: ConsensusManager → DecisionMaker
+type LocalSystemState struct{
 	AliveStatus    	bool
-	LocalState  	map[int]HRAElevState
+	ElevatorState  	HRAElevState
 	HallRequests 	HallOrderTable
 }

@@ -1,98 +1,92 @@
 package decisionMaker
 
 import (
-	."elevator/internal/types"
+	. "elevator/internal/types"
 )
 
-
-// RunAssignmentController manages elevator order assignment and system decision basis broadcasting.
-// It listens for button events, elevator hardware state updates, and network-wide consensus states.
 func RunDecisionMaker(
-	newLocalOrders 				chan<- 	CabOrderTable,
-	distributedDecisionBasis	chan<- 	DecisionBasisFromAssigner,
-	lightUpdateRequests 		chan<- 	HallOrderTable,
-	elevatorStateUpdates 		<-chan 	LocalElevatorFromDriver,
-	networkConsensusBasis 		<-chan 	DecisionBasisFromNetwork,
-	buttonEvent 				<-chan	ButtonEvent,
-	elevatorID 							int,
+	newLocalOrders       chan<- CabOrderTable,
+	localSystemState     chan<- LocalSystemState,
+	lightUpdateRequests  chan<- HallOrderTable,
+	elevatorStateUpdates <-chan LocalElevatorFromDriver,
+	agreedSystemState    <-chan AgreedSystemState,
+	buttonEvents         <-chan ButtonEvent,
+	elevatorID           int,
 ) {
 	var (
-		//orderEvents         = make(chan OrderEvent)
-		previousLocalOrders  CabOrderTable
+		localState     LocalSystemState
+		previousOrders CabOrderTable
 	)
 
-	initialElevatorState 		:= 	<-	elevatorStateUpdates
-	initialDecisionBasis 		:= 	<-	networkConsensusBasis
-	localDecisionBasis 			:= 		initializeLocalDecisionBasis(initialElevatorState, initialDecisionBasis, elevatorID)
-	distributedDecisionBasis 		<- 	localDecisionBasis
-
-	//go hardware.PollButtons(orderEvents)
+	localState = initLocalSystemState(<-elevatorStateUpdates, elevatorID)
+	localSystemState <- localState
 
 	for {
 		select {
-		case newButtonEvent := 	<-buttonEvent:
-			onButtonEvent(
-				&localDecisionBasis, elevatorID, newButtonEvent, distributedDecisionBasis,
-			)
+		case hw := <-elevatorStateUpdates:
+			localState = applyHardwareUpdate(localState, hw, elevatorID)
+			localSystemState <- localState
+		
+		case btn := <-buttonEvents:
+			localState = applyButtonPress(localState, elevatorID, btn)
+			localSystemState <- localState
+			
 
-		case newElevState 	:= 	<-elevatorStateUpdates:
-			onElevatorHardwareUpdate(
-				&localDecisionBasis, elevatorID, newElevState, distributedDecisionBasis,
-			)
-
-		case newConsensusBasis := <-networkConsensusBasis:
-			onNetworkConsensus(
-				&localDecisionBasis, newConsensusBasis, elevatorID,
-				newLocalOrders, &previousLocalOrders, lightUpdateRequests,
+		case agreedState := <-agreedSystemState:
+			localState, previousOrders = assignOrders(
+				agreedState, localState, previousOrders,
+				newLocalOrders, lightUpdateRequests, elevatorID,
 			)
 		}
 	}
 }
 
 
+// package decisionMaker
+
+// import (
+// 	."elevator/internal/types"
+// )
 
 
-
-// //Denne modulen får inn fysiske elevator-states, og synkronisert verdenssyn, og sørger for å ta korrekt HRA-algoritmen korrekt
-
-// // ------------------------------------------------------------------------------------
-// //	This module makes decisions for witch elevator to take a hall order
-// // ------------------------------------------------------------------------------------
-
-
-// //initLocalDecisionBasis?
-
-
-
-// type HallOrderTable [NFloors][NButtons]OrderState
-
-// func decisionMaker(){
-// 	//Function parameters
-// 	localElevatorEvent <-chan localElevatorFromDriver
-// 	elevatorState := <-localElevatorEvent
-
-// 	syncronizedDecisionBasis <-chan globalDecisionBasis
-
-
-
+// func RunDecisionMaker(
+// 	newLocalOrders 				chan<- 	CabOrderTable,
+// 	distributedDecisionBasis	chan<- 	LocalSystemState,
+// 	lightUpdateRequests 		chan<- 	HallOrderTable,
+// 	elevatorStateUpdates 		<-chan 	LocalElevatorFromDriver,
+// 	networkConsensusBasis 		<-chan 	AgreedSystemState,
+// 	buttonEvent 				<-chan	ButtonEvent,
+// 	elevatorID 							int,
+// ) {
 // 	var (
-// 		buttonEvent = make(chan ButtonEvent)
+// 		//orderEvents         = make(chan OrderEvent)
+// 		previousLocalOrders  CabOrderTable
 // 	)
-	
 
-// 	//worldView = initWorldView evt. decisionBasis
-// 	go hardware.PollButtons(buttonEvent)
+// 	initialElevatorState 		:= 	<-	elevatorStateUpdates
+// 	initialDecisionBasis 		:= 	<-	networkConsensusBasis
+// 	localDecisionBasis 			:= 		initializeLocalDecisionBasis(initialElevatorState, initialDecisionBasis, elevatorID)
+// 	distributedDecisionBasis 		<- 	localDecisionBasis
 
-// 	//Three things can happen: localOrder, gloablOrder -> makeDecision, elevatorStatusUpdate
+// 	//go hardware.PollButtons(orderEvents)
 
-// 	for{
-// 		select{
-			
-		
+// 	for {
+// 		select {
+// 		case newButtonEvent := 	<-buttonEvent:
+// 			onButtonEvent(
+// 				&localDecisionBasis, elevatorID, newButtonEvent, distributedDecisionBasis,
+// 			)
 
+// 		case newElevState 	:= 	<-elevatorStateUpdates:
+// 			onElevatorHardwareUpdate(
+// 				&localDecisionBasis, elevatorID, newElevState, distributedDecisionBasis,
+// 			)
+
+// 		case newConsensusBasis := <-networkConsensusBasis:
+// 			onNetworkConsensus(
+// 				&localDecisionBasis, newConsensusBasis, elevatorID,
+// 				newLocalOrders, &previousLocalOrders, lightUpdateRequests,
+// 			)
 // 		}
 // 	}
-
-
-
 // }
