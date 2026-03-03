@@ -44,7 +44,7 @@ const (
 	ElevatorDoorOpen
 )
 
-type OrderEvent struct {
+type ButtonEvent struct {	//Changed back to ButtonEvent for concistency (Jesper)
 	Floor  int
 	Button ButtonType
 }
@@ -52,8 +52,14 @@ type OrderEvent struct {
 type FromLocalToDM struct {
 	Elevator       Elevator
 	CompletedOrder CabOrderTable
-	NewButtonPress *OrderEvent 
+	NewButtonPress *ButtonEvent 
 	Obstructed     bool        
+}
+
+
+type LocalElevatorFromDriver struct{
+	Elevator 		Elevator
+	ExecutedOrders 	CabOrderTable
 }
 
 //Elevator types stop
@@ -62,10 +68,17 @@ type FromLocalToDM struct {
 
 type Message struct {
 	SenderID      int
-	ElevatorList  [NElevators]int                    //ElevatorState??
-	HallOrderList [NElevators][NFloors][NButtons]int //ButtonState??
+	ElevatorList  [NElevators]HRAElevState                   
+	HallOrderList HallOrderTable 
 	AliveStatus   bool
 	AliveList     [NElevators]bool
+}
+
+
+type NetworkNodeRegistry struct {
+    Nodes []int // all currently active nodes
+    New   []int // nodes that just came online
+    Lost  []int // nodes that just went offline
 }
 
 
@@ -132,7 +145,7 @@ const (
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
-type CabOrderTable [NFloors][NButtons]bool
+type CabOrderTable 	[NFloors][NButtons]bool
 
 
 type HRAElevState struct {
@@ -148,20 +161,20 @@ type HRAInput struct {
 }
 
 
-type DecisionBasisFromNetwork struct {
-	AliveList    [NElevators]bool
-	ElevatorList  [NElevators]HRAElevState
-	HallOrderTable HallOrderTable
+//Ønsker å endre DecisonBasis til SystemState. Skal visstnok være mer korrekt (Jesper)
+
+
+// Flows: DecisionMaker → ConsensusManager
+type AgreedSystemState struct {
+	AliveList    	[NElevators]bool
+	ElevatorList  	[NElevators]HRAElevState
+	HallOrderTable 	[NElevators]HallOrderTable
 }
 
-type LocalElevatorFromDriver struct{
-	Elevator Elevator
-	ExecutedOrders CabOrderTable
-}
 
-
-type DecisionBasisFromAssigner struct{	//Placeholder, change from network based on Need 
-	AliveList    [NElevators]bool
-	ElevatorList  [NElevators]HRAElevState
-	HallOrderTable HallOrderTable
+// Flows: ConsensusManager → DecisionMaker
+type LocalSystemState struct{
+	AliveStatus    	bool
+	ElevatorState  	HRAElevState
+	HallRequests 	HallOrderTable
 }
