@@ -24,7 +24,7 @@ type LocalSystemState struct {
 type Message struct {
 	SenderID      int
 	ElevatorList  [NElevators]HRAElevState
-	HallOrderList HallOrderTable
+	HallOrderList [NElevators]HallOrderTable
 	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
@@ -78,6 +78,14 @@ type FromLocalToDM struct {
 //Elevator types stop
 
 //Network types START:
+
+// type Message struct {
+// 	SenderID      int
+// 	ElevatorList  [NElevators]HRAElevState                   
+// 	HallOrderList [NElevators]HallOrderTable 
+// 	AliveStatus   bool
+// 	AliveList     [NElevators]bool
+// }
 
 type GlobalNodeRegistry struct {
 	Nodes []int

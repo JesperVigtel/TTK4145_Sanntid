@@ -1,18 +1,36 @@
-//Sender og Reciever blir 2 gorutiner i network.go og vil jobbe i bakgrunnen
+//Transmitter og Reciever blir 2 gorutiner i network.go og vil jobbe i bakgrunnen
 //disse vil håndtere all nettverkskommunikasjon
-// //func sender()
-// Jobben til sender er å lytte til kanalen i 
 package broadcast
-
 import (
-	"Network-go/network/conn"
+	"elevator/internal/network/conn"
 	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
 )
 
+
+//VIKTIG! HVA ER BUFFSIZE VI SETTER???????????????????	
+
+
 const bufSize = 1024
+
+
+// Mangelliste:
+// Hvis jeg skulle gitt deg en ren TODO-liste for å gjøre nettverket “komplett” nok:
+// 1. Fiks import paths i broadcast.go og peers.go (fjern Network-go/... og bruk deres modulsti).
+// 2. Lag conn for Linux (DialBroadcastUDP) + eventuelt Windows.
+// 3. Unifiser bufferstørrelse (bruk config.BroadcastBufferSize).
+// 4. Implementer en NetworkManager goroutine som:
+// 	tar inn LocalSystemState (eller tilsvarende) fra DecisionMaker/consensus
+// 	bygger types.Message snapshot
+// 	sender snapshot på msgTx hvert BroadcastRate
+// 5. Filtrer self messages og legg inn Seq/Timestamp/BootID for staleness.
+// 6. Bygg “peerUpdate → NetworkNodeRegistry” og publish til consensus-laget.
+// 7. Definer merge-regler (hvilke felt oppdateres fra hvem, og hvordan).
+// 8. Sikre at joiner rehydreres ved å alltid broadcast “full snapshot”.
+// 9. (Valgfritt men anbefalt) Rate-limit / drop hvis meldinger blir for store; eller komprimer / send bare nødvendige felt.
+
 
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts
 // it on `port`
