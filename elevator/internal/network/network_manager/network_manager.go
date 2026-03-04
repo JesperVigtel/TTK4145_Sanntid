@@ -1,30 +1,31 @@
 package networkmanager
 
 
-Ansvar (NetworkManager):
+// Ansvar (NetworkManager):
 
-Oversette peers.PeerUpdate → types.NetworkNodeRegistry (og sende videre til consensus)
+// Oversette peers.PeerUpdate → types.NetworkNodeRegistry (og sende videre til consensus)
 
-Motta “lokal snapshot som skal broadcastes” (fra consensus eller DM) og:
+// Motta “lokal snapshot som skal broadcastes” (fra consensus eller DM) og:
 
-pakke i types.Message
+// pakke i types.Message
 
-legge på Seq, BootID
+// legge på Seq, BootID
 
-sende periodisk (tick/gossip)
+// sende periodisk (tick/gossip)
 
-Motta meldinger fra UDP (msgRx) og:
+// Motta meldinger fra UDP (msgRx) og:
 
-droppe self
+// droppe self
 
-droppe stale/out-of-order per avsender
+// droppe stale/out-of-order per avsender
 
-sende videre på incomingMessages til consensus
+// sende videre på incomingMessages til consensus
 
-Viktig: Consensus trenger ikke vite om UDP. Den trenger bare:
+// Viktig: Consensus trenger ikke vite om UDP. Den trenger bare:
 
-incomingMessages <-chan types.Message
+// incomingMessages <-chan types.Message
 
-peerEvents <-chan types.NetworkNodeRegistry
+// peerEvents <-chan types.NetworkNodeRegistry
 
-Det er akkurat slik RunConsensusManager allerede er skrevet.
+// Det er akkurat slik RunConsensusManager allerede er skrevet.
+
