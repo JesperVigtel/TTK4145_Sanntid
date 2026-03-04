@@ -8,13 +8,13 @@ import (
 // Module based on the LocalSystemState and agreedSystemState data to assign orders
 // ------------------------------------------------
 
-func RunDecisionMaker(
-	newLocalOrders chan<- CabOrderTable,
-	localSystemCh chan<- LocalSystemState,
+func RunDispatch(
+	newLocalOrders 		chan<- CabOrderTable,
+	localSystemCh 		chan<- LocalSystemState,
 	lightUpdateRequests chan<- HallOrderTable,
-	localControlEvents <-chan FromLocalToDM,
-	agreedSystemState <-chan AgreedSystemState,
-	elevatorID int,
+	localControlEvents 	<-chan FromLocalToDM,
+	agreedSystemState 	<-chan AgreedSystemState,
+	elevatorID 			int,
 ) {
 	var (
 		localState     LocalSystemState

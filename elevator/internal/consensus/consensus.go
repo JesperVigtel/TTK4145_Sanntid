@@ -5,6 +5,11 @@ import (
 	. "elevator/internal/types"
 )
 
+// -----------------------------------------------------------------------------
+// Module based on a cyclyc counter to enfoce consensus between peers in network
+// -----------------------------------------------------------------------------
+
+
 func RunConsensusManager(
 	incomingMessages 	<-chan Message,
 	nodeRegistryEvents 	<-chan GlobalNodeRegistry,

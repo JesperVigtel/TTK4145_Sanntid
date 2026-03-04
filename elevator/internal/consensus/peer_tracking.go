@@ -8,8 +8,8 @@ import (
 
 func newSystemHallOrders() [NElevators]HallOrderTable {
 	var table [NElevators]HallOrderTable
-	for id := range table {
-		table[id] = newStandbyHallOrders()
+	for peerID := range table {
+		table[peerID] = newStandbyHallOrders()
 	}
 	return table
 }
@@ -25,63 +25,58 @@ func newStandbyHallOrders() HallOrderTable {
 }
 
 func updatePeerAvailability(
-	nodeRegistry GlobalNodeRegistry,
-	peerIsAlive [NElevators]bool,
-	systemHallOrders [NElevators]HallOrderTable,
+	nodeRegistry 		GlobalNodeRegistry,
+	peerIsAlive 		[NElevators]bool,
+	systemHallOrders 	[NElevators]HallOrderTable,
 ) ([NElevators]bool, [NElevators]HallOrderTable) {
-	for _, id := range nodeRegistry.Lost {
-		if id < 0 || id >= NElevators {
+
+	for _, peerID := range nodeRegistry.Lost {
+		if peerID < 0 || peerID >= NElevators {
 			continue
 		}
-		peerIsAlive[id] = false
-		systemHallOrders[id] = newStandbyHallOrders()
+		peerIsAlive[peerID] = false
+		systemHallOrders[peerID] = newStandbyHallOrders()
 	}
-	for _, id := range nodeRegistry.New {
-		if id < 0 || id >= NElevators {
+
+	for _, peerID := range nodeRegistry.New {
+		if peerID < 0 || peerID >= NElevators {
 			continue
 		}
-		peerIsAlive[id] = true
+		peerIsAlive[peerID] = true
 	}
 	return peerIsAlive, systemHallOrders
 }
 
 func peerStateMatchesRecorded(
-	msg Message,
-	systemHallOrders [NElevators]HallOrderTable,
-	systemElevStates [NElevators]HRAElevState,
+	msg 				Message,
+	systemHallOrders 	[NElevators]HallOrderTable,
+	systemElevStates 	[NElevators]HRAElevState,
 ) bool {
-	// Compare only the sender's slot in our system table against what they broadcast.
-	// Comparing the full [NElevators]HallOrderTable against a single HallOrderTable
-	// would always return false (type mismatch), so convergence would never be reached.
-	return reflect.DeepEqual(systemHallOrders[msg.SenderID], msg.HallOrderList) &&
-		reflect.DeepEqual(systemElevStates, msg.ElevatorList)
+	return 	reflect.DeepEqual(systemHallOrders[msg.SenderID], 	msg.HallOrderList) &&
+			reflect.DeepEqual(systemElevStates, 				msg.ElevatorList)
 }
 
 func allAlivePeersConverged(
-	peerHasConverged [NElevators]bool,
-	peerIsAlive [NElevators]bool,
-	selfID int,
+	peerHasConverged 	[NElevators]bool,
+	peerIsAlive 		[NElevators]bool,
+	selfID 				int,
 ) bool {
-	for id := 0; id < NElevators; id++ {
-		if id == selfID {
+	for peerID := range NElevators {
+		if peerID == selfID {
 			continue
 		}
-		if peerIsAlive[id] && !peerHasConverged[id] {
+		if peerIsAlive[peerID] && !peerHasConverged[peerID] {
 			return false
 		}
 	}
 	return true
 }
 
-// publishAgreedState sends the agreed state non-blocking. If the downstream
-// consumer is busy or the channel is full the publication is dropped and will
-// be retried on the next convergence event. This prevents the consensus loop
-// from stalling and letting peer messages pile up.
 func publishAgreedState(
-	agreedSystemState chan<- AgreedSystemState,
-	peerIsAlive [NElevators]bool,
-	systemElevStates [NElevators]HRAElevState,
-	systemHallOrders [NElevators]HallOrderTable,
+	agreedSystemState 	chan<- AgreedSystemState,
+	peerIsAlive 		[NElevators]bool,
+	systemElevStates 	[NElevators]HRAElevState,
+	systemHallOrders 	[NElevators]HallOrderTable,
 ) {
 	state := AgreedSystemState{
 		AliveList:      peerIsAlive,
@@ -89,7 +84,7 @@ func publishAgreedState(
 		HallOrderTable: systemHallOrders,
 	}
 	select {
-	case agreedSystemState <- state:
-	default:
+		case agreedSystemState <- state:
+		default:
 	}
 }
