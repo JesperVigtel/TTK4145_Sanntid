@@ -1,4 +1,4 @@
-package decisionMaker
+package dispatch
 
 import (
 	. "elevator/internal/config"

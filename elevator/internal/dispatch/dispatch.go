@@ -1,11 +1,11 @@
-package decisionMaker
+package dispatch
 
 import (
 	. "elevator/internal/types"
 )
 
 // ------------------------------------------------
-// Module based on the LocalSystemState data to assign orders
+// Module based on the LocalSystemState and agreedSystemState data to assign orders
 // ------------------------------------------------
 
 func RunDecisionMaker(

@@ -5,97 +5,102 @@ import (
 	. "elevator/internal/types"
 )
 
-func stepAllOrderStates(
-	fleetHallOrders [NElevators]HallOrderTable,
-	nodeID          int,
+func advanceLocalOrderStates(
+	systemHallOrders [NElevators]HallOrderTable,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) [NElevators]HallOrderTable {
 	for floor := 0; floor < NFloors; floor++ {
 		for btn := 0; btn < NButtons; btn++ {
-			fleetHallOrders[nodeID][floor][btn] = stepOrderState(
-				fleetHallOrders, floor, btn, nodeID,
+			systemHallOrders[selfID][floor][btn] = computeNextOrderState(
+				systemHallOrders, floor, btn, selfID, peerIsAlive,
 			)
 		}
 	}
-	return fleetHallOrders
+	return systemHallOrders
 }
 
-func stepOrderState(
-	fleetHallOrders [NElevators]HallOrderTable,
-	floor           int,
-	btn             int,
-	nodeID          int,
+func computeNextOrderState(
+	systemHallOrders [NElevators]HallOrderTable,
+	floor int,
+	btn int,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) OrderState {
-	current    := fleetHallOrders[nodeID][floor][btn]
-	peerStates := collectPeerOrderStates(fleetHallOrders, floor, btn, nodeID)
+	current := systemHallOrders[selfID][floor][btn]
+	peerStates := alivePeerOrderStates(systemHallOrders, floor, btn, selfID, peerIsAlive)
 
-	next, advanced := tryAdvanceState(current, peerStates)
+	next, advanced := tryCyclicAdvance(current, peerStates)
 	if advanced {
 		return next
 	}
 
-	if statesHaveDiverged(current, peerStates) {
+	if peerStatesHaveDiverged(current, peerStates) {
 		return OrderStandby
 	}
 
 	return current
 }
 
-func tryAdvanceState(current OrderState, peerStates []OrderState) (OrderState, bool) {
+func tryCyclicAdvance(current OrderState, peerStates []OrderState) (OrderState, bool) {
 	switch current {
 	case OrderStandby:
-		if subsetOf(peerStates, OrderStandby, OrderPending) && contains(peerStates, OrderPending) {
+		if allAreEither(peerStates, OrderStandby, OrderPending) && anyIs(peerStates, OrderPending) {
 			return OrderPending, true
 		}
 	case OrderPending:
-		if subsetOf(peerStates, OrderPending, OrderAssigned) {
+		if allAreEither(peerStates, OrderPending, OrderAssigned) {
 			return OrderAssigned, true
 		}
 	case OrderAssigned:
-		if subsetOf(peerStates, OrderAssigned, OrderComplete) && contains(peerStates, OrderComplete) {
+		if allAreEither(peerStates, OrderAssigned, OrderComplete) && anyIs(peerStates, OrderComplete) {
 			return OrderComplete, true
 		}
 	case OrderComplete:
-		if subsetOf(peerStates, OrderComplete, OrderStandby) {
+		if allAreEither(peerStates, OrderComplete, OrderStandby) {
 			return OrderStandby, true
 		}
 	}
 	return current, false
 }
 
-func statesHaveDiverged(current OrderState, peerStates []OrderState) bool {
+func peerStatesHaveDiverged(current OrderState, peerStates []OrderState) bool {
 	switch current {
 	case OrderStandby:
-		return !subsetOf(peerStates, OrderStandby, OrderPending) &&
-			!subsetOf(peerStates, OrderStandby, OrderComplete)
+		return !allAreEither(peerStates, OrderStandby, OrderPending) &&
+			!allAreEither(peerStates, OrderStandby, OrderComplete)
 	case OrderPending:
-		return !subsetOf(peerStates, OrderPending, OrderAssigned) &&
-			!subsetOf(peerStates, OrderStandby, OrderPending)
+		return !allAreEither(peerStates, OrderPending, OrderAssigned) &&
+			!allAreEither(peerStates, OrderStandby, OrderPending)
 	case OrderAssigned:
-		return !subsetOf(peerStates, OrderAssigned, OrderComplete) &&
-			!subsetOf(peerStates, OrderAssigned, OrderPending)
+		return !allAreEither(peerStates, OrderAssigned, OrderComplete) &&
+			!allAreEither(peerStates, OrderAssigned, OrderPending)
 	case OrderComplete:
-		return !subsetOf(peerStates, OrderComplete, OrderStandby) &&
-			!subsetOf(peerStates, OrderAssigned, OrderComplete)
+		return !allAreEither(peerStates, OrderComplete, OrderStandby) &&
+			!allAreEither(peerStates, OrderAssigned, OrderComplete)
 	}
 	return false
 }
 
-func collectPeerOrderStates(
-	fleetHallOrders [NElevators]HallOrderTable,
-	floor           int,
-	btn             int,
-	nodeID          int,
+func alivePeerOrderStates(
+	systemHallOrders [NElevators]HallOrderTable,
+	floor int,
+	btn int,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) []OrderState {
+	// Only include alive peers. A dead node frozen mid-cycle would otherwise
+	// permanently block cycle progression until the registry event fires.
 	var peerStates []OrderState
 	for id := 0; id < NElevators; id++ {
-		if id != nodeID {
-			peerStates = append(peerStates, fleetHallOrders[id][floor][btn])
+		if id != selfID && peerIsAlive[id] {
+			peerStates = append(peerStates, systemHallOrders[id][floor][btn])
 		}
 	}
 	return peerStates
 }
 
-func subsetOf(peerStates []OrderState, a, b OrderState) bool {
+func allAreEither(peerStates []OrderState, a, b OrderState) bool {
 	for _, s := range peerStates {
 		if s != a && s != b {
 			return false
@@ -104,7 +109,7 @@ func subsetOf(peerStates []OrderState, a, b OrderState) bool {
 	return true
 }
 
-func contains(peerStates []OrderState, target OrderState) bool {
+func anyIs(peerStates []OrderState, target OrderState) bool {
 	for _, s := range peerStates {
 		if s == target {
 			return true

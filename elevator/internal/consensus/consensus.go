@@ -6,47 +6,54 @@ import (
 )
 
 func RunConsensusManager(
-	incomingMessages  	<-chan Message,
+	incomingMessages 	<-chan Message,
 	nodeRegistryEvents 	<-chan GlobalNodeRegistry,
-	localSystemState  	<-chan LocalSystemState,
+	localSystemState 	<-chan LocalSystemState,
 	agreedSystemState 	chan<- AgreedSystemState,
-	elevatorID        	int,
+	selfID 				int,
 ) {
 	var (
-		globalHallOrders  [NElevators]HallOrderTable
-		globalElevStates  [NElevators]HRAElevState
-		nodeAliveStatus   [NElevators]bool
-		nodeConverged     [NElevators]bool
+		systemHallOrders [NElevators]HallOrderTable
+		systemElevStates [NElevators]HRAElevState
+		peerIsAlive      [NElevators]bool
+		peerHasConverged [NElevators]bool
 	)
 
-	globalHallOrders = initGlobalHallOrders()
+	systemHallOrders = newSystemHallOrders()
 
 	for {
 		select {
 
-		case nodeRegistry := <-nodeRegistryEvents:
-			nodeAliveStatus, globalHallOrders = applyNodeRegistryChange(nodeRegistry, nodeAliveStatus, globalHallOrders)
+		case registry := <-nodeRegistryEvents:
+			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders)
 
 		case msg := <-incomingMessages:
-			nodeConverged[msg.SenderID]        = nodeViewMatchesOurs(msg, globalHallOrders, globalElevStates)
-			globalElevStates[msg.SenderID]     = msg.ElevatorList[msg.SenderID]
-			globalHallOrders[msg.SenderID]     = msg.HallOrderList
-			nodeAliveStatus[msg.SenderID]      = msg.AliveStatus
-			globalHallOrders                   = stepAllOrderStates(globalHallOrders, elevatorID)
+			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
+				continue
+			}
 
-			if allNodesConverged(nodeConverged, nodeAliveStatus, elevatorID) {
-				nodeConverged = resetNodeConverged()
-				agreedSystemState <- AgreedSystemState{
-					AliveList:      nodeAliveStatus,
-					ElevatorList:   globalElevStates,
-					HallOrderTable: globalHallOrders,
-				}
+			peerHasConverged[msg.SenderID] 	= peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
+			systemElevStates[msg.SenderID] 	= msg.ElevatorList[msg.SenderID]
+			systemHallOrders[msg.SenderID] 	= msg.HallOrderList
+			peerIsAlive[msg.SenderID] 		= msg.AliveStatus
+
+			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
+
+			if allAlivePeersConverged(peerHasConverged, peerIsAlive, selfID) {
+				peerHasConverged = [NElevators]bool{}
+				publishAgreedState(agreedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
 			}
 
 		case state := <-localSystemState:
-			globalHallOrders[elevatorID]  = state.HallRequests
-			globalElevStates[elevatorID]  = state.ElevatorState
-			nodeAliveStatus[elevatorID]   = state.AliveStatus
+			systemHallOrders[selfID] = state.HallRequests
+			systemElevStates[selfID] = state.ElevatorState
+			peerIsAlive[selfID] = state.AliveStatus
+
+			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
+			if allAlivePeersConverged(peerHasConverged, peerIsAlive, selfID) {
+				peerHasConverged = [NElevators]bool{}
+			publishAgreedState(agreedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
+			}
 		}
 	}
 }
