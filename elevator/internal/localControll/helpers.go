@@ -3,6 +3,7 @@ package localControl
 import (
 	"elevator/internal/config"
 	"elevator/internal/types"
+	"elevator/internal/localControll/hardware"
 )
 
 func elevatorInit() types.Elevator {
@@ -107,11 +108,6 @@ func localClearCabOrder(
 	e *types.Elevator,
 	floor int,
 ) bool {
-
-	if floor < 0 || floor >= config.NFloors {
-		return false
-	}
-
 	if e.Request[floor][int(types.BTCab)] {
 		e.Request[floor][int(types.BTCab)] = false
 		return true
@@ -123,10 +119,6 @@ func localClearCabOrder(
 //Fjerner local caborders lokalt, hvordan få dette inn i DecisionMaker
 
 func shouldStopAtFloor(e types.Elevator, floor int) bool {
-	if floor < 0 || floor >= config.NFloors {
-		return false
-	}
-
 	// Cab always stops
 	if e.Request[floor][int(types.BTCab)] {
 		return true
@@ -140,5 +132,75 @@ func shouldStopAtFloor(e types.Elevator, floor int) bool {
 		return e.Request[floor][int(types.BTHallDown)]
 	default:
 		return false
+	}
+}
+
+func handleFloorArrival(e *types.Elevator, doorOpenChan chan<- bool) [config.NFloors][config.NButtons]bool {
+	var completedOrders [config.NFloors][config.NButtons]bool
+	floor := e.CurrentFloor
+
+	// Stop motor
+	hardware.SetMotorDirection(types.Stop)
+	e.MotorDirection = types.Stop
+	e.Behaviour = types.ElevatorDoorOpen
+
+	hardware.SetDoorOpenLamp(true)
+	doorOpenChan <- true // Start door timer
+
+
+	if e.Request[floor][int(types.BTCab)] {
+		completedOrders[floor][int(types.BTCab)] = true
+	}
+	if e.Request[floor][int(types.BTHallUp)] {
+		completedOrders[floor][int(types.BTHallUp)] = true
+	}
+	if e.Request[floor][int(types.BTHallDown)] {
+		completedOrders[floor][int(types.BTHallDown)] = true
+	}
+
+	localClearCabOrder(e, floor)
+	localClearHallOrder(e, floor, types.Up)
+	localClearHallOrder(e, floor, types.Down)
+
+	return completedOrders
+}
+
+func handleDoorClosed(e *types.Elevator, motorActiveChan chan<- bool) {
+	// Close door
+	hardware.SetDoorOpenLamp(false)
+
+	// Determine next direction
+	newDir := switchDirection(*e)
+	e.MotorDirection = newDir
+
+	if newDir == types.Stop {
+		e.Behaviour = types.ElevatorIdle
+		hardware.SetMotorDirection(types.Stop)
+	} else {
+		e.Behaviour = types.ElevatorMoving
+		hardware.SetMotorDirection(newDir)
+		motorActiveChan <- true // Start motor timeout
+	}
+}
+
+func handleStopButton(e *types.Elevator) {
+	hardware.SetMotorDirection(types.Stop)
+	hardware.SetStopLamp(true)
+	e.MotorDirection = types.Stop
+	e.Behaviour = types.ElevatorIdle
+	e.ActiveStatus = false
+}
+
+
+func sendElevatorUpdate(
+	elevatorEvents chan<- types.FromLocalToDM,
+	elevator types.Elevator,
+	obstructed bool,
+) {
+	elevatorEvents <- types.FromLocalToDM{
+		Elevator:       elevator,
+		CompletedOrder: [config.NFloors][config.NButtons]bool{},
+		NewButtonPress: nil,
+		Obstructed:     obstructed,
 	}
 }
