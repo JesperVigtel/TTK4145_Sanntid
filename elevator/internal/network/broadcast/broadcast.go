@@ -9,27 +9,9 @@ import (
 	"reflect"
 )
 
-
-//VIKTIG! HVA ER BUFFSIZE VI SETTER???????????????????	
-
+//Hva setter vi buffer size til?
 
 const bufSize = 1024
-
-
-// Mangelliste:
-// Hvis jeg skulle gitt deg en ren TODO-liste for å gjøre nettverket “komplett” nok:
-// 1. Fiks import paths i broadcast.go og peers.go (fjern Network-go/... og bruk deres modulsti).
-// 2. Lag conn for Linux (DialBroadcastUDP) + eventuelt Windows.
-// 3. Unifiser bufferstørrelse (bruk config.BroadcastBufferSize).
-// 4. Implementer en NetworkManager goroutine som:
-// 	tar inn LocalSystemState (eller tilsvarende) fra DecisionMaker/consensus
-// 	bygger types.Message snapshot
-// 	sender snapshot på msgTx hvert BroadcastRate
-// 5. Filtrer self messages og legg inn Seq/Timestamp/BootID for staleness.
-// 6. Bygg “peerUpdate → NetworkNodeRegistry” og publish til consensus-laget.
-// 7. Definer merge-regler (hvilke felt oppdateres fra hvem, og hvordan).
-// 8. Sikre at joiner rehydreres ved å alltid broadcast “full snapshot”.
-// 9. (Valgfritt men anbefalt) Rate-limit / drop hvis meldinger blir for store; eller komprimer / send bare nødvendige felt.
 
 
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts
