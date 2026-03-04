@@ -6,11 +6,11 @@ import (
 )
 
 func RunConsensusManager(
-	incomingMessages  <-chan Message,
-	nodeRegistryEvents <-chan GlobalNodeRegistry,
-	localSystemState  <-chan LocalSystemState,
-	agreedSystemState chan<- AgreedSystemState,
-	elevatorID        int,
+	incomingMessages  	<-chan Message,
+	nodeRegistryEvents 	<-chan GlobalNodeRegistry,
+	localSystemState  	<-chan LocalSystemState,
+	agreedSystemState 	chan<- AgreedSystemState,
+	elevatorID        	int,
 ) {
 	var (
 		globalHallOrders  [NElevators]HallOrderTable
