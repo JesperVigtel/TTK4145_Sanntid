@@ -6,7 +6,7 @@ import (
 	"net"
 	"sort"
 	"time"
-)
+)   
 
 type PeerUpdate struct {
 	Peers []string

@@ -1,8 +1,8 @@
 package utilitynetwork
 
 import (
-	"strconv"
-	"elevator/internal/config"
+	// "strconv"
+	// "elevator/internal/config"
 	. "elevator/internal/config"
 	"elevator/internal/network/broadcast"
 	"elevator/internal/network/peers"
@@ -17,17 +17,21 @@ func InitNetwork(id string, msgTx chan types.Message, msgRx chan types.Message, 
 }
 
 
-func PeerUpdates(peerUpdate <-chan peers.PeerUpdate, aliveList *[config.NElevators]bool){
-    for update := range peerUpdate {
-        // Ny heis koblet til
-        if update.New != "" {
-            id, _ := strconv.Atoi(update.New)
-            aliveList[id] = true
-        }
-        // Heis falt ut
-        for _, lost := range update.Lost {
-            id, _ := strconv.Atoi(lost)
-            aliveList[id] = false
-        }
-    }
-}
+
+
+
+
+// func PeerUpdates(peerUpdate <-chan peers.PeerUpdate, aliveList *[config.NElevators]bool){
+//     for update := range peerUpdate {
+//         // Ny heis koblet til
+//         if update.New != "" {
+//             id, _ := strconv.Atoi(update.New)
+//             aliveList[id] = true
+//         }
+//         // Heis falt ut
+//         for _, lost := range update.Lost {
+//             id, _ := strconv.Atoi(lost)
+//             aliveList[id] = false
+//         }
+//     }
+// }
