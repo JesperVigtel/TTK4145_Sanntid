@@ -10,13 +10,14 @@ import(
 	"net"
 	"fmt"
 	"elevator/internal/types"
+	"elevator/internal/config"
 )
 
 
 const _pollRate = 20 * time.Millisecond
 
 var _initialized    bool = false
-var _numFloors      int = 4
+var _numFloors      int = config.NFloors
 var _mtx            sync.Mutex
 var _conn           net.Conn
 
@@ -61,7 +62,7 @@ func SetStopLamp(value bool) {
 
 
 
-func PollButtons(receiver chan<- types.OrderEvent) {
+func PollButtons(receiver chan<- types.ButtonEvent) {
 	prev := make([][3]bool, _numFloors)
 	for {
 		time.Sleep(_pollRate)
@@ -69,7 +70,7 @@ func PollButtons(receiver chan<- types.OrderEvent) {
 			for b := types.ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v != false {
-					receiver <- types.OrderEvent{Floor: f, Button: types.ButtonType(b)}
+					receiver <- types.ButtonEvent{Floor: f, Button: types.ButtonType(b)}
 				}
 				prev[f][b] = v
 			}

@@ -1,13 +1,10 @@
 package main
 
-// Entry point. Sets up channels and starts goroutines.
-// Contains no logic — only wires modules together via channels.
-
 import (
 	"elevator/internal/config"
 	"elevator/internal/consensus"
 	"elevator/internal/dispatch"
-	"elevator/internal/localControll/hardware"
+	"elevator/internal/localControll"
 	"elevator/internal/types"
 	"flag"
 	"fmt"
@@ -18,21 +15,20 @@ func main() {
 	selfID := parseSelfID()
 
 	// -- Channels --
-
-	localControlEvents := make(chan types.FromLocalToDM, config.ChannelBufferSize)
-	newLocalOrders := make(chan types.CabOrderTable, config.ChannelBufferSize)
-	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
-	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
-	hallLightUpdates := make(chan types.HallOrderTable, config.ChannelBufferSize)
-	incomingMessages := make(chan types.Message, config.ChannelBufferSize)
-	outgoingMessages := make(chan types.Message, config.ChannelBufferSize)
-	nodeRegistryEvents := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
+	localControlEvents 		:= make(chan types.FromLocalToDM, 			config.ChannelBufferSize)
+	newLocalOrders 			:= make(chan types.LocalOrderTable, 		config.ChannelBufferSize)
+	localSystemState 		:= make(chan types.LocalSystemState, 		config.ChannelBufferSize)
+	convergedSystemState 	:= make(chan types.ConvergedSystemState,	config.ChannelBufferSize)
+	hallLightUpdates 		:= make(chan types.HallOrderTable, 			config.ChannelBufferSize)
+	incomingMessages 		:= make(chan types.Message, 				config.ChannelBufferSize)
+	outgoingMessages 		:= make(chan types.Message, 				config.ChannelBufferSize)
+	nodeRegistryEvents 		:= make(chan types.GlobalNodeRegistry, 		config.ChannelBufferSize)
 
 	// -- Goroutines --
-	hardware.Init(config.Addr, config.NFloors) //Shuld be moved inside a localContoll run
-	//go localControll.Run(newLocalOrders, localControlEvents)
+	//hardware.Init(config.Addr, config.NFloors) //Shuld be moved inside a localContoll run
+	//go localControl.Run(newLocalOrders, localControlEvents)
 
-	go dispatch.RunDispatch(
+	go dispatch.Run(
 		newLocalOrders,
 		localSystemState,
 		hallLightUpdates,
@@ -41,7 +37,7 @@ func main() {
 		selfID,
 	)
 
-	go consensus.RunConsensusManager(
+	go consensus.Run(
 		incomingMessages,
 		outgoingMessages,
 		nodeRegistryEvents,
@@ -54,6 +50,9 @@ func main() {
 
 	select {}
 }
+
+
+
 
 func parseSelfID() int {
 	id := flag.Int("id", 0, "Elevator node ID (0-2)")

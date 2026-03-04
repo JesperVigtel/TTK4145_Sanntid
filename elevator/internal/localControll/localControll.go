@@ -1,38 +1,34 @@
 package localControl
 
-// Tilstandsmaskinen (FSM). Håndterer heisens fysiske bevegelse og dørlogikk.
-// Inneholder logikk for OnFloorArrival, OnOrderRequest og OnTimerTimeout.
-// Snakker med hardware for å styre motor og dør.
-
 import (
 	"elevator/internal/config"
+	"elevator/internal/lights"
 	"elevator/internal/localControll/hardware"
 	"elevator/internal/localControll/timer"
 	"elevator/internal/types"
-	"fmt"
 )
 
 func localControl(
 	newOrder <-chan [config.NFloors][config.NButtons]bool,
 	elevatorEvents chan<- types.FromLocalToDM,
+	localLightsChan chan<- lights.LocalLightUpdate,
 ) {
 	var (
 		floorChan          = make(chan int, config.ChannelBufferSize)
-		doorOpenChan       = make(chan bool, 1)
-		motorActiveChan    = make(chan bool, 1)
-		recoveryEnableChan = make(chan bool, 1)
-		doorClosedChan    = make(chan bool, 1) 
-		motorInactiveChan = make(chan bool, 1) 
-		recoveryTickChan  = make(chan bool, 1) 
-		obstructionChan   = make(chan bool, config.ChannelBufferSize)
-		buttonPressChan   = make(chan types.OrderEvent, config.ChannelBufferSize)
-		obstruction  bool
+		doorOpenChan       = make(chan bool, config.ChannelBufferSize)
+		motorActiveChan    = make(chan bool, config.ChannelBufferSize)
+		recoveryEnableChan = make(chan bool, config.ChannelBufferSize)
+		doorClosedChan     = make(chan bool, config.ChannelBufferSize)
+		motorInactiveChan  = make(chan bool, config.ChannelBufferSize)
+		recoveryTickChan   = make(chan bool, config.ChannelBufferSize)
+		obstructionChan    = make(chan bool, config.ChannelBufferSize)
+		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
+		obstruction        bool
 	)
 
 	go hardware.PollFloorSensor(floorChan)
 	go hardware.PollObstructionSwitch(obstructionChan)
 	go hardware.PollButtons(buttonPressChan)
-	go hardware.PollStopButton(StopPressChan)
 
 	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan, doorClosedChan, motorInactiveChan, recoveryTickChan)
 
@@ -47,50 +43,55 @@ func localControl(
 		case floor := <-floorChan:
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
-			hardware.SetFloorIndicator(floor)
+			recoveryEnableChan <- false
+			updateFloorIndicator(localLightsChan, elevator)
+
+			if !hasLocalOrderAbove(elevator) && !hasLocalOrderBelow(elevator) &&
+				!hasAnyOrderAtFloor(elevator, floor) {
+				hardware.SetMotorDirection(types.Stop)
+				elevator.MotorDirection = types.Stop
+				elevator.Behaviour = types.ElevatorIdle
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+				continue
+			}
 
 			if shouldStopAtFloor(elevator, floor) {
-				completedOrders := handleFloorArrival(&elevator, doorOpenChan)
-
-				elevatorEvents <- types.FromLocalToDM{
-					Elevator:       elevator,
-					CompletedOrder: completedOrders,
-					NewButtonPress: nil,
-					Obstructed:     obstruction,
-				}
+				completedOrders := handleFloorArrival(&elevator, doorOpenChan, localLightsChan, elevator.MotorDirection)
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 			} else {
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction)
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 			}
 
 		case orders := <-newOrder:
-			elevator.Request = orders
-
+			elevator.LocalOrders = orders
 			if elevator.Behaviour == types.ElevatorIdle {
-				newDir := switchDirection(elevator)
-				if newDir != types.Stop {
-					elevator.MotorDirection = newDir
-					elevator.Behaviour = types.ElevatorMoving
-					hardware.SetMotorDirection(newDir)
-					motorActiveChan <- true
-					sendElevatorUpdate(elevatorEvents, elevator, obstruction)
+				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
+					completedOrders := handleFloorArrival(&elevator, doorOpenChan, localLightsChan, elevator.MotorDirection)
+					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
+				} else {
+					newDir := chooseDirection(elevator)
+					if newDir != types.Stop {
+						elevator.MotorDirection = newDir
+						elevator.Behaviour = types.ElevatorMoving
+						hardware.SetMotorDirection(newDir)
+						motorActiveChan <- true
+						sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+					}
 				}
 			}
 
 		case <-doorClosedChan:
 			if elevator.Behaviour == types.ElevatorDoorOpen {
-				handleDoorClosed(&elevator, motorActiveChan)
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction)
+				handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 			}
 
 		case <-motorInactiveChan:
 			if elevator.Behaviour == types.ElevatorMoving {
-				fmt.Println("Motor timeout - elevator may be stuck!")
 				elevator.ActiveStatus = false
-				elevator.Behaviour = types.ElevatorIdle // Allow recovery when new orders come
+				elevator.Behaviour = types.ElevatorIdle
 				hardware.SetMotorDirection(types.Stop)
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction)
-
-				// Enable recovery timer to try again
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 				recoveryEnableChan <- true
 			}
 
@@ -98,34 +99,21 @@ func localControl(
 			if obstruction && elevator.Behaviour == types.ElevatorDoorOpen {
 				doorOpenChan <- true
 			}
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction)
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 
 		case buttonEvent := <-buttonPressChan:
-			elevatorEvents <- types.FromLocalToDM{
-				Elevator:       elevator,
-				CompletedOrder: [config.NFloors][config.NButtons]bool{},
-				NewButtonPress: &buttonEvent,
-				Obstructed:     obstruction,
-			}
-
-		case <-StopPressChan:
-			handleStopButton(&elevator)
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction)
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, &buttonEvent)
 
 		case <-recoveryTickChan:
 			if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
-				newDir := switchDirection(elevator)
+				newDir := chooseDirection(elevator)
 				if newDir != types.Stop {
-					fmt.Println("Attempting recovery - trying to move again")
 					elevator.MotorDirection = newDir
 					elevator.Behaviour = types.ElevatorMoving
 					hardware.SetMotorDirection(newDir)
-					motorActiveChan <- true // Re-enable watchdog
+					motorActiveChan <- true
 				}
-				// her må jeg sende noe på recoverychan for a stoppe denne timeren
 			}
 		}
 	}
 }
-
-//kan hende det enkleste er å fjerne recoveryTimeren. Er usikker på om den er nødvendig.

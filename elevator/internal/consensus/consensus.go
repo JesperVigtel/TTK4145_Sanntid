@@ -12,7 +12,7 @@ import (
 // so that state transitions are self-synchronising without a central coordinator.
 // -----------------------------------------------------------------------------
 
-func RunConsensusManager(
+func Run(
 	incomingMessages 	<-chan Message,
 	outgoingMessages	chan<- Message,
 	nodeRegistryEvents 	<-chan GlobalNodeRegistry,
@@ -40,10 +40,10 @@ func RunConsensusManager(
 				continue
 			}
 
-			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			systemElevStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
-			systemHallOrders[msg.SenderID] = msg.HallOrderList
-			peerIsAlive[msg.SenderID] = msg.AliveStatus
+			peerIsConsistent[msg.SenderID] 	= peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
+			systemElevStates[msg.SenderID] 	= msg.ElevatorList[msg.SenderID]
+			systemHallOrders[msg.SenderID] 	= msg.HallOrderTable
+			peerIsAlive[msg.SenderID] 		= msg.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 

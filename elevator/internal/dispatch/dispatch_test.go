@@ -198,7 +198,7 @@ func makeInitialHWEvent() FromLocalToDM {
 }
 
 func TestRunDispatch_ButtonPress_PublishesUpdatedLocalState(t *testing.T) {
-	newLocalOrders      := make(chan CabOrderTable, 10)
+	newLocalOrders      := make(chan LocalOrderTable, 10)
 	localSystemCh       := make(chan LocalSystemState, 10)
 	lightUpdateRequests := make(chan HallOrderTable, 10)
 	localControlEvents  := make(chan FromLocalToDM, 10)
@@ -207,7 +207,7 @@ func TestRunDispatch_ButtonPress_PublishesUpdatedLocalState(t *testing.T) {
 	// The goroutine blocks on the first event to initialise; feed it now.
 	localControlEvents <- makeInitialHWEvent()
 
-	go RunDispatch(
+	go Run(
 		newLocalOrders,
 		localSystemCh,
 		lightUpdateRequests,

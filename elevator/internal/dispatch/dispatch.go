@@ -4,22 +4,22 @@ import (
 	. "elevator/internal/types"
 )
 
-// ------------------------------------------------
+// ------------------------------------------------------------------------------
 // Translates converged distributed state and local hardware events into commands
 // for the local elevator: cab order assignments and hall light updates.
-// ------------------------------------------------
+// ------------------------------------------------------------------------------
 
-func RunDispatch(
-	newLocalOrders chan<- CabOrderTable,
-	localSystemCh chan<- LocalSystemState,
-	lightUpdateRequests chan<- HallOrderTable,
-	localControlEvents <-chan FromLocalToDM,
-	convergedSystemState <-chan ConvergedSystemState,
-	elevatorID int,
+func Run(
+	newLocalOrders 			chan<- LocalOrderTable,
+	localSystemCh 			chan<- LocalSystemState,
+	lightUpdateRequests 	chan<- HallOrderTable,
+	localControlEvents 		<-chan FromLocalToDM,
+	convergedSystemState 	<-chan ConvergedSystemState,
+	elevatorID 				int,
 ) {
 	var (
 		localState     LocalSystemState
-		previousOrders CabOrderTable
+		previousOrders LocalOrderTable
 	)
 
 	localState = initLocalSystemState(<-localControlEvents, elevatorID)

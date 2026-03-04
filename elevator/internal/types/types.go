@@ -24,7 +24,7 @@ type LocalSystemState struct {
 type Message struct {
 	SenderID      int
 	ElevatorList  [NElevators]HRAElevState
-	HallOrderList [NElevators]HallOrderTable
+	HallOrderTable HallOrderTable
 	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
@@ -42,7 +42,7 @@ const (
 type Elevator struct {
 	CurrentFloor   int
 	MotorDirection MotorDirection
-	Request        CabOrderTable
+	LocalOrders    LocalOrderTable
 	Behaviour      ElevatorBehaviour
 	ActiveStatus   bool
 }
@@ -70,7 +70,7 @@ type ButtonEvent struct {
 
 type FromLocalToDM struct {
 	Elevator       Elevator
-	CompletedOrder CabOrderTable
+	CompletedOrder LocalOrderTable
 	NewButtonPress *ButtonEvent
 	Obstructed     bool
 }
@@ -78,14 +78,6 @@ type FromLocalToDM struct {
 //Elevator types stop
 
 //Network types START:
-
-// type Message struct {
-// 	SenderID      int
-// 	ElevatorList  [NElevators]HRAElevState                   
-// 	HallOrderList [NElevators]HallOrderTable 
-// 	AliveStatus   bool
-// 	AliveList     [NElevators]bool
-// }
 
 type GlobalNodeRegistry struct {
 	Nodes []int
@@ -140,7 +132,7 @@ const (
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
-type CabOrderTable [NFloors][NButtons]bool
+type LocalOrderTable [NFloors][NButtons]bool
 
 // ------------------------------------------------------------------------------------
 //	enum types for assigner
