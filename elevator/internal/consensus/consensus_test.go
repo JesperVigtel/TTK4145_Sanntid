@@ -188,12 +188,14 @@ func TestAllAlivePeersConsistent_DeadPeerNotRequired(t *testing.T) {
 
 func TestRunConsensusManager_SingleNode_PublishesOnLocalState(t *testing.T) {
 	incomingMessages    := make(chan Message, 10)
+	outgoingMessages    := make(chan Message, 10)
 	nodeRegistryEvents  := make(chan GlobalNodeRegistry, 10)
 	localSystemStateCh  := make(chan LocalSystemState, 10)
 	convergedSystemStateCh := make(chan ConvergedSystemState, 10)
 
-	go RunConsensusManager(
+	go RunConsensus(
 		incomingMessages,
+		outgoingMessages,
 		nodeRegistryEvents,
 		localSystemStateCh,
 		convergedSystemStateCh,
@@ -223,12 +225,14 @@ func TestRunConsensusManager_SingleNode_PublishesOnLocalState(t *testing.T) {
 
 func TestRunConsensusManager_LostPeer_ResetsItsOrders(t *testing.T) {
 	incomingMessages    := make(chan Message, 10)
+	outgoingMessages    := make(chan Message, 10)
 	nodeRegistryEvents  := make(chan GlobalNodeRegistry, 10)
 	localSystemStateCh  := make(chan LocalSystemState, 10)
 	convergedSystemStateCh := make(chan ConvergedSystemState, 10)
 
-	go RunConsensusManager(
+	go RunConsensus(
 		incomingMessages,
+		outgoingMessages,
 		nodeRegistryEvents,
 		localSystemStateCh,
 		convergedSystemStateCh,

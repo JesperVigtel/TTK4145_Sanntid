@@ -11,7 +11,7 @@ import (
 func prepareAssignment(
 	convergedState ConvergedSystemState,
 	localState LocalSystemState,
-) (CabOrderTable, HallOrderTable) {
+) (LocalOrderTable, HallOrderTable) {
 	elevatorID := localState.ElevatorID
 	assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
 	lightUpdate := computeLightUpdate(convergedState, elevatorID)
@@ -42,8 +42,8 @@ func computeAssignedOrders(
 	convergedState ConvergedSystemState,
 	localState LocalSystemState,
 	elevatorID int,
-) CabOrderTable {
-	var result CabOrderTable
+) LocalOrderTable {
+	var result LocalOrderTable
 
 	// If this elevator is not recognised as alive by the network, only serve
 	// cab calls — hall orders require network agreement to assign safely.
@@ -70,7 +70,7 @@ func computeAssignedOrders(
 		return result
 	}
 
-	return buildCabOrderTable(output, localState, elevatorID)
+	return buildLocalOrderTable(output, localState, elevatorID)
 }
 
 func buildHallAssignerInput(
@@ -110,12 +110,12 @@ func buildHallAssignerInput(
 	return input
 }
 
-func buildCabOrderTable(
+func buildLocalOrderTable(
 	output map[string][][2]bool,
 	localState LocalSystemState,
 	elevatorID int,
-) CabOrderTable {
-	var result CabOrderTable
+) LocalOrderTable {
+	var result LocalOrderTable
 	idStr := fmt.Sprintf("elevator_%d", elevatorID)
 
 	if assigned, found := output[idStr]; found {
@@ -137,8 +137,8 @@ func computeLightUpdate(convergedState ConvergedSystemState, elevatorID int) Hal
 	return convergedState.HallOrderTable[elevatorID]
 }
 
-func cabOrdersOnly(localState LocalSystemState) CabOrderTable {
-	var result CabOrderTable
+func cabOrdersOnly(localState LocalSystemState) LocalOrderTable {
+	var result LocalOrderTable
 	for floor := 0; floor < NFloors; floor++ {
 		result[floor][BTCab] = localState.ElevatorState.CabRequests[floor]
 	}

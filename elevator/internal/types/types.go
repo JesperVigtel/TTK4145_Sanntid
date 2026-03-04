@@ -24,7 +24,7 @@ type LocalSystemState struct {
 type Message struct {
 	SenderID      int
 	ElevatorList  [NElevators]HRAElevState
-	HallOrderList [NElevators]HallOrderTable
+	HallOrderTable HallOrderTable
 	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
@@ -79,14 +79,6 @@ type FromLocalToDM struct {
 
 //Network types START:
 
-// type Message struct {
-// 	SenderID      int
-// 	ElevatorList  [NElevators]HRAElevState                   
-// 	HallOrderList [NElevators]HallOrderTable 
-// 	AliveStatus   bool
-// 	AliveList     [NElevators]bool
-// }
-
 type GlobalNodeRegistry struct {
 	Nodes []int
 	New   []int
@@ -140,7 +132,7 @@ const (
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
-type CabOrderTable [NFloors][NButtons]bool
+type LocalOrderTable [NFloors][NButtons]bool
 
 // ------------------------------------------------------------------------------------
 //	enum types for assigner

@@ -54,8 +54,8 @@ func peerStateMatchesRecorded(
 	systemHallOrders [NElevators]HallOrderTable,
 	systemElevStates [NElevators]HRAElevState,
 ) bool {
-	return reflect.DeepEqual(systemHallOrders[msg.SenderID], msg.HallOrderList) &&
-		reflect.DeepEqual(systemElevStates, msg.ElevatorList)
+	return reflect.DeepEqual(systemHallOrders[msg.SenderID], msg.HallOrderTable) &&
+		reflect.DeepEqual(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
 
 func allAlivePeersConsistent(
@@ -85,7 +85,7 @@ func broadcastLocalState(
 	case outgoingMessages <- Message{
 		SenderID:      selfID,
 		ElevatorList:  systemElevStates,
-		HallOrderList: systemHallOrders[selfID],
+		HallOrderTable: systemHallOrders[selfID],
 		AliveStatus:   peerIsAlive[selfID],
 		AliveList:     peerIsAlive,
 	}:

@@ -41,7 +41,7 @@ func main() {
 		selfID,
 	)
 
-	go consensus.RunConsensusManager(
+	go consensus.RunConsensus(
 		incomingMessages,
 		outgoingMessages,
 		nodeRegistryEvents,
