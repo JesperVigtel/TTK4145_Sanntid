@@ -7,6 +7,39 @@ import (
 // Felles datatyper, structs og konstanter brukt på tvers av alle pakker.
 // Sikrer konsistente data og kontrakter mellom moduler.
 
+
+
+// ------------------------------------------------------------------------------------
+//	enum types for intermodule contracts
+// ------------------------------------------------------------------------------------
+
+
+// Flows: DecisionMaker → ConsensusManager
+type AgreedSystemState struct {
+	AliveList    	[NElevators]bool
+	ElevatorList  	[NElevators]HRAElevState
+	HallOrderTable 	[NElevators]HallOrderTable
+}
+
+
+// Flows: ConsensusManager → DecisionMaker
+type LocalSystemState struct{
+	ElevatorID		int
+	AliveStatus    	bool
+	ElevatorState  	HRAElevState
+	HallRequests 	HallOrderTable
+}
+
+
+type Message struct {
+	SenderID      int
+	ElevatorList  [NElevators]HRAElevState                   
+	HallOrderList HallOrderTable 
+	AliveStatus   bool
+	AliveList     [NElevators]bool
+}
+
+
 // TODO: Definer structs som Elevator, Order, ElevatorState osv.
 // TODO: Definer konstanter for etasjer, motorretning osv.
 
@@ -66,13 +99,6 @@ type FromLocalToDM struct {
 
 //Network types START:
 
-type Message struct {
-	SenderID      int
-	ElevatorList  [NElevators]HRAElevState                   
-	HallOrderList HallOrderTable 
-	AliveStatus   bool
-	AliveList     [NElevators]bool
-}
 
 
 type GlobalNodeRegistry struct {
@@ -105,15 +131,6 @@ const (
 )
 
 
-
-// // bruke vanlig elevator isteden eller?? har en nesten lik struct over (Andreas)
-// type LocalElevatorState struct {
-// 	Behaviour   ElevatorBehaviour
-// 	Floor       int
-// 	Direction   MotorDirection
-// 	CabRequests []bool
-// }
-
 type Req struct {
 	Active     bool
 	AssignedTo string
@@ -135,6 +152,10 @@ type State struct {
 //Erstattes med types.motorDirection
 
 
+
+// ------------------------------------------------------------------------------------
+//	enum types for order domain
+// ------------------------------------------------------------------------------------
 type OrderState int
 
 const (
@@ -147,6 +168,12 @@ const (
 type HallOrderTable [NFloors][NButtons]OrderState
 type CabOrderTable 	[NFloors][NButtons]bool
 
+
+
+
+// ------------------------------------------------------------------------------------
+//	enum types for assigner.go
+// ------------------------------------------------------------------------------------
 
 type HRAElevState struct {
     Behavior    string      `json:"behaviour"`
@@ -161,21 +188,3 @@ type HRAInput struct {
 }
 
 
-//Ønsker å endre DecisonBasis til SystemState. Skal visstnok være mer korrekt (Jesper)
-
-
-// Flows: DecisionMaker → ConsensusManager
-type AgreedSystemState struct {
-	AliveList    	[NElevators]bool
-	ElevatorList  	[NElevators]HRAElevState
-	HallOrderTable 	[NElevators]HallOrderTable
-}
-
-
-// Flows: ConsensusManager → DecisionMaker
-type LocalSystemState struct{
-	ElevatorID		int
-	AliveStatus    	bool
-	ElevatorState  	HRAElevState
-	HallRequests 	HallOrderTable
-}
