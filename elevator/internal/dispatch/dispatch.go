@@ -10,11 +10,11 @@ import (
 // ------------------------------------------------------------------------------
 
 func Run(
-	newLocalOrders 			chan<- LocalOrderTable,
-	localSystemCh 			chan<- LocalSystemState,
-	lightUpdateRequests 	chan<- HallOrderTable,
-	localControlEvents 		<-chan FromLocalToDM,
-	convergedSystemState 	<-chan ConvergedSystemState,
+	localOrders 			chan<- LocalOrderTable,
+	localStateCh 			chan<- LocalSystemState,
+	hallLights 				chan<- HallOrderTable,
+	elevEvents 				<-chan ElevatorEvents,
+	convergedSystem 		<-chan ConvergedSystemState,
 	elevatorID 				int,
 ) {
 	var (
@@ -22,32 +22,30 @@ func Run(
 		previousOrders LocalOrderTable
 	)
 
-	localState = initLocalSystemState(<-localControlEvents, elevatorID)
-	localSystemCh <- localState
+	localState = initLocalSystemState(<-elevEvents, elevatorID)
+	localStateCh <- localState
 
 	for {
 		select {
 
-		case event := <-localControlEvents:
+		case event := <-elevEvents:
 			if event.NewButtonPress != nil {
 				localState = applyButtonPress(localState, *event.NewButtonPress)
 			}
 
 			localState = applyHardwareUpdate(localState, event)
-			localSystemCh <- localState
+			localStateCh <- localState
 
-		case convergedState := <-convergedSystemState:
-			localState = mergeConvergedHallOrders(localState, convergedState, localState.ElevatorID)
-			assignedOrders, lightUpdate := prepareAssignment(convergedState, localState)
+		case converged := <-convergedSystem:
+			localState = mergeConvergedHallOrders(localState, converged, localState.ElevatorID)
+			assignedOrders, lightUpdate := prepareAssignment(converged, localState)
 
-			// Only forward new assignments to avoid re-interrupting local control
-			// with an identical order table on every consensus tick.
 			if assignedOrders != previousOrders {
-				newLocalOrders <- assignedOrders
+				localOrders <- assignedOrders
 				previousOrders = assignedOrders
 			}
 
-			lightUpdateRequests <- lightUpdate
+			hallLights <- lightUpdate
 		}
 	}
 }
