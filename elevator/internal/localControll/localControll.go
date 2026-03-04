@@ -21,13 +21,12 @@ func localControl(
 		doorOpenChan       = make(chan bool, 1)
 		motorActiveChan    = make(chan bool, 1)
 		recoveryEnableChan = make(chan bool, 1)
-		doorClosedChan     = make(chan bool, 1)
-		motorInactiveChan  = make(chan bool, 1)
-		recoveryTickChan   = make(chan bool, 1)
-		obstructionChan    = make(chan bool, config.ChannelBufferSize)
-		buttonPressChan    = make(chan types.OrderEvent, config.ChannelBufferSize)
-		StopPressChan      = make(chan bool, 1)
-		obstruction        bool
+		doorClosedChan    = make(chan bool, 1) 
+		motorInactiveChan = make(chan bool, 1) 
+		recoveryTickChan  = make(chan bool, 1) 
+		obstructionChan   = make(chan bool, config.ChannelBufferSize)
+		buttonPressChan   = make(chan types.OrderEvent, config.ChannelBufferSize)
+		obstruction  bool
 	)
 
 	go hardware.PollFloorSensor(floorChan)

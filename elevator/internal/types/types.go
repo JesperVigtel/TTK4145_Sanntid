@@ -44,7 +44,7 @@ const (
 	ElevatorDoorOpen
 )
 
-type OrderEvent struct {
+type ButtonEvent struct {	//Changed back to ButtonEvent for concistency (Jesper)
 	Floor  int
 	Button ButtonType
 }
@@ -52,8 +52,14 @@ type OrderEvent struct {
 type FromLocalToDM struct {
 	Elevator       Elevator
 	CompletedOrder CabOrderTable
-	NewButtonPress *OrderEvent 
+	NewButtonPress *ButtonEvent 
 	Obstructed     bool        
+}
+
+
+type LocalElevatorFromDriver struct{
+	Elevator 		Elevator
+	ExecutedOrders 	CabOrderTable
 }
 
 //Elevator types stop
@@ -62,10 +68,17 @@ type FromLocalToDM struct {
 
 type Message struct {
 	SenderID      int
-	ElevatorList  [NElevators]int                    
+	ElevatorList  [NElevators]HRAElevState                   
 	HallOrderList HallOrderTable 
 	AliveStatus   bool
 	AliveList     [NElevators]bool
+}
+
+
+type GlobalNodeRegistry struct {
+    Nodes []int 
+    New   []int 
+    Lost  []int 
 }
 
 
@@ -148,21 +161,20 @@ type HRAInput struct {
 }
 
 
-type DecisionBasisFromNetwork struct {
+//Ønsker å endre DecisonBasis til SystemState. Skal visstnok være mer korrekt (Jesper)
+
+
+// Flows: DecisionMaker → ConsensusManager
+type AgreedSystemState struct {
 	AliveList    	[NElevators]bool
 	ElevatorList  	[NElevators]HRAElevState
-	HallOrderTable 	HallOrderTable
-}
-
-type LocalElevatorFromDriver struct{
-	Elevator 		Elevator
-	ExecutedOrders 	CabOrderTable
+	HallOrderTable 	[NElevators]HallOrderTable
 }
 
 
-
-type DecisionBasisFromAssigner struct{	//Placeholder, change from network based on Need 
-	AliveList    	[NElevators]bool
-	ElevatorStates  [NElevators]HRAElevState
+// Flows: ConsensusManager → DecisionMaker
+type LocalSystemState struct{
+	AliveStatus    	bool
+	ElevatorState  	HRAElevState
 	HallRequests 	HallOrderTable
 }
