@@ -5,17 +5,17 @@ import (
 	. "elevator/internal/types"
 )
 
-func toHRAElevState(e Elevator) HRAElevState {
+func toHRAElevState(elev Elevator) HRAElevState {
 	return HRAElevState{
-		Behavior:    behaviourToString(e.Behaviour),
-		Floor:       e.CurrentFloor,
-		Direction:   directionToString(e.MotorDirection),
-		CabRequests: cabTableToBoolSlice(e.Request),
+		Behavior:    behaviourToString(elev.Behaviour),
+		Floor:       elev.CurrentFloor,
+		Direction:   directionToString(elev.MotorDirection),
+		CabRequests: cabTableToBoolSlice(elev.Request),
 	}
 }
 
-func behaviourToString(b ElevatorBehaviour) string {
-	switch b {
+func behaviourToString(behaviour ElevatorBehaviour) string {
+	switch behaviour {
 		case ElevatorIdle:     return "idle"
 		case ElevatorMoving:   return "moving"
 		case ElevatorDoorOpen: return "doorOpen"
@@ -23,18 +23,18 @@ func behaviourToString(b ElevatorBehaviour) string {
 	}
 }
 
-func directionToString(d MotorDirection) string {
-	switch d {
+func directionToString(dir MotorDirection) string {
+	switch dir {
 		case Up:   return "up"
 		case Down: return "down"
 		default:   return "stop"
 	}
 }
 
-func cabTableToBoolSlice(t CabOrderTable) []bool {
+func cabTableToBoolSlice(table CabOrderTable) []bool {
 	result := make([]bool, NFloors)
-	for floor := range t {
-		result[floor] = t[floor][BTCab]
+	for floor := range table {
+		result[floor] = table[floor][BTCab]
 	}
 	return result
 }

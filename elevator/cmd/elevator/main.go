@@ -19,14 +19,14 @@ func main() {
 
 	// -- Channels --
 
-	localControlEvents := make(chan types.FromLocalToDM, config.ChannelBufferSize)
-	newLocalOrders := make(chan types.CabOrderTable, config.ChannelBufferSize)
-	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
-	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
-	hallLightUpdates := make(chan types.HallOrderTable, config.ChannelBufferSize)
-	incomingMessages := make(chan types.Message, config.ChannelBufferSize)
-	outgoingMessages := make(chan types.Message, config.ChannelBufferSize)
-	nodeRegistryEvents := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
+	localControlEvents 		:= make(chan types.FromLocalToDM, 			config.ChannelBufferSize)
+	newLocalOrders 			:= make(chan types.CabOrderTable, 			config.ChannelBufferSize)
+	localSystemState 		:= make(chan types.LocalSystemState, 		config.ChannelBufferSize)
+	convergedSystemState 	:= make(chan types.ConvergedSystemState,	config.ChannelBufferSize)
+	hallLightUpdates 		:= make(chan types.HallOrderTable, 			config.ChannelBufferSize)
+	incomingMessages 		:= make(chan types.Message, 				config.ChannelBufferSize)
+	outgoingMessages 		:= make(chan types.Message, 				config.ChannelBufferSize)
+	nodeRegistryEvents 		:= make(chan types.GlobalNodeRegistry, 		config.ChannelBufferSize)
 
 	// -- Goroutines --
 	hardware.Init(config.Addr, config.NFloors) //Shuld be moved inside a localContoll run
