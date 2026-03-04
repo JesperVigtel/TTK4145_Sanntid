@@ -190,13 +190,13 @@ func TestRunConsensusManager_SingleNode_PublishesOnLocalState(t *testing.T) {
 	incomingMessages    := make(chan Message, 10)
 	nodeRegistryEvents  := make(chan GlobalNodeRegistry, 10)
 	localSystemStateCh  := make(chan LocalSystemState, 10)
-	agreedSystemStateCh := make(chan AgreedSystemState, 10)
+	convergedSystemStateCh := make(chan ConvergedSystemState, 10)
 
 	go RunConsensusManager(
 		incomingMessages,
 		nodeRegistryEvents,
 		localSystemStateCh,
-		agreedSystemStateCh,
+		convergedSystemStateCh,
 		0,
 	)
 
@@ -212,12 +212,12 @@ func TestRunConsensusManager_SingleNode_PublishesOnLocalState(t *testing.T) {
 	}
 
 	select {
-	case agreed := <-agreedSystemStateCh:
-		if !agreed.AliveList[0] {
-			t.Error("self should be marked alive in AgreedSystemState")
+	case converged := <-convergedSystemStateCh:
+		if !converged.AliveList[0] {
+			t.Error("self should be marked alive in ConvergedSystemState")
 		}
 	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for AgreedSystemState")
+		t.Fatal("timed out waiting for ConvergedSystemState")
 	}
 }
 
@@ -225,13 +225,13 @@ func TestRunConsensusManager_LostPeer_ResetsItsOrders(t *testing.T) {
 	incomingMessages    := make(chan Message, 10)
 	nodeRegistryEvents  := make(chan GlobalNodeRegistry, 10)
 	localSystemStateCh  := make(chan LocalSystemState, 10)
-	agreedSystemStateCh := make(chan AgreedSystemState, 10)
+	convergedSystemStateCh := make(chan ConvergedSystemState, 10)
 
 	go RunConsensusManager(
 		incomingMessages,
 		nodeRegistryEvents,
 		localSystemStateCh,
-		agreedSystemStateCh,
+		convergedSystemStateCh,
 		0,
 	)
 
@@ -249,19 +249,19 @@ func TestRunConsensusManager_LostPeer_ResetsItsOrders(t *testing.T) {
 	}
 
 	select {
-	case agreed := <-agreedSystemStateCh:
-		if agreed.AliveList[1] {
+	case converged := <-convergedSystemStateCh:
+		if converged.AliveList[1] {
 			t.Error("peer 1 should not be alive after being reported lost")
 		}
 		for floor := 0; floor < NFloors; floor++ {
 			for btn := 0; btn < NButtons; btn++ {
-				if agreed.HallOrderTable[1][floor][btn] != OrderStandby {
+				if converged.HallOrderTable[1][floor][btn] != OrderStandby {
 					t.Errorf("peer 1 orders should be Standby after loss, got %v at [%d][%d]",
-						agreed.HallOrderTable[1][floor][btn], floor, btn)
+						converged.HallOrderTable[1][floor][btn], floor, btn)
 				}
 			}
 		}
 	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for AgreedSystemState")
+		t.Fatal("timed out waiting for ConvergedSystemState")
 	}
 }

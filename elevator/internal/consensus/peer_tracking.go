@@ -74,19 +74,19 @@ func allAlivePeersConsistent(
 	return true
 }
 
-func publishAgreedState(
-	agreedSystemState chan<- AgreedSystemState,
-	peerIsAlive [NElevators]bool,
-	systemElevStates [NElevators]HRAElevState,
-	systemHallOrders [NElevators]HallOrderTable,
+func publishConsistantState(
+	convergedSystemState 	chan<- ConvergedSystemState,
+	peerIsAlive 			[NElevators]bool,
+	systemElevStates 		[NElevators]HRAElevState,
+	systemHallOrders 		[NElevators]HallOrderTable,
 ) {
-	state := AgreedSystemState{
+	state := ConvergedSystemState{
 		AliveList:      peerIsAlive,
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders,
 	}
 	select {
-	case agreedSystemState <- state:
+	case convergedSystemState <- state:
 	default:
 	}
 }

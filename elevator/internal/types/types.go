@@ -4,37 +4,30 @@ import (
 	. "elevator/internal/config"
 )
 
-// Felles datatyper, structs og konstanter brukt på tvers av alle pakker.
-// Sikrer konsistente data og kontrakter mellom moduler.
-
-
-
 // ------------------------------------------------------------------------------------
 //	enum types for intermodule contracts
 // ------------------------------------------------------------------------------------
 
-type AgreedSystemState struct {
-	AliveList    	[NElevators]bool
-	ElevatorList  	[NElevators]HRAElevState
-	HallOrderTable 	[NElevators]HallOrderTable
+type ConvergedSystemState struct {
+	AliveList      [NElevators]bool
+	ElevatorList   [NElevators]HRAElevState
+	HallOrderTable [NElevators]HallOrderTable
 }
 
-type LocalSystemState struct{
-	ElevatorID		int
-	AliveStatus    	bool
-	ElevatorState  	HRAElevState
-	HallRequests 	HallOrderTable
+type LocalSystemState struct {
+	ElevatorID    int
+	AliveStatus   bool
+	ElevatorState HRAElevState
+	HallRequests  HallOrderTable
 }
-
 
 type Message struct {
 	SenderID      int
-	ElevatorList  [NElevators]HRAElevState                   
-	HallOrderList HallOrderTable 
+	ElevatorList  [NElevators]HRAElevState
+	HallOrderList HallOrderTable
 	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
-
 
 //Elevator types START:
 
@@ -70,7 +63,7 @@ const (
 	ElevatorDoorOpen
 )
 
-type ButtonEvent struct {	
+type ButtonEvent struct {
 	Floor  int
 	Button ButtonType
 }
@@ -78,24 +71,19 @@ type ButtonEvent struct {
 type FromLocalToDM struct {
 	Elevator       Elevator
 	CompletedOrder CabOrderTable
-	NewButtonPress *ButtonEvent 
-	Obstructed     bool        
+	NewButtonPress *ButtonEvent
+	Obstructed     bool
 }
-
 
 //Elevator types stop
 
 //Network types START:
 
-
-
 type GlobalNodeRegistry struct {
-    Nodes []int 
-    New   []int 
-    Lost  []int 
+	Nodes []int
+	New   []int
+	Lost  []int
 }
-
-
 
 //Network types END:
 
@@ -118,7 +106,6 @@ const (
 	ClearInDirn
 )
 
-
 type Req struct {
 	Active     bool
 	AssignedTo string
@@ -130,10 +117,10 @@ type State struct {
 	Time  int64
 }
 
-
-
 // ------------------------------------------------------------------------------------
+//
 //	enum types for order domain
+//
 // ------------------------------------------------------------------------------------
 type OrderState int
 
@@ -145,25 +132,20 @@ const (
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
-type CabOrderTable 	[NFloors][NButtons]bool
-
-
-
+type CabOrderTable [NFloors][NButtons]bool
 
 // ------------------------------------------------------------------------------------
 //	enum types for assigner
 // ------------------------------------------------------------------------------------
 
 type HRAElevState struct {
-    Behavior    string      `json:"behaviour"`
-    Floor       int         `json:"floor"` 
-    Direction   string      `json:"direction"`
-    CabRequests []bool      `json:"cabRequests"`
+	Behavior    string `json:"behaviour"`
+	Floor       int    `json:"floor"`
+	Direction   string `json:"direction"`
+	CabRequests []bool `json:"cabRequests"`
 }
 
 type HRAInput struct {
-    HallRequests    [NFloors][2]bool           	`json:"hallRequests"`
-    States          map[string]HRAElevState     `json:"states"`
+	HallRequests [NFloors][2]bool        `json:"hallRequests"`
+	States       map[string]HRAElevState `json:"states"`
 }
-
-

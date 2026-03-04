@@ -7,7 +7,7 @@ import (
 
 // -----------------------------------------------------------------------------
 // Enforces distributed consensus over hall order state by requiring all alive
-// peers to report a consistent view before publishing an agreed state.
+// peers to report a consistent view before publishing a converged state.
 // Uses a cyclic order-state counter (Standby→Pending→Assigned→Complete→Standby)
 // so that state transitions are self-synchronising without a central coordinator.
 // -----------------------------------------------------------------------------
@@ -16,7 +16,7 @@ func RunConsensusManager(
 	incomingMessages <-chan Message,
 	nodeRegistryEvents <-chan GlobalNodeRegistry,
 	localSystemState <-chan LocalSystemState,
-	agreedSystemState chan<- AgreedSystemState,
+	convergedSystemState chan<- ConvergedSystemState,
 	selfID int,
 ) {
 	var (
@@ -39,8 +39,6 @@ func RunConsensusManager(
 				continue
 			}
 
-			// Check against the previously recorded state: a peer is consistent if its
-			// new message matches what we already have, meaning both sides advanced together.	
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
 			systemElevStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
 			systemHallOrders[msg.SenderID] = msg.HallOrderList
@@ -50,7 +48,7 @@ func RunConsensusManager(
 
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
-				publishAgreedState(agreedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
+				publishConsistantState(convergedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
 			}
 
 		case state := <-localSystemState:
@@ -61,7 +59,7 @@ func RunConsensusManager(
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
-				publishAgreedState(agreedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
+				publishConsistantState(convergedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
 			}
 		}
 	}

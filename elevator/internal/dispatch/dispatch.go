@@ -5,17 +5,17 @@ import (
 )
 
 // ------------------------------------------------
-// Translates agreed distributed state and local hardware events into commands
+// Translates converged distributed state and local hardware events into commands
 // for the local elevator: cab order assignments and hall light updates.
 // ------------------------------------------------
 
 func RunDispatch(
-	newLocalOrders 		chan<- CabOrderTable,
-	localSystemCh 		chan<- LocalSystemState,
+	newLocalOrders chan<- CabOrderTable,
+	localSystemCh chan<- LocalSystemState,
 	lightUpdateRequests chan<- HallOrderTable,
-	localControlEvents 	<-chan FromLocalToDM,
-	agreedSystemState 	<-chan AgreedSystemState,
-	elevatorID 			int,
+	localControlEvents <-chan FromLocalToDM,
+	convergedSystemState <-chan ConvergedSystemState,
+	elevatorID int,
 ) {
 	var (
 		localState     LocalSystemState
@@ -36,9 +36,9 @@ func RunDispatch(
 			localState = applyHardwareUpdate(localState, event)
 			localSystemCh <- localState
 
-		case agreedState := <-agreedSystemState:
-			localState = mergeAgreedHallOrders(localState, agreedState, localState.ElevatorID)
-			assignedOrders, lightUpdate := prepareAssignment(agreedState, localState)
+		case convergedState := <-convergedSystemState:
+			localState = mergeConvergedHallOrders(localState, convergedState, localState.ElevatorID)
+			assignedOrders, lightUpdate := prepareAssignment(convergedState, localState)
 
 			// Only forward new assignments to avoid re-interrupting local control
 			// with an identical order table on every consensus tick.

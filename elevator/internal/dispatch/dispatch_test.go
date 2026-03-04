@@ -5,7 +5,7 @@ package dispatch
 // Two layers are tested here:
 //
 //  1. Pure state-transformation helpers (applyButtonPress, applyHardwareUpdate,
-//     mergeAgreedHallOrders).  These have no side-effects and are the easiest
+//     mergeConvergedHallOrders).  These have no side-effects and are the easiest
 //     to cover thoroughly with table-driven tests.
 //
 //  2. RunDispatch itself – the goroutine that is the module's public boundary.
@@ -144,36 +144,36 @@ func TestApplyHardwareUpdate_CompletedHallUp_SetsOrderComplete(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. mergeAgreedHallOrders
+// 3. mergeConvergedHallOrders
 // ---------------------------------------------------------------------------
 
-func TestMergeAgreedHallOrders_Standby_BecomesAssigned(t *testing.T) {
+func TestMergeConvergedHallOrders_Standby_BecomesAssigned(t *testing.T) {
 	const id = 0
 	localState := baseLocalState(id)
 
-	var agreed AgreedSystemState
-	agreed.AliveList[id] = true
-	agreed.HallOrderTable[id][0][BTHallUp] = OrderAssigned
+	var converged ConvergedSystemState
+	converged.AliveList[id] = true
+	converged.HallOrderTable[id][0][BTHallUp] = OrderAssigned
 
-	next := mergeAgreedHallOrders(localState, agreed, id)
+	next := mergeConvergedHallOrders(localState, converged, id)
 
 	if next.HallRequests[0][BTHallUp] != OrderAssigned {
 		t.Errorf("expected OrderAssigned, got %v", next.HallRequests[0][BTHallUp])
 	}
 }
 
-func TestMergeAgreedHallOrders_LocalComplete_NotRegressedByAssigned(t *testing.T) {
+func TestMergeConvergedHallOrders_LocalComplete_NotRegressedByAssigned(t *testing.T) {
 	// Once we locally marked an order as Complete, the consensus layer may
 	// still say Assigned (it hasn't caught up yet). We must NOT go back.
 	const id = 0
 	localState := baseLocalState(id)
 	localState.HallRequests[0][BTHallUp] = OrderComplete
 
-	var agreed AgreedSystemState
-	agreed.AliveList[id] = true
-	agreed.HallOrderTable[id][0][BTHallUp] = OrderAssigned
+	var converged ConvergedSystemState
+	converged.AliveList[id] = true
+	converged.HallOrderTable[id][0][BTHallUp] = OrderAssigned
 
-	next := mergeAgreedHallOrders(localState, agreed, id)
+	next := mergeConvergedHallOrders(localState, converged, id)
 
 	if next.HallRequests[0][BTHallUp] != OrderComplete {
 		t.Errorf("regression: OrderComplete was overwritten by stale OrderAssigned")
@@ -202,7 +202,7 @@ func TestRunDispatch_ButtonPress_PublishesUpdatedLocalState(t *testing.T) {
 	localSystemCh       := make(chan LocalSystemState, 10)
 	lightUpdateRequests := make(chan HallOrderTable, 10)
 	localControlEvents  := make(chan FromLocalToDM, 10)
-	agreedSystemState   := make(chan AgreedSystemState, 10)
+	agreedSystemState   := make(chan ConvergedSystemState, 10)
 
 	// The goroutine blocks on the first event to initialise; feed it now.
 	localControlEvents <- makeInitialHWEvent()
@@ -240,10 +240,10 @@ func TestRunDispatch_ButtonPress_PublishesUpdatedLocalState(t *testing.T) {
 		t.Fatal("timed out waiting for LocalSystemState after button press")
 	}
 
-	// newLocalOrders should NOT have been written (no AgreedSystemState sent).
+	// newLocalOrders should NOT have been written (no ConvergedSystemState sent).
 	select {
 	case <-newLocalOrders:
-		t.Error("unexpected write to newLocalOrders without AgreedSystemState")
+		t.Error("unexpected write to newLocalOrders without ConvergedSystemState")
 	default:
 	}
 }

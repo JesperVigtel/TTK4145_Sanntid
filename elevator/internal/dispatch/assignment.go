@@ -9,54 +9,49 @@ import (
 )
 
 func prepareAssignment(
-	agreedState AgreedSystemState,
-	localState  LocalSystemState,
+	convergedState ConvergedSystemState,
+	localState LocalSystemState,
 ) (CabOrderTable, HallOrderTable) {
-	elevatorID     := localState.ElevatorID
-	assignedOrders := computeAssignedOrders(agreedState, localState, elevatorID)
-	lightUpdate    := computeLightUpdate(agreedState, elevatorID)
+	elevatorID := localState.ElevatorID
+	assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
+	lightUpdate := computeLightUpdate(convergedState, elevatorID)
 	return assignedOrders, lightUpdate
 }
 
-
-
-
-
-
-func mergeAgreedHallOrders(
-	localState  LocalSystemState,
-	agreedState AgreedSystemState,
-	elevatorID  int,
+func mergeConvergedHallOrders(
+	localState LocalSystemState,
+	convergedState ConvergedSystemState,
+	elevatorID int,
 ) LocalSystemState {
 	for floor := 0; floor < NFloors; floor++ {
 		for btn := 0; btn < NButtons; btn++ {
-			agreedOrder := agreedState.HallOrderTable[elevatorID][floor][btn]
-			localOrder  := localState.HallRequests[floor][btn]
+			convergedOrder := convergedState.HallOrderTable[elevatorID][floor][btn]
+			localOrder := localState.HallRequests[floor][btn]
 			// Keep our completed state: we already finished this order but consensus
 			// hasn't caught up yet and would otherwise overwrite it with Assigned
-			if localOrder == OrderComplete && agreedOrder == OrderAssigned {
+			if localOrder == OrderComplete && convergedOrder == OrderAssigned {
 				continue
 			}
-			localState.HallRequests[floor][btn] = agreedOrder
+			localState.HallRequests[floor][btn] = convergedOrder
 		}
 	}
 	return localState
 }
 
 func computeAssignedOrders(
-	agreedState AgreedSystemState,
-	localState  LocalSystemState,
-	elevatorID  int,
+	convergedState ConvergedSystemState,
+	localState LocalSystemState,
+	elevatorID int,
 ) CabOrderTable {
 	var result CabOrderTable
 
 	// If this elevator is not recognised as alive by the network, only serve
 	// cab calls — hall orders require network agreement to assign safely.
-	if !agreedState.AliveList[elevatorID] {
+	if !convergedState.AliveList[elevatorID] {
 		return cabOrdersOnly(localState)
 	}
 
-	input    := buildHallAssignerInput(agreedState, localState, elevatorID)
+	input := buildHallAssignerInput(convergedState, localState, elevatorID)
 	jsonBytes, err := json.Marshal(input)
 	if err != nil {
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
@@ -79,20 +74,20 @@ func computeAssignedOrders(
 }
 
 func buildHallAssignerInput(
-	agreedState AgreedSystemState,
-	localState  LocalSystemState,
-	elevatorID  int,
+	convergedState ConvergedSystemState,
+	localState LocalSystemState,
+	elevatorID int,
 ) HRAInput {
 	input := HRAInput{
 		HallRequests: [NFloors][2]bool{},
 		States:       make(map[string]HRAElevState),
 	}
 
-	for id, alive := range agreedState.AliveList {
+	for id, alive := range convergedState.AliveList {
 		if !alive {
 			continue
 		}
-		elevState := agreedState.ElevatorList[id]
+		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
 			elevState.CabRequests = localState.ElevatorState.CabRequests
 		}
@@ -102,8 +97,8 @@ func buildHallAssignerInput(
 	for floor := 0; floor < NFloors; floor++ {
 		for btn := BTHallUp; btn <= BTHallDown; btn++ {
 			allAssigned := true
-			for id, alive := range agreedState.AliveList {
-				if alive && agreedState.HallOrderTable[id][floor][btn] != OrderAssigned {
+			for id, alive := range convergedState.AliveList {
+				if alive && convergedState.HallOrderTable[id][floor][btn] != OrderAssigned {
 					allAssigned = false
 					break
 				}
@@ -116,7 +111,7 @@ func buildHallAssignerInput(
 }
 
 func buildCabOrderTable(
-	output     map[string][][2]bool,
+	output map[string][][2]bool,
 	localState LocalSystemState,
 	elevatorID int,
 ) CabOrderTable {
@@ -138,8 +133,8 @@ func buildCabOrderTable(
 	return result
 }
 
-func computeLightUpdate(agreedState AgreedSystemState, elevatorID int) HallOrderTable {
-	return agreedState.HallOrderTable[elevatorID]
+func computeLightUpdate(convergedState ConvergedSystemState, elevatorID int) HallOrderTable {
+	return convergedState.HallOrderTable[elevatorID]
 }
 
 func cabOrdersOnly(localState LocalSystemState) CabOrderTable {
