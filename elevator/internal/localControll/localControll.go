@@ -123,6 +123,7 @@ func localControl(
 					hardware.SetMotorDirection(newDir)
 					motorActiveChan <- true // Re-enable watchdog
 				}
+				// her må jeg sende noe på recoverychan for a stoppe denne timeren
 			}
 		}
 	}
