@@ -23,12 +23,10 @@ func mergeConvergedHallOrders(
 	convergedState ConvergedSystemState,
 	elevatorID int,
 ) LocalSystemState {
-	for floor := 0; floor < NFloors; floor++ {
-		for btn := 0; btn < NButtons; btn++ {
+	for floor := range NFloors {
+		for btn := range NButtons {
 			convergedOrder := convergedState.HallOrderTable[elevatorID][floor][btn]
 			localOrder := localState.HallRequests[floor][btn]
-			// Keep our completed state: we already finished this order but consensus
-			// hasn't caught up yet and would otherwise overwrite it with Assigned
 			if localOrder == OrderComplete && convergedOrder == OrderAssigned {
 				continue
 			}
@@ -45,11 +43,11 @@ func computeAssignedOrders(
 ) LocalOrderTable {
 	var result LocalOrderTable
 
-	// If this elevator is not recognised as alive by the network, only serve
-	// cab calls — hall orders require network agreement to assign safely.
-	if !convergedState.AliveList[elevatorID] {
-		return cabOrdersOnly(localState)
-	}
+	// // If this elevator is not recognised as alive by the network, only serve
+	// // cab calls — hall orders require network agreement to assign safely.
+	// if !convergedState.AliveList[elevatorID] {
+	// 	return cabOrdersOnly(localState)
+	// }
 
 	input := buildHallAssignerInput(convergedState, localState, elevatorID)
 	jsonBytes, err := json.Marshal(input)
@@ -94,7 +92,7 @@ func buildHallAssignerInput(
 		input.States[fmt.Sprintf("elevator_%d", id)] = elevState
 	}
 
-	for floor := 0; floor < NFloors; floor++ {
+	for floor := range NFloors {
 		for btn := BTHallUp; btn <= BTHallDown; btn++ {
 			allAssigned := true
 			for id, alive := range convergedState.AliveList {
@@ -120,13 +118,13 @@ func buildLocalOrderTable(
 
 	if assigned, found := output[idStr]; found {
 		for floor := 0; floor < NFloors && floor < len(assigned); floor++ {
-			for btn := BTHallUp; btn < BTCab; btn++ {
+			for btn := range BTCab {
 				result[floor][btn] = assigned[floor][btn]
 			}
 		}
 	}
 
-	for floor := 0; floor < NFloors; floor++ {
+	for floor := range NFloors {
 		result[floor][BTCab] = localState.ElevatorState.CabRequests[floor]
 	}
 
@@ -139,7 +137,7 @@ func computeLightUpdate(convergedState ConvergedSystemState, elevatorID int) Hal
 
 func cabOrdersOnly(localState LocalSystemState) LocalOrderTable {
 	var result LocalOrderTable
-	for floor := 0; floor < NFloors; floor++ {
+	for floor := range NFloors {
 		result[floor][BTCab] = localState.ElevatorState.CabRequests[floor]
 	}
 	return result

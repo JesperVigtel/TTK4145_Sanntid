@@ -9,7 +9,7 @@ import (
 // for the local elevator: cab order assignments and hall light updates.
 // ------------------------------------------------------------------------------
 
-func RunDispatch(
+func Run(
 	newLocalOrders 			chan<- LocalOrderTable,
 	localSystemCh 			chan<- LocalSystemState,
 	lightUpdateRequests 	chan<- HallOrderTable,

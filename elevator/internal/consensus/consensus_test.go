@@ -193,7 +193,7 @@ func TestRunConsensusManager_SingleNode_PublishesOnLocalState(t *testing.T) {
 	localSystemStateCh  := make(chan LocalSystemState, 10)
 	convergedSystemStateCh := make(chan ConvergedSystemState, 10)
 
-	go RunConsensus(
+	go Run(
 		incomingMessages,
 		outgoingMessages,
 		nodeRegistryEvents,
@@ -230,7 +230,7 @@ func TestRunConsensusManager_LostPeer_ResetsItsOrders(t *testing.T) {
 	localSystemStateCh  := make(chan LocalSystemState, 10)
 	convergedSystemStateCh := make(chan ConvergedSystemState, 10)
 
-	go RunConsensus(
+	go Run(
 		incomingMessages,
 		outgoingMessages,
 		nodeRegistryEvents,

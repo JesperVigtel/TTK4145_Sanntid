@@ -12,7 +12,7 @@ import (
 // so that state transitions are self-synchronising without a central coordinator.
 // -----------------------------------------------------------------------------
 
-func RunConsensus(
+func Run(
 	incomingMessages 	<-chan Message,
 	outgoingMessages	chan<- Message,
 	nodeRegistryEvents 	<-chan GlobalNodeRegistry,

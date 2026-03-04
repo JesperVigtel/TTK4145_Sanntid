@@ -207,7 +207,7 @@ func TestRunDispatch_ButtonPress_PublishesUpdatedLocalState(t *testing.T) {
 	// The goroutine blocks on the first event to initialise; feed it now.
 	localControlEvents <- makeInitialHWEvent()
 
-	go RunDispatch(
+	go Run(
 		newLocalOrders,
 		localSystemCh,
 		lightUpdateRequests,
