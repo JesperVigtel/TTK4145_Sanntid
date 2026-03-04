@@ -1,7 +1,9 @@
-//Transmitter og Reciever blir 2 gorutiner i network.go og vil jobbe i bakgrunnen
-//disse vil håndtere all nettverkskommunikasjon
+// Transmitter og Reciever blir 2 gorutiner i network.go og vil jobbe i bakgrunnen
+// disse vil håndtere all nettverkskommunikasjon
 package broadcast
+
 import (
+	"elevator/internal/config"
 	"elevator/internal/network/conn"
 	"encoding/json"
 	"fmt"
@@ -9,9 +11,9 @@ import (
 	"reflect"
 )
 
-//Hva setter vi buffer size til?
 
-const bufSize = 1024
+
+const bufSize = config.BroadcastBufferSize
 
 
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts

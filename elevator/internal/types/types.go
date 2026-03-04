@@ -22,11 +22,11 @@ type LocalSystemState struct {
 }
 
 type Message struct {
-	SenderID      int
-	ElevatorList  [NElevators]HRAElevState
+	SenderID       int
+	ElevatorList   [NElevators]HRAElevState
 	HallOrderTable HallOrderTable
-	AliveStatus   bool
-	AliveList     [NElevators]bool
+	AliveStatus    bool
+	AliveList      [NElevators]bool
 }
 
 //Elevator types START:

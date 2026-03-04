@@ -18,9 +18,6 @@ func InitNetwork(id string, msgTx chan types.Message, msgRx chan types.Message, 
 
 
 
-
-
-
 // func PeerUpdates(peerUpdate <-chan peers.PeerUpdate, aliveList *[config.NElevators]bool){
 //     for update := range peerUpdate {
 //         // Ny heis koblet til
