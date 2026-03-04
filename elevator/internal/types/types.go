@@ -57,10 +57,10 @@ type FromLocalToDM struct {
 }
 
 
-type LocalElevatorFromDriver struct{
-	Elevator 		Elevator
-	ExecutedOrders 	CabOrderTable
-}
+// type LocalElevatorFromDriver struct{	//Redundant, shoudl be removed
+// 	Elevator 		Elevator
+// 	ExecutedOrders 	CabOrderTable
+// }
 
 //Elevator types stop
 
@@ -174,6 +174,7 @@ type AgreedSystemState struct {
 
 // Flows: ConsensusManager → DecisionMaker
 type LocalSystemState struct{
+	ElevatorID		int
 	AliveStatus    	bool
 	ElevatorState  	HRAElevState
 	HallRequests 	HallOrderTable

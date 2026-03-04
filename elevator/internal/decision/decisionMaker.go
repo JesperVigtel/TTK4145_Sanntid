@@ -4,89 +4,47 @@ import (
 	. "elevator/internal/types"
 )
 
+// ------------------------------------------------
+// Module based on the LocalSystemState data to assign orders
+// ------------------------------------------------
+
 func RunDecisionMaker(
-	newLocalOrders       chan<- CabOrderTable,
-	localSystemState     chan<- LocalSystemState,
-	lightUpdateRequests  chan<- HallOrderTable,
-	elevatorStateUpdates <-chan LocalElevatorFromDriver,
-	agreedSystemState    <-chan AgreedSystemState,
-	buttonEvents         <-chan ButtonEvent,
-	elevatorID           int,
+	newLocalOrders chan<- CabOrderTable,
+	localSystemCh chan<- LocalSystemState,
+	lightUpdateRequests chan<- HallOrderTable,
+	localControlEvents <-chan FromLocalToDM,
+	agreedSystemState <-chan AgreedSystemState,
+	elevatorID int,
 ) {
 	var (
 		localState     LocalSystemState
 		previousOrders CabOrderTable
 	)
 
-	localState = initLocalSystemState(<-elevatorStateUpdates, elevatorID)
-	localSystemState <- localState
+	localState = initLocalSystemState(<-localControlEvents, elevatorID)
+	localSystemCh <- localState
 
 	for {
 		select {
-		case hw := <-elevatorStateUpdates:
-			localState = applyHardwareUpdate(localState, hw, elevatorID)
-			localSystemState <- localState
-		
-		case btn := <-buttonEvents:
-			localState = applyButtonPress(localState, elevatorID, btn)
-			localSystemState <- localState
-			
+
+		case event := <-localControlEvents:
+			if event.NewButtonPress != nil {
+				localState = applyButtonPress(localState, *event.NewButtonPress)
+			}
+
+			localState = applyHardwareUpdate(localState, event)
+			localSystemCh <- localState
 
 		case agreedState := <-agreedSystemState:
-			localState, previousOrders = assignOrders(
-				agreedState, localState, previousOrders,
-				newLocalOrders, lightUpdateRequests, elevatorID,
-			)
+			localState = mergeAgreedHallOrders(localState, agreedState, localState.ElevatorID)
+			assignedOrders, lightUpdate := prepareAssignment(agreedState, localState)
+
+			if assignedOrders != previousOrders {
+				newLocalOrders <- assignedOrders
+				previousOrders = assignedOrders
+			}
+
+			lightUpdateRequests <- lightUpdate
 		}
 	}
 }
-
-
-// package decisionMaker
-
-// import (
-// 	."elevator/internal/types"
-// )
-
-
-// func RunDecisionMaker(
-// 	newLocalOrders 				chan<- 	CabOrderTable,
-// 	distributedDecisionBasis	chan<- 	LocalSystemState,
-// 	lightUpdateRequests 		chan<- 	HallOrderTable,
-// 	elevatorStateUpdates 		<-chan 	LocalElevatorFromDriver,
-// 	networkConsensusBasis 		<-chan 	AgreedSystemState,
-// 	buttonEvent 				<-chan	ButtonEvent,
-// 	elevatorID 							int,
-// ) {
-// 	var (
-// 		//orderEvents         = make(chan OrderEvent)
-// 		previousLocalOrders  CabOrderTable
-// 	)
-
-// 	initialElevatorState 		:= 	<-	elevatorStateUpdates
-// 	initialDecisionBasis 		:= 	<-	networkConsensusBasis
-// 	localDecisionBasis 			:= 		initializeLocalDecisionBasis(initialElevatorState, initialDecisionBasis, elevatorID)
-// 	distributedDecisionBasis 		<- 	localDecisionBasis
-
-// 	//go hardware.PollButtons(orderEvents)
-
-// 	for {
-// 		select {
-// 		case newButtonEvent := 	<-buttonEvent:
-// 			onButtonEvent(
-// 				&localDecisionBasis, elevatorID, newButtonEvent, distributedDecisionBasis,
-// 			)
-
-// 		case newElevState 	:= 	<-elevatorStateUpdates:
-// 			onElevatorHardwareUpdate(
-// 				&localDecisionBasis, elevatorID, newElevState, distributedDecisionBasis,
-// 			)
-
-// 		case newConsensusBasis := <-networkConsensusBasis:
-// 			onNetworkConsensus(
-// 				&localDecisionBasis, newConsensusBasis, elevatorID,
-// 				newLocalOrders, &previousLocalOrders, lightUpdateRequests,
-// 			)
-// 		}
-// 	}
-// }

@@ -16,18 +16,18 @@ func toHRAElevState(e Elevator) HRAElevState {
 
 func behaviourToString(b ElevatorBehaviour) string {
 	switch b {
-	case ElevatorIdle:     return "idle"
-	case ElevatorMoving:   return "moving"
-	case ElevatorDoorOpen: return "doorOpen"
-	default:               return "idle"
+		case ElevatorIdle:     return "idle"
+		case ElevatorMoving:   return "moving"
+		case ElevatorDoorOpen: return "doorOpen"
+		default:               return "idle"
 	}
 }
 
 func directionToString(d MotorDirection) string {
 	switch d {
-	case Up:   return "up"
-	case Down: return "down"
-	default:   return "stop"
+		case Up:   return "up"
+		case Down: return "down"
+		default:   return "stop"
 	}
 }
 

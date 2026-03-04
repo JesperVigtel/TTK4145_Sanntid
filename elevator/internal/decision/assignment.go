@@ -8,25 +8,14 @@ import (
 	"os/exec"
 )
 
-func assignOrders(
-	agreedState         AgreedSystemState,
-	localState          LocalSystemState,
-	previousOrders      CabOrderTable,
-	newLocalOrders      chan<- CabOrderTable,
-	lightUpdateRequests chan<- HallOrderTable,
-	elevatorID          int,
-) (LocalSystemState, CabOrderTable) {
-	localState     = mergeAgreedHallOrders(localState, agreedState, elevatorID)
+func prepareAssignment(
+	agreedState AgreedSystemState,
+	localState  LocalSystemState,
+) (CabOrderTable, HallOrderTable) {
+	elevatorID     := localState.ElevatorID
 	assignedOrders := computeAssignedOrders(agreedState, localState, elevatorID)
-
-	if assignedOrders != previousOrders {
-		newLocalOrders <- assignedOrders
-		previousOrders  = assignedOrders
-	}
-
-	lightUpdateRequests <- computeLightUpdate(agreedState, elevatorID)
-
-	return localState, previousOrders
+	lightUpdate    := computeLightUpdate(agreedState, elevatorID)
+	return assignedOrders, lightUpdate
 }
 
 
@@ -64,7 +53,7 @@ func computeAssignedOrders(
 		return cabOrdersOnly(localState)
 	}
 
-	input    := buildHRAInput(agreedState, localState, elevatorID)
+	input    := buildHallAssignerInput(agreedState, localState, elevatorID)
 	jsonBytes, err := json.Marshal(input)
 	if err != nil {
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
@@ -86,7 +75,7 @@ func computeAssignedOrders(
 	return buildCabOrderTable(output, localState, elevatorID)
 }
 
-func buildHRAInput(
+func buildHallAssignerInput(
 	agreedState AgreedSystemState,
 	localState  LocalSystemState,
 	elevatorID  int,
