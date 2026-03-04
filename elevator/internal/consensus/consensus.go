@@ -9,19 +9,18 @@ import (
 // Module based on a cyclyc counter to enfoce consensus between peers in network
 // -----------------------------------------------------------------------------
 
-
 func RunConsensusManager(
-	incomingMessages 	<-chan Message,
-	nodeRegistryEvents 	<-chan GlobalNodeRegistry,
-	localSystemState 	<-chan LocalSystemState,
-	agreedSystemState 	chan<- AgreedSystemState,
-	selfID 				int,
+	incomingMessages <-chan Message,
+	nodeRegistryEvents <-chan GlobalNodeRegistry,
+	localSystemState <-chan LocalSystemState,
+	agreedSystemState chan<- AgreedSystemState,
+	selfID int,
 ) {
 	var (
 		systemHallOrders [NElevators]HallOrderTable
 		systemElevStates [NElevators]HRAElevState
 		peerIsAlive      [NElevators]bool
-		peerHasConverged [NElevators]bool
+		peerIsConsistent [NElevators]bool
 	)
 
 	systemHallOrders = newSystemHallOrders()
@@ -37,15 +36,15 @@ func RunConsensusManager(
 				continue
 			}
 
-			peerHasConverged[msg.SenderID] 	= peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			systemElevStates[msg.SenderID] 	= msg.ElevatorList[msg.SenderID]
-			systemHallOrders[msg.SenderID] 	= msg.HallOrderList
-			peerIsAlive[msg.SenderID] 		= msg.AliveStatus
+			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
+			systemElevStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
+			systemHallOrders[msg.SenderID] = msg.HallOrderList
+			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 
-			if allAlivePeersConverged(peerHasConverged, peerIsAlive, selfID) {
-				peerHasConverged = [NElevators]bool{}
+			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
+				peerIsConsistent = [NElevators]bool{}
 				publishAgreedState(agreedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
 			}
 
@@ -55,9 +54,9 @@ func RunConsensusManager(
 			peerIsAlive[selfID] = state.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			if allAlivePeersConverged(peerHasConverged, peerIsAlive, selfID) {
-				peerHasConverged = [NElevators]bool{}
-			publishAgreedState(agreedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
+			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
+				peerIsConsistent = [NElevators]bool{}
+				publishAgreedState(agreedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
 			}
 		}
 	}

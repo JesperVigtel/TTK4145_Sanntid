@@ -25,9 +25,9 @@ func newStandbyHallOrders() HallOrderTable {
 }
 
 func updatePeerAvailability(
-	nodeRegistry 		GlobalNodeRegistry,
-	peerIsAlive 		[NElevators]bool,
-	systemHallOrders 	[NElevators]HallOrderTable,
+	nodeRegistry GlobalNodeRegistry,
+	peerIsAlive [NElevators]bool,
+	systemHallOrders [NElevators]HallOrderTable,
 ) ([NElevators]bool, [NElevators]HallOrderTable) {
 
 	for _, peerID := range nodeRegistry.Lost {
@@ -48,24 +48,24 @@ func updatePeerAvailability(
 }
 
 func peerStateMatchesRecorded(
-	msg 				Message,
-	systemHallOrders 	[NElevators]HallOrderTable,
-	systemElevStates 	[NElevators]HRAElevState,
+	msg Message,
+	systemHallOrders [NElevators]HallOrderTable,
+	systemElevStates [NElevators]HRAElevState,
 ) bool {
-	return 	reflect.DeepEqual(systemHallOrders[msg.SenderID], 	msg.HallOrderList) &&
-			reflect.DeepEqual(systemElevStates, 				msg.ElevatorList)
+	return reflect.DeepEqual(systemHallOrders[msg.SenderID], msg.HallOrderList) &&
+		reflect.DeepEqual(systemElevStates, msg.ElevatorList)
 }
 
-func allAlivePeersConverged(
-	peerHasConverged 	[NElevators]bool,
-	peerIsAlive 		[NElevators]bool,
-	selfID 				int,
+func allAlivePeersConsistent(
+	peerIsConsistent [NElevators]bool,
+	peerIsAlive [NElevators]bool,
+	selfID int,
 ) bool {
 	for peerID := range NElevators {
 		if peerID == selfID {
 			continue
 		}
-		if peerIsAlive[peerID] && !peerHasConverged[peerID] {
+		if peerIsAlive[peerID] && !peerIsConsistent[peerID] {
 			return false
 		}
 	}
@@ -73,10 +73,10 @@ func allAlivePeersConverged(
 }
 
 func publishAgreedState(
-	agreedSystemState 	chan<- AgreedSystemState,
-	peerIsAlive 		[NElevators]bool,
-	systemElevStates 	[NElevators]HRAElevState,
-	systemHallOrders 	[NElevators]HallOrderTable,
+	agreedSystemState chan<- AgreedSystemState,
+	peerIsAlive [NElevators]bool,
+	systemElevStates [NElevators]HRAElevState,
+	systemHallOrders [NElevators]HallOrderTable,
 ) {
 	state := AgreedSystemState{
 		AliveList:      peerIsAlive,
@@ -84,7 +84,7 @@ func publishAgreedState(
 		HallOrderTable: systemHallOrders,
 	}
 	select {
-		case agreedSystemState <- state:
-		default:
+	case agreedSystemState <- state:
+	default:
 	}
 }
