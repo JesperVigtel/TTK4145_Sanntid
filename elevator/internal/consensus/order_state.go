@@ -11,11 +11,10 @@ import (
 // Standby -> Pending -> Assigned -> Complete -> Standby
 // -----------------------------------------------------------------------------
 
-
 func advanceLocalOrderStates(
-	systemHallOrders 	[NElevators]HallOrderTable,
-	selfID 				int,
-	peerIsAlive 		[NElevators]bool,
+	systemHallOrders [NElevators]HallOrderTable,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) [NElevators]HallOrderTable {
 	for floor := range NFloors {
 		for btn := range NButtons {
@@ -28,11 +27,11 @@ func advanceLocalOrderStates(
 }
 
 func computeNextOrderState(
-	systemHallOrders 	[NElevators]HallOrderTable,
-	floor 				int,
-	btn 				int,
-	selfID 				int,
-	peerIsAlive 		[NElevators]bool,
+	systemHallOrders [NElevators]HallOrderTable,
+	floor int,
+	btn int,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) OrderState {
 	current := systemHallOrders[selfID][floor][btn]
 	peerStates := alivePeerOrderStates(systemHallOrders, floor, btn, selfID, peerIsAlive)
@@ -50,21 +49,24 @@ func computeNextOrderState(
 }
 
 func tryCyclicAdvance(current OrderState, peerStates []OrderState) (OrderState, bool) {
+	// With no alive peers, advance unconditionally: there is no one to wait for.
+	alone := len(peerStates) == 0
+
 	switch current {
 	case OrderStandby:
-		if allAreEither(peerStates, OrderStandby, OrderPending) && slices.Contains(peerStates, OrderPending) {
+		if alone || (allAreEither(peerStates, OrderStandby, OrderPending) && slices.Contains(peerStates, OrderPending)) {
 			return OrderPending, true
 		}
 	case OrderPending:
-		if allAreEither(peerStates, OrderPending, OrderAssigned) {
+		if alone || allAreEither(peerStates, OrderPending, OrderAssigned) {
 			return OrderAssigned, true
 		}
 	case OrderAssigned:
-		if allAreEither(peerStates, OrderAssigned, OrderComplete) && slices.Contains(peerStates, OrderComplete) {
+		if alone || (allAreEither(peerStates, OrderAssigned, OrderComplete) && slices.Contains(peerStates, OrderComplete)) {
 			return OrderComplete, true
 		}
 	case OrderComplete:
-		if allAreEither(peerStates, OrderComplete, OrderStandby) {
+		if alone || allAreEither(peerStates, OrderComplete, OrderStandby) {
 			return OrderStandby, true
 		}
 	}
@@ -90,11 +92,11 @@ func peerStatesHaveDiverged(current OrderState, peerStates []OrderState) bool {
 }
 
 func alivePeerOrderStates(
-	systemHallOrders 	[NElevators]HallOrderTable,
-	floor 				int,
-	btn 				int,
-	selfID 				int,
-	peerIsAlive 		[NElevators]bool,
+	systemHallOrders [NElevators]HallOrderTable,
+	floor int,
+	btn int,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) []OrderState {
 	var peerStates []OrderState
 	for peerID := range NElevators {
