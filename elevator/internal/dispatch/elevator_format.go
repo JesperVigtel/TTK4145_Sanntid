@@ -31,7 +31,7 @@ func directionToString(dir MotorDirection) string {
 	}
 }
 
-func cabTableToBoolSlice(table CabOrderTable) []bool {
+func cabTableToBoolSlice(table LocalOrderTable) []bool {
 	result := make([]bool, NFloors)
 	for floor := range table {
 		result[floor] = table[floor][BTCab]

@@ -42,7 +42,7 @@ const (
 type Elevator struct {
 	CurrentFloor   int
 	MotorDirection MotorDirection
-	Request        CabOrderTable
+	Request        LocalOrderTable
 	Behaviour      ElevatorBehaviour
 	ActiveStatus   bool
 }
@@ -70,7 +70,7 @@ type ButtonEvent struct {
 
 type FromLocalToDM struct {
 	Elevator       Elevator
-	CompletedOrder CabOrderTable
+	CompletedOrder LocalOrderTable
 	NewButtonPress *ButtonEvent
 	Obstructed     bool
 }
