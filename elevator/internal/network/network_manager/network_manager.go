@@ -44,7 +44,7 @@ func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
 
     return registry
 }
-
+	
 
 func RunNetworkManager(
     selfID          int,
@@ -77,4 +77,6 @@ func RunNetworkManager(
         }
     }
 }
+
+
 
