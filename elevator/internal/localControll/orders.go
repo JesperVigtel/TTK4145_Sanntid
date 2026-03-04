@@ -5,10 +5,10 @@ import (
 	"elevator/internal/types"
 )
 
-func hasLocalOrderAbove(e types.Elevator) bool {
-	for floor := e.CurrentFloor + 1; floor < config.NFloors; floor++ {
+func hasLocalOrderAbove(elevator types.Elevator) bool {
+	for floor := elevator.CurrentFloor + 1; floor < config.NFloors; floor++ {
 		for btn := 0; btn < config.NButtons; btn++ {
-			if e.LocalOrders[floor][btn] {
+			if elevator.LocalOrders[floor][btn] {
 				return true
 			}
 		}
@@ -16,10 +16,10 @@ func hasLocalOrderAbove(e types.Elevator) bool {
 	return false
 }
 
-func hasLocalOrderBelow(e types.Elevator) bool {
-	for floor := e.CurrentFloor - 1; floor >= 0; floor-- {
+func hasLocalOrderBelow(elevator types.Elevator) bool {
+	for floor := elevator.CurrentFloor - 1; floor >= 0; floor-- {
 		for btn := 0; btn < config.NButtons; btn++ {
-			if e.LocalOrders[floor][btn] {
+			if elevator.LocalOrders[floor][btn] {
 				return true
 			}
 		}
@@ -27,117 +27,111 @@ func hasLocalOrderBelow(e types.Elevator) bool {
 	return false
 }
 
-func hasAnyOrderAtFloor(e types.Elevator, floor int) bool {
-	return e.LocalOrders[floor][int(types.BTCab)] ||
-		e.LocalOrders[floor][int(types.BTHallUp)] ||
-		e.LocalOrders[floor][int(types.BTHallDown)]
+func hasAnyOrderAtFloor(elevator types.Elevator, floor int) bool {
+	return elevator.LocalOrders[floor][int(types.BTCab)] ||
+		elevator.LocalOrders[floor][int(types.BTHallUp)] ||
+		elevator.LocalOrders[floor][int(types.BTHallDown)]
 }
 
 
 
-func chooseDirection(e types.Elevator) types.MotorDirection {
-	switch e.MotorDirection {
+func chooseDirection(elevator types.Elevator) types.MotorDirection {
+	switch elevator.MotorDirection {
 	case types.Up:
-		if hasLocalOrderAbove(e) {
+		if hasLocalOrderAbove(elevator) {
 			return types.Up
 		}
-		if hasLocalOrderBelow(e) {
+		if hasLocalOrderBelow(elevator) {
 			return types.Down
 		}
 	case types.Down:
-		if hasLocalOrderBelow(e) {
+		if hasLocalOrderBelow(elevator) {
 			return types.Down
 		}
-		if hasLocalOrderAbove(e) {
+		if hasLocalOrderAbove(elevator) {
 			return types.Up
 		}
 	default:
-		if hasLocalOrderAbove(e) {
+		if hasLocalOrderAbove(elevator) {
 			return types.Up
 		}
-		if hasLocalOrderBelow(e) {
+		if hasLocalOrderBelow(elevator) {
 			return types.Down
 		}
 	}
 	return types.Stop
 }
 
-func shouldStopAtFloor(e types.Elevator, floor int) bool {
-	if e.LocalOrders[floor][int(types.BTCab)] {
+func shouldStopAtFloor(elevator types.Elevator, floor int) bool {
+	if elevator.LocalOrders[floor][int(types.BTCab)] {
 		return true
 	}
 
-	hallUp := e.LocalOrders[floor][int(types.BTHallUp)]
-	hallDown := e.LocalOrders[floor][int(types.BTHallDown)]
+	hallUp := elevator.LocalOrders[floor][int(types.BTHallUp)]
+	hallDown := elevator.LocalOrders[floor][int(types.BTHallDown)]
 
-	switch e.MotorDirection {
+	switch elevator.MotorDirection {
 	case types.Up:
-		return hallUp || (!hasLocalOrderAbove(e) && hallDown)
+		return hallUp || (!hasLocalOrderAbove(elevator) && hallDown)
 	case types.Down:
-		return hallDown || (!hasLocalOrderBelow(e) && hallUp)
+		return hallDown || (!hasLocalOrderBelow(elevator) && hallUp)
 	default:
 		return hallUp || hallDown
 	}
 }
 
 
-func clearCabOrder(e *types.Elevator, floor int) bool {
-	if e.LocalOrders[floor][int(types.BTCab)] {
-		e.LocalOrders[floor][int(types.BTCab)] = false
+func clearCabOrder(elevator *types.Elevator, floor int) bool {
+	if elevator.LocalOrders[floor][int(types.BTCab)] {
+		elevator.LocalOrders[floor][int(types.BTCab)] = false
 		return true
 	}
 	return false
 }
 
-func clearHallOrder(e *types.Elevator, floor int, dir types.MotorDirection) bool {
+func clearHallOrder(elevator *types.Elevator, floor int, dir types.MotorDirection) bool {
 	btn := types.BTHallUp
 	if dir == types.Down {
 		btn = types.BTHallDown
 	}
-	if e.LocalOrders[floor][int(btn)] {
-		e.LocalOrders[floor][int(btn)] = false
+	if elevator.LocalOrders[floor][int(btn)] {
+		elevator.LocalOrders[floor][int(btn)] = false
 		return true
 	}
 	return false
 }
 
-// clearOrdersAtFloor clears appropriate orders and returns what was cleared.
-// Returns true if direction change announcement is needed (extra door time).
-
 func clearOrdersAtFloor(
-	e *types.Elevator,
+	elevator *types.Elevator,
 	floor int,
 	arrivalDir types.MotorDirection,
 ) (completed [config.NFloors][config.NButtons]bool, needsExtraDoorTime bool) {
-	if clearCabOrder(e, floor) {
+	if clearCabOrder(elevator, floor) {
 		completed[floor][int(types.BTCab)] = true
 	}
 
 	switch arrivalDir {
 	case types.Up:
-		if clearHallOrder(e, floor, types.Up) {
+		if clearHallOrder(elevator, floor, types.Up) {
 			completed[floor][int(types.BTHallUp)] = true
 		}
-		// Direction change: clear down if no more orders above
-		if !hasLocalOrderAbove(*e) && clearHallOrder(e, floor, types.Down) {
+		if !hasLocalOrderAbove(*elevator) && clearHallOrder(elevator, floor, types.Down) {
 			completed[floor][int(types.BTHallDown)] = true
 			needsExtraDoorTime = true
 		}
 	case types.Down:
-		if clearHallOrder(e, floor, types.Down) {
+		if clearHallOrder(elevator, floor, types.Down) {
 			completed[floor][int(types.BTHallDown)] = true
 		}
-		// Direction change: clear up if no more orders below
-		if !hasLocalOrderBelow(*e) && clearHallOrder(e, floor, types.Up) {
+		if !hasLocalOrderBelow(*elevator) && clearHallOrder(elevator, floor, types.Up) {
 			completed[floor][int(types.BTHallUp)] = true
 			needsExtraDoorTime = true
 		}
 	default:
-		// Idle: clear both
-		if clearHallOrder(e, floor, types.Up) {
+		if clearHallOrder(elevator, floor, types.Up) {
 			completed[floor][int(types.BTHallUp)] = true
 		}
-		if clearHallOrder(e, floor, types.Down) {
+		if clearHallOrder(elevator, floor, types.Down) {
 			completed[floor][int(types.BTHallDown)] = true
 		}
 	}

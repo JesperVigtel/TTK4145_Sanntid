@@ -6,7 +6,6 @@ import (
 	"elevator/internal/localControll/hardware"
 	"elevator/internal/localControll/timer"
 	"elevator/internal/types"
-	"fmt"
 )
 
 func localControl(
