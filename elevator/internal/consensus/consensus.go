@@ -13,11 +13,12 @@ import (
 // -----------------------------------------------------------------------------
 
 func RunConsensusManager(
-	incomingMessages <-chan Message,
-	nodeRegistryEvents <-chan GlobalNodeRegistry,
-	localSystemState <-chan LocalSystemState,
+	incomingMessages 	<-chan Message,
+	outgoingMessages	chan<- Message,
+	nodeRegistryEvents 	<-chan GlobalNodeRegistry,
+	localSystemState 	<-chan LocalSystemState,
 	convergedSystemState chan<- ConvergedSystemState,
-	selfID int,
+	selfID 				int,
 ) {
 	var (
 		systemHallOrders [NElevators]HallOrderTable
@@ -57,6 +58,7 @@ func RunConsensusManager(
 			peerIsAlive[selfID] = state.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
+			broadcastLocalState(outgoingMessages, selfID, peerIsAlive, systemElevStates, systemHallOrders)
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
 				publishConsistantState(convergedSystemState, peerIsAlive, systemElevStates, systemHallOrders)

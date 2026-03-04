@@ -74,6 +74,25 @@ func allAlivePeersConsistent(
 	return true
 }
 
+func broadcastLocalState(
+	outgoingMessages 	chan<- Message,
+	selfID 				int,
+	peerIsAlive 		[NElevators]bool,
+	systemElevStates 	[NElevators]HRAElevState,
+	systemHallOrders 	[NElevators]HallOrderTable,
+) {
+	select {
+	case outgoingMessages <- Message{
+		SenderID:      selfID,
+		ElevatorList:  systemElevStates,
+		HallOrderList: systemHallOrders[selfID],
+		AliveStatus:   peerIsAlive[selfID],
+		AliveList:     peerIsAlive,
+	}:
+	default:
+	}
+}
+
 func publishConsistantState(
 	convergedSystemState 	chan<- ConvergedSystemState,
 	peerIsAlive 			[NElevators]bool,
