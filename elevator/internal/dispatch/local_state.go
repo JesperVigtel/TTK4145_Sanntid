@@ -1,4 +1,4 @@
-package decisionMaker
+package dispatch
 
 import (
 	. "elevator/internal/config"
@@ -6,33 +6,28 @@ import (
 )
 
 func initLocalSystemState(
-	hw         LocalElevatorFromDriver,
+	HWEvent         FromLocalToDM,
 	elevatorID int,
 ) LocalSystemState {
 	return LocalSystemState{
-		AliveStatus:   hw.Elevator.ActiveStatus,
-		ElevatorState: toHRAElevState(hw.Elevator),
+		ElevatorID:    elevatorID,
+		AliveStatus:   HWEvent.Elevator.ActiveStatus,
+		ElevatorState: toHRAElevState(HWEvent.Elevator),
 		HallRequests:  HallOrderTable{},
 	}
 }
 
 
 func applyButtonPress(
-	state      LocalSystemState,
-	elevatorID int,
-	btn        ButtonEvent,
+	state LocalSystemState,
+	btn   ButtonEvent,
 ) LocalSystemState {
 
 	switch btn.Button {
 
-		case BTHallUp:
-			if state.HallRequests[btn.Floor][BTHallUp] == OrderStandby {
-				state.HallRequests[btn.Floor][BTHallUp] = OrderPending
-			}
-
-		case BTHallDown:
-			if state.HallRequests[btn.Floor][BTHallDown] == OrderStandby {
-				state.HallRequests[btn.Floor][BTHallDown] = OrderPending
+		case BTHallUp, BTHallDown:
+			if state.HallRequests[btn.Floor][btn.Button] == OrderStandby {
+				state.HallRequests[btn.Floor][btn.Button] = OrderPending
 			}
 
 		case BTCab:
@@ -45,9 +40,8 @@ func applyButtonPress(
 
 
 func applyHardwareUpdate(
-	state      LocalSystemState,
-	hw         LocalElevatorFromDriver,
-	elevatorID int,
+	state LocalSystemState,
+	hw    FromLocalToDM,
 ) LocalSystemState {
 	updatedElevState             := toHRAElevState(hw.Elevator)
 	updatedElevState.CabRequests  = state.ElevatorState.CabRequests
@@ -56,7 +50,7 @@ func applyHardwareUpdate(
 
 	for floor := 0; floor < NFloors; floor++ {
 		for btn := BTHallUp; btn <= BTCab; btn++ {
-			if !hw.ExecutedOrders[floor][btn] {
+			if !hw.CompletedOrder[floor][btn] {
 				continue
 			}
 			switch ButtonType(btn) {
