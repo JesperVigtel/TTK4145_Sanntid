@@ -32,7 +32,8 @@ func mergeAgreedHallOrders(
 		for btn := 0; btn < NButtons; btn++ {
 			agreedOrder := agreedState.HallOrderTable[elevatorID][floor][btn]
 			localOrder  := localState.HallRequests[floor][btn]
-			// Don't regress: we completed this order, consensus hasn't caught up yet
+			// Keep our completed state: we already finished this order but consensus
+			// hasn't caught up yet and would otherwise overwrite it with Assigned
 			if localOrder == OrderComplete && agreedOrder == OrderAssigned {
 				continue
 			}
@@ -49,6 +50,8 @@ func computeAssignedOrders(
 ) CabOrderTable {
 	var result CabOrderTable
 
+	// If this elevator is not recognised as alive by the network, only serve
+	// cab calls — hall orders require network agreement to assign safely.
 	if !agreedState.AliveList[elevatorID] {
 		return cabOrdersOnly(localState)
 	}

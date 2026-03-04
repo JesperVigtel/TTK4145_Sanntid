@@ -6,7 +6,10 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Module based on a cyclyc counter to enfoce consensus between peers in network
+// Enforces distributed consensus over hall order state by requiring all alive
+// peers to report a consistent view before publishing an agreed state.
+// Uses a cyclic order-state counter (Standby→Pending→Assigned→Complete→Standby)
+// so that state transitions are self-synchronising without a central coordinator.
 // -----------------------------------------------------------------------------
 
 func RunConsensusManager(
@@ -36,6 +39,8 @@ func RunConsensusManager(
 				continue
 			}
 
+			// Check against the previously recorded state: a peer is consistent if its
+			// new message matches what we already have, meaning both sides advanced together.	
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
 			systemElevStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
 			systemHallOrders[msg.SenderID] = msg.HallOrderList

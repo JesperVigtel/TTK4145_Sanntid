@@ -5,7 +5,8 @@ import (
 )
 
 // ------------------------------------------------
-// Module based on the LocalSystemState and agreedSystemState data to assign orders
+// Translates agreed distributed state and local hardware events into commands
+// for the local elevator: cab order assignments and hall light updates.
 // ------------------------------------------------
 
 func RunDispatch(
@@ -39,6 +40,8 @@ func RunDispatch(
 			localState = mergeAgreedHallOrders(localState, agreedState, localState.ElevatorID)
 			assignedOrders, lightUpdate := prepareAssignment(agreedState, localState)
 
+			// Only forward new assignments to avoid re-interrupting local control
+			// with an identical order table on every consensus tick.
 			if assignedOrders != previousOrders {
 				newLocalOrders <- assignedOrders
 				previousOrders = assignedOrders

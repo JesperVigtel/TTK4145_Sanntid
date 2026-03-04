@@ -34,6 +34,8 @@ func updatePeerAvailability(
 		if peerID < 0 || peerID >= NElevators {
 			continue
 		}
+		// Reset to Standby on peer loss: we can no longer confirm the state of orders
+		// that peer was tracking, so we return to the cycle's safe starting state.
 		peerIsAlive[peerID] = false
 		systemHallOrders[peerID] = newStandbyHallOrders()
 	}
