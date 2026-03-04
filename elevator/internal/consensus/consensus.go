@@ -58,7 +58,7 @@ func Run(
 			peerIsAlive[selfID] = state.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			broadcastLocalState(outgoingMessages, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			sendStateUpdate(outgoingMessages, selfID, peerIsAlive, systemElevStates, systemHallOrders)
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
 				publishConsistantState(convergedSystemState, peerIsAlive, systemElevStates, systemHallOrders)

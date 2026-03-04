@@ -74,7 +74,7 @@ func allAlivePeersConsistent(
 	return true
 }
 
-func broadcastLocalState(
+func sendStateUpdate(
 	outgoingMessages 	chan<- Message,
 	selfID 				int,
 	peerIsAlive 		[NElevators]bool,

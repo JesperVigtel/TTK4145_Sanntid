@@ -50,9 +50,9 @@ type Elevator struct {
 type ButtonType int
 
 const (
-	BTHallUp ButtonType = iota
-	BTHallDown
-	BTCab
+	BtnHallUp ButtonType = iota
+	BtnHallDown
+	BtnCab
 )
 
 type ElevatorBehaviour int
@@ -68,13 +68,23 @@ type ButtonEvent struct {
 	Button ButtonType
 }
 
-type FromLocalToDM struct {
+type ElevatorEvents struct {
 	Elevator       Elevator
 	CompletedOrder LocalOrderTable
 	NewButtonPress *ButtonEvent
 	Obstructed     bool
 }
 
+type LocalLightUpdate struct {
+	CabLights    [NFloors]bool
+	DoorOpen     bool
+	CurrentFloor int
+}
+
+type HallLightUpdate struct {
+	HallUp   [NFloors]bool
+	HallDown [NFloors]bool
+}
 //Elevator types stop
 
 //Network types START:
@@ -91,13 +101,6 @@ type GlobalNodeRegistry struct {
 //	enum types for Local Control
 // ------------------------------------------------------------------------------------
 
-type CallType int
-
-const (
-	CallTypeHallUp CallType = iota
-	CallTypeHallDown
-	CallTypeCab
-)
 
 type ClearRequestType int
 
@@ -118,9 +121,7 @@ type State struct {
 }
 
 // ------------------------------------------------------------------------------------
-//
 //	enum types for order domain
-//
 // ------------------------------------------------------------------------------------
 type OrderState int
 

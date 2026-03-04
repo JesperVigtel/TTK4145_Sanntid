@@ -28,9 +28,9 @@ func hasLocalOrderBelow(elevator types.Elevator) bool {
 }
 
 func hasAnyOrderAtFloor(elevator types.Elevator, floor int) bool {
-	return elevator.LocalOrders[floor][int(types.BTCab)] ||
-		elevator.LocalOrders[floor][int(types.BTHallUp)] ||
-		elevator.LocalOrders[floor][int(types.BTHallDown)]
+	return elevator.LocalOrders[floor][int(types.BtnCab)] ||
+		elevator.LocalOrders[floor][int(types.BtnHallUp)] ||
+		elevator.LocalOrders[floor][int(types.BtnHallDown)]
 }
 
 
@@ -63,12 +63,12 @@ func chooseDirection(elevator types.Elevator) types.MotorDirection {
 }
 
 func shouldStopAtFloor(elevator types.Elevator, floor int) bool {
-	if elevator.LocalOrders[floor][int(types.BTCab)] {
+	if elevator.LocalOrders[floor][int(types.BtnCab)] {
 		return true
 	}
 
-	hallUp := elevator.LocalOrders[floor][int(types.BTHallUp)]
-	hallDown := elevator.LocalOrders[floor][int(types.BTHallDown)]
+	hallUp := elevator.LocalOrders[floor][int(types.BtnHallUp)]
+	hallDown := elevator.LocalOrders[floor][int(types.BtnHallDown)]
 
 	switch elevator.MotorDirection {
 	case types.Up:
@@ -82,17 +82,17 @@ func shouldStopAtFloor(elevator types.Elevator, floor int) bool {
 
 
 func clearCabOrder(elevator *types.Elevator, floor int) bool {
-	if elevator.LocalOrders[floor][int(types.BTCab)] {
-		elevator.LocalOrders[floor][int(types.BTCab)] = false
+	if elevator.LocalOrders[floor][int(types.BtnCab)] {
+		elevator.LocalOrders[floor][int(types.BtnCab)] = false
 		return true
 	}
 	return false
 }
 
 func clearHallOrder(elevator *types.Elevator, floor int, dir types.MotorDirection) bool {
-	btn := types.BTHallUp
+	btn := types.BtnHallUp
 	if dir == types.Down {
-		btn = types.BTHallDown
+		btn = types.BtnHallDown
 	}
 	if elevator.LocalOrders[floor][int(btn)] {
 		elevator.LocalOrders[floor][int(btn)] = false
@@ -107,32 +107,32 @@ func clearOrdersAtFloor(
 	arrivalDir types.MotorDirection,
 ) (completed [config.NFloors][config.NButtons]bool, needsExtraDoorTime bool) {
 	if clearCabOrder(elevator, floor) {
-		completed[floor][int(types.BTCab)] = true
+		completed[floor][int(types.BtnCab)] = true
 	}
 
 	switch arrivalDir {
 	case types.Up:
 		if clearHallOrder(elevator, floor, types.Up) {
-			completed[floor][int(types.BTHallUp)] = true
+			completed[floor][int(types.BtnHallUp)] = true
 		}
 		if !hasLocalOrderAbove(*elevator) && clearHallOrder(elevator, floor, types.Down) {
-			completed[floor][int(types.BTHallDown)] = true
+			completed[floor][int(types.BtnHallDown)] = true
 			needsExtraDoorTime = true
 		}
 	case types.Down:
 		if clearHallOrder(elevator, floor, types.Down) {
-			completed[floor][int(types.BTHallDown)] = true
+			completed[floor][int(types.BtnHallDown)] = true
 		}
 		if !hasLocalOrderBelow(*elevator) && clearHallOrder(elevator, floor, types.Up) {
-			completed[floor][int(types.BTHallUp)] = true
+			completed[floor][int(types.BtnHallUp)] = true
 			needsExtraDoorTime = true
 		}
 	default:
 		if clearHallOrder(elevator, floor, types.Up) {
-			completed[floor][int(types.BTHallUp)] = true
+			completed[floor][int(types.BtnHallUp)] = true
 		}
 		if clearHallOrder(elevator, floor, types.Down) {
-			completed[floor][int(types.BTHallDown)] = true
+			completed[floor][int(types.BtnHallDown)] = true
 		}
 	}
 	return

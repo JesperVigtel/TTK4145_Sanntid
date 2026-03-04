@@ -15,8 +15,8 @@ func main() {
 	selfID := parseSelfID()
 
 	// -- Channels --
-	localControlEvents 		:= make(chan types.FromLocalToDM, 			config.ChannelBufferSize)
-	newLocalOrders 			:= make(chan types.LocalOrderTable, 		config.ChannelBufferSize)
+	localControlEvents 		:= make(chan types.ElevatorEvents, 			config.ChannelBufferSize)
+	localOrders 			:= make(chan types.LocalOrderTable, 		config.ChannelBufferSize)
 	localSystemState 		:= make(chan types.LocalSystemState, 		config.ChannelBufferSize)
 	convergedSystemState 	:= make(chan types.ConvergedSystemState,	config.ChannelBufferSize)
 	hallLightUpdates 		:= make(chan types.HallOrderTable, 			config.ChannelBufferSize)
@@ -29,7 +29,7 @@ func main() {
 	//go localControl.Run(newLocalOrders, localControlEvents)
 
 	go dispatch.Run(
-		newLocalOrders,
+		localOrders,
 		localSystemState,
 		hallLightUpdates,
 		localControlEvents,
@@ -44,6 +44,10 @@ func main() {
 		localSystemState,
 		convergedSystemState,
 		selfID,
+	)
+
+	go localControl.Run(
+		localOrders
 	)
 
 	// Rest of go rutines

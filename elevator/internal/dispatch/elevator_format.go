@@ -10,7 +10,7 @@ func toHRAElevState(elev Elevator) HRAElevState {
 		Behavior:    behaviourToString(elev.Behaviour),
 		Floor:       elev.CurrentFloor,
 		Direction:   directionToString(elev.MotorDirection),
-		CabRequests: cabTableToBoolSlice(elev.Request),
+		CabRequests: cabTableToBoolSlice(elev.LocalOrders),
 	}
 }
 
@@ -34,7 +34,7 @@ func directionToString(dir MotorDirection) string {
 func cabTableToBoolSlice(table LocalOrderTable) []bool {
 	result := make([]bool, NFloors)
 	for floor := range table {
-		result[floor] = table[floor][BTCab]
+		result[floor] = table[floor][BtnCab]
 	}
 	return result
 }
