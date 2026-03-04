@@ -23,7 +23,7 @@ const (
 type Elevator struct {
 	CurrentFloor   int
 	MotorDirection MotorDirection
-	Request        CabOrderTable
+	LocalOrders        CabOrderTable
 	Behaviour      ElevatorBehaviour
 	ActiveStatus   bool
 }
@@ -44,7 +44,7 @@ const (
 	ElevatorDoorOpen
 )
 
-type ButtonEvent struct {	//Changed back to ButtonEvent for concistency (Jesper)
+type ButtonEvent struct {	
 	Floor  int
 	Button ButtonType
 }

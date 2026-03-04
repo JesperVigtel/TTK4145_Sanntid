@@ -76,7 +76,6 @@ func Timer(
 				watchDogActive = false
 				motorInactiveChan <- true
 			}
-// MotorRecovery should continoue to tick until we have a floor reading
 		case <-motorRecoveryTimer.C:
 			if recoveryActive{
 				recoveryTickChan <- true
