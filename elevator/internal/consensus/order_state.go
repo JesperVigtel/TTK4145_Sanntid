@@ -7,17 +7,19 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Order state based on a cyclic counter:
+// Advances each hall order through the cyclic state machine based on peer agreement.
 // Standby -> Pending -> Assigned -> Complete -> Standby
+// States that have diverged beyond adjacent steps are reset to Standby.
 // -----------------------------------------------------------------------------
 
 func advanceLocalOrderStates(
-	systemHallOrders [NElevators]HallOrderTable,
-	selfID int,
-	peerIsAlive [NElevators]bool,
+	systemHallOrders 	[NElevators]HallOrderTable,
+	selfID 				int,
+	peerIsAlive 		[NElevators]bool,
 ) [NElevators]HallOrderTable {
 	for floor := range NFloors {
 		for btn := range NButtons {
+
 			systemHallOrders[selfID][floor][btn] = computeNextOrderState(
 				systemHallOrders, floor, btn, selfID, peerIsAlive,
 			)
@@ -27,32 +29,31 @@ func advanceLocalOrderStates(
 }
 
 func computeNextOrderState(
-	systemHallOrders [NElevators]HallOrderTable,
-	floor int,
-	btn int,
-	selfID int,
-	peerIsAlive [NElevators]bool,
+	systemHallOrders 	[NElevators]HallOrderTable,
+	floor 				int,
+	btn 				int,
+	selfID 				int,
+	peerIsAlive 		[NElevators]bool,
 ) OrderState {
-	current := systemHallOrders[selfID][floor][btn]
+	selfState := systemHallOrders[selfID][floor][btn]
 	peerStates := alivePeerOrderStates(systemHallOrders, floor, btn, selfID, peerIsAlive)
 
-	next, advanced := tryCyclicAdvance(current, peerStates)
+	next, advanced := tryCyclicAdvance(selfState, peerStates)
 	if advanced {
 		return next
 	}
 
-	if peerStatesHaveDiverged(current, peerStates) {
+	if peerStatesHaveDiverged(selfState, peerStates) {
 		return OrderStandby
 	}
 
-	return current
+	return selfState
 }
 
-func tryCyclicAdvance(current OrderState, peerStates []OrderState) (OrderState, bool) {
-	// With no alive peers, advance unconditionally: there is no one to wait for.
+func tryCyclicAdvance(currentState OrderState, peerStates []OrderState) (OrderState, bool) {
 	alone := len(peerStates) == 0
 
-	switch current {
+	switch currentState {
 	case OrderStandby:
 		if alone || (allAreEither(peerStates, OrderStandby, OrderPending) && slices.Contains(peerStates, OrderPending)) {
 			return OrderPending, true
@@ -70,11 +71,11 @@ func tryCyclicAdvance(current OrderState, peerStates []OrderState) (OrderState, 
 			return OrderStandby, true
 		}
 	}
-	return current, false
+	return currentState, false
 }
 
-func peerStatesHaveDiverged(current OrderState, peerStates []OrderState) bool {
-	switch current {
+func peerStatesHaveDiverged(selfState OrderState, peerStates []OrderState) bool {
+	switch selfState {
 	case OrderStandby:
 		return !allAreEither(peerStates, OrderStandby, OrderPending) &&
 			!allAreEither(peerStates, OrderStandby, OrderComplete)
@@ -92,11 +93,11 @@ func peerStatesHaveDiverged(current OrderState, peerStates []OrderState) bool {
 }
 
 func alivePeerOrderStates(
-	systemHallOrders [NElevators]HallOrderTable,
-	floor int,
-	btn int,
-	selfID int,
-	peerIsAlive [NElevators]bool,
+	systemHallOrders 	[NElevators]HallOrderTable,
+	floor 				int,
+	btn 				int,
+	selfID 				int,
+	peerIsAlive 		[NElevators]bool,
 ) []OrderState {
 	var peerStates []OrderState
 	for peerID := range NElevators {
@@ -107,9 +108,9 @@ func alivePeerOrderStates(
 	return peerStates
 }
 
-func allAreEither(peerStates []OrderState, allowedA, allowedB OrderState) bool {
+func allAreEither(peerStates []OrderState, stateA, stateB OrderState) bool {
 	for _, state := range peerStates {
-		if state != allowedA && state != allowedB {
+		if state != stateA && state != stateB {
 			return false
 		}
 	}

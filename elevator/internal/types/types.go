@@ -13,16 +13,12 @@ import (
 //	enum types for intermodule contracts
 // ------------------------------------------------------------------------------------
 
-
-// Flows: DecisionMaker → ConsensusManager
 type AgreedSystemState struct {
 	AliveList    	[NElevators]bool
 	ElevatorList  	[NElevators]HRAElevState
 	HallOrderTable 	[NElevators]HallOrderTable
 }
 
-
-// Flows: ConsensusManager → DecisionMaker
 type LocalSystemState struct{
 	ElevatorID		int
 	AliveStatus    	bool
@@ -39,9 +35,6 @@ type Message struct {
 	AliveList     [NElevators]bool
 }
 
-
-// TODO: Definer structs som Elevator, Order, ElevatorState osv.
-// TODO: Definer konstanter for etasjer, motorretning osv.
 
 //Elevator types START:
 
@@ -77,7 +70,7 @@ const (
 	ElevatorDoorOpen
 )
 
-type ButtonEvent struct {	//Changed back to ButtonEvent for concistency (Jesper)
+type ButtonEvent struct {	
 	Floor  int
 	Button ButtonType
 }
@@ -89,11 +82,6 @@ type FromLocalToDM struct {
 	Obstructed     bool        
 }
 
-
-// type LocalElevatorFromDriver struct{	//Redundant, shoudl be removed
-// 	Elevator 		Elevator
-// 	ExecutedOrders 	CabOrderTable
-// }
 
 //Elevator types stop
 
@@ -112,7 +100,7 @@ type GlobalNodeRegistry struct {
 //Network types END:
 
 // ------------------------------------------------------------------------------------
-//	enum types for decisionMaker
+//	enum types for Local Control
 // ------------------------------------------------------------------------------------
 
 type CallType int
@@ -142,15 +130,6 @@ type State struct {
 	Time  int64
 }
 
-// type Dirn int
-
-// const (
-// 	DirnDown Dirn = -1
-// 	DirnStop Dirn = 0
-// 	DirnUp   Dirn = 1
-// )
-//Erstattes med types.motorDirection
-
 
 
 // ------------------------------------------------------------------------------------
@@ -172,7 +151,7 @@ type CabOrderTable 	[NFloors][NButtons]bool
 
 
 // ------------------------------------------------------------------------------------
-//	enum types for assigner.go
+//	enum types for assigner
 // ------------------------------------------------------------------------------------
 
 type HRAElevState struct {
