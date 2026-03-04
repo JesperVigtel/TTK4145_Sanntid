@@ -4,7 +4,7 @@ import (
 	"elevator/internal/config"
 	"elevator/internal/consensus"
 	"elevator/internal/dispatch"
-	"elevator/internal/localControll"
+	"elevator/internal/localControl"
 	"elevator/internal/types"
 	"flag"
 	"fmt"
@@ -20,14 +20,21 @@ func main() {
 	localSystemState 		:= make(chan types.LocalSystemState, 		config.ChannelBufferSize)
 	convergedSystemState 	:= make(chan types.ConvergedSystemState,	config.ChannelBufferSize)
 	hallLightUpdates 		:= make(chan types.HallOrderTable, 			config.ChannelBufferSize)
-	incomingMessages 		:= make(chan types.Message, 				config.ChannelBufferSize)
-	outgoingMessages 		:= make(chan types.Message, 				config.ChannelBufferSize)
-	nodeRegistryEvents 		:= make(chan types.GlobalNodeRegistry, 		config.ChannelBufferSize)
+	LocalLightUpdate		:= make(chan types.LocalLightUpdate, 		config.ChannelBufferSize)
+	peerMsg    				:= make(chan types.Message,            		config.ChannelBufferSize)
+	broadcast  				:= make(chan types.Message,            		config.ChannelBufferSize)
+	peerEvents 				:= make(chan types.GlobalNodeRegistry, 		config.ChannelBufferSize)
+	elevatorEvents 			:= make(chan types.ElevatorEvents,			config.ChannelBufferSize)
 
 	// -- Goroutines --
-	//hardware.Init(config.Addr, config.NFloors) //Shuld be moved inside a localContoll run
-	//go localControl.Run(newLocalOrders, localControlEvents)
+	
+	go localControl.Run(
+		localOrders,
+		elevatorEvents,
+		LocalLightUpdate,
+	)
 
+	
 	go dispatch.Run(
 		localOrders,
 		localSystemState,
@@ -38,18 +45,15 @@ func main() {
 	)
 
 	go consensus.Run(
-		incomingMessages,
-		outgoingMessages,
-		nodeRegistryEvents,
+		peerMsg,
+		broadcast,
+		peerEvents,
 		localSystemState,
 		convergedSystemState,
 		selfID,
 	)
 
-	go localControl.Run(
-		localOrders
-	)
-
+	
 	// Rest of go rutines
 
 	select {}
@@ -67,3 +71,12 @@ func parseSelfID() int {
 	}
 	return *id
 }
+
+
+//Pot
+// func parseArgs() int {
+// 	var nodeID int
+// 	flag.IntVar(&nodeID, "id", 0, "Node ID")
+// 	flag.Parse()
+// 	return nodeID
+// }

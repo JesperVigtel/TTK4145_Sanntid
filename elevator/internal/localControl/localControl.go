@@ -8,7 +8,7 @@ import (
 )
 
 func Run(
-	newOrder <-chan [config.NFloors][config.NButtons]bool,
+	newOrder <-chan types.LocalOrderTable,
 	elevatorEvents chan<- types.ElevatorEvents,
 	localLightsChan chan<- types.LocalLightUpdate,
 ) {

@@ -13,12 +13,12 @@ import (
 // -----------------------------------------------------------------------------
 
 func Run(
-	incomingMessages 	<-chan Message,
-	outgoingMessages	chan<- Message,
-	nodeRegistryEvents 	<-chan GlobalNodeRegistry,
-	localSystemState 	<-chan LocalSystemState,
-	convergedSystemState chan<- ConvergedSystemState,
-	selfID 				int,
+	peerMsg   	<-chan Message,
+	broadcast  	chan<- Message,
+	peerEvents 	<-chan GlobalNodeRegistry,
+	localState 	<-chan LocalSystemState,
+	converged 	chan<- ConvergedSystemState,
+	selfID 		int,
 ) {
 	var (
 		systemHallOrders [NElevators]HallOrderTable
@@ -32,36 +32,37 @@ func Run(
 	for {
 		select {
 
-		case registry := <-nodeRegistryEvents:
+		case registry := <-peerEvents:
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders)
 
-		case msg := <-incomingMessages:
+		case msg := <-peerMsg:
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
 				continue
 			}
 
-			peerIsConsistent[msg.SenderID] 	= peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			systemElevStates[msg.SenderID] 	= msg.ElevatorList[msg.SenderID]
-			systemHallOrders[msg.SenderID] 	= msg.HallOrderTable
-			peerIsAlive[msg.SenderID] 		= msg.AliveStatus
+			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
+			systemElevStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
+			systemHallOrders[msg.SenderID] = msg.HallOrderTable
+			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
-				publishConsistantState(convergedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
+				publishConsistantState(converged, peerIsAlive, systemElevStates, systemHallOrders)
 			}
 
-		case state := <-localSystemState:
+		case state := <-localState:
 			systemHallOrders[selfID] = state.HallRequests
 			systemElevStates[selfID] = state.ElevatorState
 			peerIsAlive[selfID] = state.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			sendStateUpdate(outgoingMessages, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
-				publishConsistantState(convergedSystemState, peerIsAlive, systemElevStates, systemHallOrders)
+				publishConsistantState(converged, peerIsAlive, systemElevStates, systemHallOrders)
 			}
 		}
 	}

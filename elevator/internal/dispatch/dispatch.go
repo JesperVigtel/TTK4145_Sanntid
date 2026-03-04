@@ -40,8 +40,6 @@ func Run(
 			localState = mergeConvergedHallOrders(localState, converged, localState.ElevatorID)
 			assignedOrders, lightUpdate := prepareAssignment(converged, localState)
 
-			// Only forward new assignments to avoid re-interrupting local control
-			// with an identical order table on every consensus tick.
 			if assignedOrders != previousOrders {
 				localOrders <- assignedOrders
 				previousOrders = assignedOrders

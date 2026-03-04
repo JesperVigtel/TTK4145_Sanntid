@@ -135,6 +135,10 @@ const (
 type HallOrderTable [NFloors][NButtons]OrderState
 type LocalOrderTable [NFloors][NButtons]bool
 
+
+// er det en ide å lage en completedorders matrise som man kan bruke?? bruk dette til å fjerne matrisehelvete fra 
+// sendElevatorUpdate()
+
 // ------------------------------------------------------------------------------------
 //	enum types for assigner
 // ------------------------------------------------------------------------------------
