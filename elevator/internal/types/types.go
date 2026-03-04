@@ -69,7 +69,7 @@ type LocalElevatorFromDriver struct{
 type Message struct {
 	SenderID      int
 	ElevatorList  [NElevators]HRAElevState                   
-	HallOrderList HallOrderTable 
+	HallOrderList [NElevators]HallOrderTable 
 	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
