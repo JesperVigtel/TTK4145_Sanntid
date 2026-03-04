@@ -25,6 +25,7 @@ func main() {
 	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
 	hallLightUpdates := make(chan types.HallOrderTable, config.ChannelBufferSize)
 	incomingMessages := make(chan types.Message, config.ChannelBufferSize)
+	outgoingMessages := make(chan types.Message, config.ChannelBufferSize)
 	nodeRegistryEvents := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
 
 	// -- Goroutines --
@@ -42,6 +43,7 @@ func main() {
 
 	go consensus.RunConsensusManager(
 		incomingMessages,
+		outgoingMessages,
 		nodeRegistryEvents,
 		localSystemState,
 		convergedSystemState,
