@@ -4,11 +4,30 @@ import (
 	. "elevator/internal/config"
 )
 
-// Felles datatyper, structs og konstanter brukt på tvers av alle pakker.
-// Sikrer konsistente data og kontrakter mellom moduler.
+// ------------------------------------------------------------------------------------
+//	enum types for intermodule contracts
+// ------------------------------------------------------------------------------------
 
-// TODO: Definer structs som Elevator, Order, ElevatorState osv.
-// TODO: Definer konstanter for etasjer, motorretning osv.
+type ConvergedSystemState struct {
+	AliveList      [NElevators]bool
+	ElevatorList   [NElevators]HRAElevState
+	HallOrderTable [NElevators]HallOrderTable
+}
+
+type LocalSystemState struct {
+	ElevatorID    int
+	AliveStatus   bool
+	ElevatorState HRAElevState
+	HallRequests  HallOrderTable
+}
+
+type Message struct {
+	SenderID      int
+	ElevatorList  [NElevators]HRAElevState
+	HallOrderList HallOrderTable
+	AliveStatus   bool
+	AliveList     [NElevators]bool
+}
 
 //Elevator types START:
 
@@ -44,7 +63,7 @@ const (
 	ElevatorDoorOpen
 )
 
-type ButtonEvent struct {	//Changed back to ButtonEvent for concistency (Jesper)
+type ButtonEvent struct {
 	Floor  int
 	Button ButtonType
 }
@@ -52,14 +71,8 @@ type ButtonEvent struct {	//Changed back to ButtonEvent for concistency (Jesper)
 type FromLocalToDM struct {
 	Elevator       Elevator
 	CompletedOrder CabOrderTable
-	NewButtonPress *ButtonEvent 
-	Obstructed     bool        
-}
-
-
-type LocalElevatorFromDriver struct{
-	Elevator 		Elevator
-	ExecutedOrders 	CabOrderTable
+	NewButtonPress *ButtonEvent
+	Obstructed     bool
 }
 
 //Elevator types stop
@@ -73,20 +86,16 @@ type Message struct {
 	AliveStatus   bool
 	AliveList     [NElevators]bool
 }
-
-
-type NetworkNodeRegistry struct {
-    Nodes []int // all currently active nodes
-    New   []int // nodes that just came online
-    Lost  []int // nodes that just went offline
+type GlobalNodeRegistry struct {
+	Nodes []int
+	New   []int
+	Lost  []int
 }
-
-
 
 //Network types END:
 
 // ------------------------------------------------------------------------------------
-//	enum types for decisionMaker
+//	enum types for Local Control
 // ------------------------------------------------------------------------------------
 
 type CallType int
@@ -104,16 +113,6 @@ const (
 	ClearInDirn
 )
 
-
-
-// // bruke vanlig elevator isteden eller?? har en nesten lik struct over (Andreas)
-// type LocalElevatorState struct {
-// 	Behaviour   ElevatorBehaviour
-// 	Floor       int
-// 	Direction   MotorDirection
-// 	CabRequests []bool
-// }
-
 type Req struct {
 	Active     bool
 	AssignedTo string
@@ -125,16 +124,11 @@ type State struct {
 	Time  int64
 }
 
-// type Dirn int
-
-// const (
-// 	DirnDown Dirn = -1
-// 	DirnStop Dirn = 0
-// 	DirnUp   Dirn = 1
-// )
-//Erstattes med types.motorDirection
-
-
+// ------------------------------------------------------------------------------------
+//
+//	enum types for order domain
+//
+// ------------------------------------------------------------------------------------
 type OrderState int
 
 const (
@@ -145,36 +139,20 @@ const (
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
-type CabOrderTable 	[NFloors][NButtons]bool
+type CabOrderTable [NFloors][NButtons]bool
 
+// ------------------------------------------------------------------------------------
+//	enum types for assigner
+// ------------------------------------------------------------------------------------
 
 type HRAElevState struct {
-    Behavior    string      `json:"behaviour"`
-    Floor       int         `json:"floor"` 
-    Direction   string      `json:"direction"`
-    CabRequests []bool      `json:"cabRequests"`
+	Behavior    string `json:"behaviour"`
+	Floor       int    `json:"floor"`
+	Direction   string `json:"direction"`
+	CabRequests []bool `json:"cabRequests"`
 }
 
 type HRAInput struct {
-    HallRequests    [NFloors][2]bool           	`json:"hallRequests"`
-    States          map[string]HRAElevState     `json:"states"`
-}
-
-
-//Ønsker å endre DecisonBasis til SystemState. Skal visstnok være mer korrekt (Jesper)
-
-
-// Flows: DecisionMaker → ConsensusManager
-type AgreedSystemState struct {
-	AliveList    	[NElevators]bool
-	ElevatorList  	[NElevators]HRAElevState
-	HallOrderTable 	[NElevators]HallOrderTable
-}
-
-
-// Flows: ConsensusManager → DecisionMaker
-type LocalSystemState struct{
-	AliveStatus    	bool
-	ElevatorState  	HRAElevState
-	HallRequests 	HallOrderTable
+	HallRequests [NFloors][2]bool        `json:"hallRequests"`
+	States       map[string]HRAElevState `json:"states"`
 }
