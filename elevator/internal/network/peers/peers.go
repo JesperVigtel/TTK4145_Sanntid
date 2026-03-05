@@ -17,6 +17,10 @@ type PeerUpdate struct {
 const interval = 15 * time.Millisecond
 const timeout = 500 * time.Millisecond
 
+//Hvor lenge vil vi vente før vi markerer noe som lost?
+//Hvor ofte vil vi sende ut?
+
+
 func Transmitter(port int, id string, transmitEnable <-chan bool) {
 
 	conn := conn.DialBroadcastUDP(port)
@@ -64,7 +68,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		// Removing dead connection
 		p.Lost = make([]string, 0)
 		for k, v := range lastSeen {
-			if time.Now().Sub(v) > timeout {
+			if time.Since(v) > timeout { //if time.Now().Sub(v) > timeout
 				updated = true
 				p.Lost = append(p.Lost, k)
 				delete(lastSeen, k)
@@ -75,7 +79,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		if updated {
 			p.Peers = make([]string, 0, len(lastSeen))
 
-			for k, _ := range lastSeen {
+			for k := range lastSeen { //for k, _ := range lastSeen
 				p.Peers = append(p.Peers, k)
 			}
 

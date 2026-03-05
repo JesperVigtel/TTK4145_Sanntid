@@ -1,5 +1,6 @@
-// +build linux
+//go:build linux
 package conn
+
 
 import (
 	"fmt"
