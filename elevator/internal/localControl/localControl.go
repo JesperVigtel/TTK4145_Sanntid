@@ -2,16 +2,15 @@ package localControl
 
 import (
 	"elevator/internal/config"
-	"elevator/internal/lights"
-	"elevator/internal/localControll/hardware"
-	"elevator/internal/localControll/timer"
+	"elevator/internal/localControl/hardware"
+	"elevator/internal/localControl/timer"
 	"elevator/internal/types"
 )
 
-func localControl(
-	newOrder <-chan [config.NFloors][config.NButtons]bool,
-	elevatorEvents chan<- types.FromLocalToDM,
-	localLightsChan chan<- lights.LocalLightUpdate,
+func Run(
+	newOrder <-chan types.LocalOrderTable,
+	elevatorEvents chan<- types.ElevatorEvents,
+	localLightsChan chan<- types.LocalLightUpdate,
 ) {
 	var (
 		floorChan          = make(chan int, config.ChannelBufferSize)
@@ -25,6 +24,7 @@ func localControl(
 		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
 		obstruction        bool
 	)
+	hardware.Init(config.Addr, config.NFloors)
 
 	go hardware.PollFloorSensor(floorChan)
 	go hardware.PollObstructionSwitch(obstructionChan)
@@ -80,6 +80,16 @@ func localControl(
 				}
 			}
 
+		case obstruction = <-obstructionChan:
+			if obstruction && elevator.Behaviour == types.ElevatorDoorOpen {
+				doorOpenChan <- true
+			}
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+
+		case buttonEvent := <-buttonPressChan:
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, &buttonEvent)
+
+
 		case <-doorClosedChan:
 			if elevator.Behaviour == types.ElevatorDoorOpen {
 				handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
@@ -94,15 +104,6 @@ func localControl(
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 				recoveryEnableChan <- true
 			}
-
-		case obstruction = <-obstructionChan:
-			if obstruction && elevator.Behaviour == types.ElevatorDoorOpen {
-				doorOpenChan <- true
-			}
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
-
-		case buttonEvent := <-buttonPressChan:
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, &buttonEvent)
 
 		case <-recoveryTickChan:
 			if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {

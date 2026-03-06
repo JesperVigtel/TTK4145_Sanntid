@@ -6,13 +6,13 @@ import (
 )
 
 func initLocalSystemState(
-	HWEvent         FromLocalToDM,
-	elevatorID int,
+	event		ElevatorEvents,
+	elevatorID 	int,
 ) LocalSystemState {
 	return LocalSystemState{
 		ElevatorID:    elevatorID,
-		AliveStatus:   HWEvent.Elevator.ActiveStatus,
-		ElevatorState: toHRAElevState(HWEvent.Elevator),
+		AliveStatus:   event.Elevator.ActiveStatus,
+		ElevatorState: toHRAElevState(event.Elevator),
 		HallRequests:  HallOrderTable{},
 	}
 }
@@ -25,12 +25,12 @@ func applyButtonPress(
 
 	switch btn.Button {
 
-		case BTHallUp, BTHallDown:
+		case BtnHallUp, BtnHallDown:
 			if state.HallRequests[btn.Floor][btn.Button] == OrderStandby {
 				state.HallRequests[btn.Floor][btn.Button] = OrderPending
 			}
 
-		case BTCab:
+		case BtnCab:
 			state.ElevatorState.CabRequests[btn.Floor] = true
 		}
 
@@ -40,28 +40,28 @@ func applyButtonPress(
 
 
 func applyHardwareUpdate(
-	state LocalSystemState,
-	hw    FromLocalToDM,
+	state 	LocalSystemState,
+	event   ElevatorEvents,
 ) LocalSystemState {
-	updatedElevState             := toHRAElevState(hw.Elevator)
+	updatedElevState             := toHRAElevState(event.Elevator)
 	updatedElevState.CabRequests  = state.ElevatorState.CabRequests
 	state.ElevatorState           = updatedElevState
-	state.AliveStatus             = hw.Elevator.ActiveStatus
+	state.AliveStatus             = event.Elevator.ActiveStatus
 
-	for floor := 0; floor < NFloors; floor++ {
-		for btn := BTHallUp; btn <= BTCab; btn++ {
-			if !hw.CompletedOrder[floor][btn] {
+	for floor := range NFloors {
+		for btn := BtnHallUp; btn <= BtnCab; btn++ {
+			if !event.CompletedOrder[floor][btn] {
 				continue
 			}
 			switch ButtonType(btn) {
 				
-				case BTHallUp:
-					state.HallRequests[floor][BTHallUp] = OrderComplete
+				case BtnHallUp:
+					state.HallRequests[floor][BtnHallUp] = OrderComplete
 
-				case BTHallDown:
-					state.HallRequests[floor][BTHallDown] = OrderComplete
+				case BtnHallDown:
+					state.HallRequests[floor][BtnHallDown] = OrderComplete
 
-				case BTCab:
+				case BtnCab:
 					state.ElevatorState.CabRequests[floor] = false
 			}
 		}

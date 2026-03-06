@@ -2,8 +2,7 @@ package localControl
 
 import (
 	"elevator/internal/config"
-	"elevator/internal/lights"
-	"elevator/internal/localControll/hardware"
+	"elevator/internal/localControl/hardware"
 	"elevator/internal/types"
 )
 
@@ -17,7 +16,7 @@ func elevatorInit() types.Elevator {
 	}
 }
 
-func handleFloorArrival(elevator *types.Elevator, doorOpenChan chan<- bool, localLightsChan chan<- lights.LocalLightUpdate, arrivalDir types.MotorDirection) [config.NFloors][config.NButtons]bool {
+func handleFloorArrival(elevator *types.Elevator, doorOpenChan chan<- bool, localLightsChan chan<- types.LocalLightUpdate, arrivalDir types.MotorDirection) [config.NFloors][config.NButtons]bool {
 	hardware.SetMotorDirection(types.Stop)
 	elevator.MotorDirection = types.Stop
 	elevator.Behaviour = types.ElevatorDoorOpen
@@ -32,7 +31,7 @@ func handleFloorArrival(elevator *types.Elevator, doorOpenChan chan<- bool, loca
 	return completed
 }
 
-func handleDoorClosed(elevator *types.Elevator, motorActiveChan chan<- bool, localLightsChan chan<- lights.LocalLightUpdate) {
+func handleDoorClosed(elevator *types.Elevator, motorActiveChan chan<- bool, localLightsChan chan<- types.LocalLightUpdate) {
 	newDir := chooseDirection(*elevator)
 	elevator.MotorDirection = newDir
 
@@ -46,8 +45,8 @@ func handleDoorClosed(elevator *types.Elevator, motorActiveChan chan<- bool, loc
 	sendLightUpdate(localLightsChan, *elevator, false)
 }
 
-func sendElevatorUpdate(channel chan<- types.FromLocalToDM, elevator types.Elevator, obstructed bool, completed [config.NFloors][config.NButtons]bool, btn *types.ButtonEvent) {
-	channel <- types.FromLocalToDM{
+func sendElevatorUpdate(channel chan<- types.ElevatorEvents, elevator types.Elevator, obstructed bool, completed [config.NFloors][config.NButtons]bool, btn *types.ButtonEvent) {
+	channel <- types.ElevatorEvents{
 		Elevator:       elevator,
 		CompletedOrder: completed,
 		NewButtonPress: btn,
@@ -55,18 +54,18 @@ func sendElevatorUpdate(channel chan<- types.FromLocalToDM, elevator types.Eleva
 	}
 }
 
-func sendLightUpdate(channel chan<- lights.LocalLightUpdate, elevator types.Elevator, doorOpen bool) {
+func sendLightUpdate(channel chan<- types.LocalLightUpdate, elevator types.Elevator, doorOpen bool) {
 	var cabLights [config.NFloors]bool
-	for floor := 0; floor < config.NFloors; floor++ {
-		cabLights[floor] = elevator.LocalOrders[floor][int(types.BTCab)]
+	for floor := range config.NFloors {
+		cabLights[floor] = elevator.LocalOrders[floor][int(types.BtnCab)]
 	}
-	channel <- lights.LocalLightUpdate{
+	channel <- types.LocalLightUpdate{
 		CabLights:    cabLights,
 		DoorOpen:     doorOpen,
 		CurrentFloor: elevator.CurrentFloor,
 	}
 }
 
-func updateFloorIndicator(channel chan<- lights.LocalLightUpdate, elevator types.Elevator) {
+func updateFloorIndicator(channel chan<- types.LocalLightUpdate, elevator types.Elevator) {
 	sendLightUpdate(channel, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 }

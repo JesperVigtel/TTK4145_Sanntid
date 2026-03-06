@@ -93,7 +93,7 @@ func buildHallAssignerInput(
 	}
 
 	for floor := range NFloors {
-		for btn := BTHallUp; btn <= BTHallDown; btn++ {
+		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
 			allAssigned := true
 			for id, alive := range convergedState.AliveList {
 				if alive && convergedState.HallOrderTable[id][floor][btn] != OrderAssigned {
@@ -118,14 +118,14 @@ func buildLocalOrderTable(
 
 	if assigned, found := output[idStr]; found {
 		for floor := 0; floor < NFloors && floor < len(assigned); floor++ {
-			for btn := range BTCab {
+			for btn := range BtnCab {
 				result[floor][btn] = assigned[floor][btn]
 			}
 		}
 	}
 
 	for floor := range NFloors {
-		result[floor][BTCab] = localState.ElevatorState.CabRequests[floor]
+		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
 	}
 
 	return result
@@ -135,10 +135,11 @@ func computeLightUpdate(convergedState ConvergedSystemState, elevatorID int) Hal
 	return convergedState.HallOrderTable[elevatorID]
 }
 
+
 func cabOrdersOnly(localState LocalSystemState) LocalOrderTable {
 	var result LocalOrderTable
 	for floor := range NFloors {
-		result[floor][BTCab] = localState.ElevatorState.CabRequests[floor]
+		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
 	}
 	return result
 }

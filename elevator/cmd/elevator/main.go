@@ -7,6 +7,7 @@ import (
 	networkmanager "elevator/internal/network/network_manager"
 	"elevator/internal/network/peers"
 	utilitynetwork "elevator/internal/network/utility_network"
+	"elevator/internal/localControl"
 	"elevator/internal/types"
 	"flag"
 	"fmt"
@@ -18,14 +19,16 @@ func main() {
 	selfID := parseSelfID()
 
 	// -- Channels --
-	localControlEvents := make(chan types.FromLocalToDM, config.ChannelBufferSize)
-	newLocalOrders := make(chan types.LocalOrderTable, config.ChannelBufferSize)
-	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
-	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
-	hallLightUpdates := make(chan types.HallOrderTable, config.ChannelBufferSize)
-	incomingMessages := make(chan types.Message, config.ChannelBufferSize)
-	outgoingMessages := make(chan types.Message, config.ChannelBufferSize)
-	nodeRegistryEvents := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
+	localControlEvents 		:= make(chan types.ElevatorEvents, 			config.ChannelBufferSize)
+	localOrders 			:= make(chan types.LocalOrderTable, 		config.ChannelBufferSize)
+	localSystemState 		:= make(chan types.LocalSystemState, 		config.ChannelBufferSize)
+	convergedSystemState 	:= make(chan types.ConvergedSystemState,	config.ChannelBufferSize)
+	hallLightUpdates 		:= make(chan types.HallOrderTable, 			config.ChannelBufferSize)
+	LocalLightUpdate		:= make(chan types.LocalLightUpdate, 		config.ChannelBufferSize)
+	peerMsg    				:= make(chan types.Message,            		config.ChannelBufferSize)
+	broadcast  				:= make(chan types.Message,            		config.ChannelBufferSize)
+	peerEvents 				:= make(chan types.GlobalNodeRegistry, 		config.ChannelBufferSize)
+	elevatorEvents 			:= make(chan types.ElevatorEvents,			config.ChannelBufferSize)
 
 	//Rå nettverkskanaler:
 	msgTx := make(chan types.Message, config.BroadcastBufferSize)
@@ -33,11 +36,16 @@ func main() {
 	peerUpdateCh := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
 	
 	// -- Goroutines --
-	//hardware.Init(config.Addr, config.NFloors) //Shuld be moved inside a localContoll run
-	//go localControl.Run(newLocalOrders, localControlEvents)
+	
+	go localControl.Run(
+		localOrders,
+		elevatorEvents,
+		LocalLightUpdate,
+	)
 
+	
 	go dispatch.Run(
-		newLocalOrders,
+		localOrders,
 		localSystemState,
 		hallLightUpdates,
 		localControlEvents,
@@ -46,9 +54,9 @@ func main() {
 	)
 
 	go consensus.Run(
-		incomingMessages,
-		outgoingMessages,
-		nodeRegistryEvents,
+		peerMsg,
+		broadcast,
+		peerEvents,
 		localSystemState,
 		convergedSystemState,
 		selfID,
@@ -65,11 +73,12 @@ func main() {
 		msgTx,
 		msgRx,
 		peerUpdateCh,
-		outgoingMessages, //localState fra consnsus
-		incomingMessages, //Videre til consensus
-		nodeRegistryEvents,
+		broadcast, //localState fra consnsus
+		peerMsg, //Videre til consensus
+		peerEvents,
 	)
 
+	
 	// Rest of go rutines
 
 	select {}
@@ -84,3 +93,12 @@ func parseSelfID() int {
 	}
 	return *id
 }
+
+
+//Pot
+// func parseArgs() int {
+// 	var nodeID int
+// 	flag.IntVar(&nodeID, "id", 0, "Node ID")
+// 	flag.Parse()
+// 	return nodeID
+// }
