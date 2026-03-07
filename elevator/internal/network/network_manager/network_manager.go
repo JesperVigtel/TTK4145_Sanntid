@@ -44,7 +44,7 @@ func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
 // Skal man initialisere lastLocalState som noe her frem til første localState kommer?
 // Kan vel evnetuelt sette lastLocalState.SenderID = selfID slik at den ignorerer frem til den får
 // localState
-func RunNetworkManager(
+func Run(
 	selfID 				int,
 	msgTx 				chan<- types.Message,
 	msgRx 				<-chan types.Message,

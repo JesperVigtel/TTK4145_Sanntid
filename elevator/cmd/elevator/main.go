@@ -68,7 +68,7 @@ func main() {
 		msgRx,
 		peerUpdateCh)
 
-	go networkmanager.RunNetworkManager(
+	go networkmanager.Run(
 		selfID,
 		msgTx,
 		msgRx,

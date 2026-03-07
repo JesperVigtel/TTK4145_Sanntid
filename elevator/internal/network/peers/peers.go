@@ -1,6 +1,7 @@
 package peers
 
 import (
+	"elevator/internal/config"
 	"elevator/internal/network/conn"
 	"fmt"
 	"net"
@@ -14,8 +15,10 @@ type PeerUpdate struct {
 	Lost  []string
 }
 
-const interval = 15 * time.Millisecond
-const timeout = 500 * time.Millisecond
+// const interval = 15 * time.Millisecond
+// const timeout = 500 * time.Millisecond
+const interval = config.HeartbeatInterval
+const timeout = config.HeartbeatTimeout
 
 //Hvor lenge vil vi vente før vi markerer noe som lost?
 //Hvor ofte vil vi sende ut?
