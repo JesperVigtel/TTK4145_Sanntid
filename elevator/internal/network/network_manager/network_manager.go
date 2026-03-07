@@ -45,13 +45,13 @@ func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
 // Kan vel evnetuelt sette lastLocalState.SenderID = selfID slik at den ignorerer frem til den får
 // localState
 func RunNetworkManager(
-	selfID int,
-	msgTx chan<- types.Message,
-	msgRx <-chan types.Message,
-	peerUpdateCh <-chan peers.PeerUpdate,
-	localState <-chan types.Message, // fra consensus
-	incomingMessages chan<- types.Message, // til consensus
-	nodeRegistry chan<- types.GlobalNodeRegistry, // til consensus
+	selfID 				int,
+	msgTx 				chan<- types.Message,
+	msgRx 				<-chan types.Message,
+	peerUpdateCh 		<-chan peers.PeerUpdate,
+	localState 			<-chan types.Message, // fra consensus
+	incomingMessages 	chan<- types.Message, // til consensus
+	nodeRegistry 		chan<- types.GlobalNodeRegistry, // til consensus
 ) {
 	ticker := time.NewTicker(config.BroadcastRate)
 	var lastLocalState types.Message
