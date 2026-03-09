@@ -103,7 +103,6 @@ func buildHallAssignerInput(
 		}
 
 	}
-	fmt.Println("[Assignemnt] Succsessfully used HRA")
 	return input
 }
 
