@@ -57,7 +57,7 @@ func Run(
 	incomingMessages 	chan<- types.Message, // til consensus
 	nodeRegistry 		chan<- types.GlobalNodeRegistry, // til consensus
 ) {
-	//fmt.Println("[DEBUG] Networkmanager called")
+	//fmt.Println("[NETWORK] Networkmanager called")
 	ticker := time.NewTicker(config.BroadcastRate)
 	var lastLocalState types.Message
 	hasState := false

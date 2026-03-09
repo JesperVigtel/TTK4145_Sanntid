@@ -54,7 +54,7 @@ func tryCyclicAdvance(currentState OrderState, peerStates []OrderState) (OrderSt
 
 	switch currentState {
 	case OrderStandby:
-		if alone || (allAreEither(peerStates, OrderStandby, OrderPending) && slices.Contains(peerStates, OrderPending)) {
+		if allAreEither(peerStates, OrderStandby, OrderPending) && slices.Contains(peerStates, OrderPending) {
 			return OrderPending, true
 		}
 	case OrderPending:
@@ -62,7 +62,9 @@ func tryCyclicAdvance(currentState OrderState, peerStates []OrderState) (OrderSt
 			return OrderAssigned, true
 		}
 	case OrderAssigned:
-		if alone || (allAreEither(peerStates, OrderAssigned, OrderComplete) && slices.Contains(peerStates, OrderComplete)) {
+		// Do not auto-complete when alone. Completion must come from actual
+		// service (local state update marks the order as Complete).
+		if allAreEither(peerStates, OrderAssigned, OrderComplete) && slices.Contains(peerStates, OrderComplete) {
 			return OrderComplete, true
 		}
 	case OrderComplete:

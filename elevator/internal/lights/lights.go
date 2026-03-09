@@ -17,8 +17,8 @@ func Run(
 		case local := <-localLights:
 			for floor := range config.NFloors {
 				hardware.SetButtonLamp(types.BtnCab, floor, local.CabLights[floor])
-				fmt.Println("[lights] Sucsessfully updated cab lights")
 			}
+			fmt.Println("[lights] Sucsessfully updated cab lights")
 			if local.CurrentFloor >= 0 {
 				hardware.SetFloorIndicator(local.CurrentFloor)
 				fmt.Println("[lights] Sucsessfully updated floor lights")
@@ -28,7 +28,6 @@ func Run(
 
 		case hall := <-hallLights:
 			for floor := range config.NFloors {
-
 				hardware.SetButtonLamp(types.BtnHallUp, floor, hall[floor][types.BtnHallUp] == types.OrderAssigned)
 				hardware.SetButtonLamp(types.BtnHallDown, floor, hall[floor][types.BtnHallDown] == types.OrderAssigned)
 			}
