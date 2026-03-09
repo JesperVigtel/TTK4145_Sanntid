@@ -20,6 +20,7 @@ func elevatorInit() types.Elevator {
 func handleFloorArrival(
 	elevator *types.Elevator,
 	doorOpenChan chan<- bool,
+	motorActiveChan chan<- bool,
 	localLightsChan chan<- types.LocalLightUpdate,
 	arrivalDir types.MotorDirection,
 ) (types.CompletedOrderTable, bool) {
@@ -27,6 +28,7 @@ func handleFloorArrival(
 	elevator.PhysicalMotorDirection = types.Stop
 	elevator.Behaviour = types.ElevatorDoorOpen
 	doorOpenChan <- true
+	motorActiveChan <- false
 
 	completed, directionChanged := clearOrdersAtFloor(elevator, elevator.CurrentFloor, arrivalDir)
 

@@ -57,13 +57,14 @@ func Run(
 				hardware.SetMotorDirection(types.Stop)
 				elevator.PhysicalMotorDirection = types.Stop
 				elevator.Behaviour = types.ElevatorIdle
+				motorActiveChan <- false
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 				println("[LocalControl] no orders anywhere -> idle")
 				continue
 			}
 
 			if shouldStopAtFloor(elevator, floor) {
-				completedOrders, dirChanged := handleFloorArrival(&elevator, doorOpenChan, localLightsChan, elevator.CurrentTravelDirection)
+				completedOrders, dirChanged := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				if dirChanged {
 					directionChangeAnnounced = true
 				}
@@ -88,7 +89,7 @@ func Run(
 			if elevator.Behaviour == types.ElevatorIdle {
 				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
 
-					completedOrders, dirChanged := handleFloorArrival(&elevator, doorOpenChan, localLightsChan, elevator.CurrentTravelDirection)
+					completedOrders, dirChanged := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 					if dirChanged {
 						directionChangeAnnounced = true
 					}
@@ -165,3 +166,11 @@ func Run(
 		}
 	}
 }
+
+
+
+// feil med recoverytick når den lokale heisen er stuck og en annen heis fullfører orderen den skulle gjøre, da skjer det ingen ting
+// dersom man da trykker på en hallorder på heisen som er stoppet, skjer det ingen ting før man trykker på en caborder. da betjenes også hallorderen i henhold til HRA
+
+// directionchange blir annonsert ved øverste etasje og nederste etasje og døren holdes åpen i forlenga tid. det skal ikke skje, den skal bare annonsere retningsbytte dersom begge knappene er trykket i en etasje
+// og det ikke er noen ordre i annkommstretningen, men det er det i motsatt retning
