@@ -10,7 +10,7 @@ func toHRAElevState(elev Elevator) HRAElevState {
 		Behavior:    behaviourToString(elev.Behaviour),
 		Floor:       elev.CurrentFloor,
 		Direction:   directionToString(elev.MotorDirection),
-		CabRequests: cabTableToBoolSlice(elev.LocalOrders),
+		CabRequests: make([]bool, NFloors),
 	}
 }
 
@@ -29,12 +29,4 @@ func directionToString(dir MotorDirection) string {
 		case Down: return "down"
 		default:   return "stop"
 	}
-}
-
-func cabTableToBoolSlice(table LocalOrderTable) []bool {
-	result := make([]bool, NFloors)
-	for floor := range table {
-		result[floor] = table[floor][BtnCab]
-	}
-	return result
 }

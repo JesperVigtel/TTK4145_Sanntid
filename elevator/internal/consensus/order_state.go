@@ -18,9 +18,9 @@ func advanceLocalOrderStates(
 	peerIsAlive 		[NElevators]bool,
 ) [NElevators]HallOrderTable {
 	for floor := range NFloors {
-		for btn := range NButtons {
+		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
 			systemHallOrders[selfID][floor][btn] = computeNextOrderState(
-				systemHallOrders, floor, btn, selfID, peerIsAlive,
+				systemHallOrders, floor, int(btn), selfID, peerIsAlive,
 			)
 		}
 	}
