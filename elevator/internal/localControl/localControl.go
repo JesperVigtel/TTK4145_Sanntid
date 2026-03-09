@@ -38,7 +38,9 @@ func Run(
 	obstruction = false
 
 	hardware.SetMotorDirection(types.Down)
-
+	
+	sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+	
 	for {
 		select {
 

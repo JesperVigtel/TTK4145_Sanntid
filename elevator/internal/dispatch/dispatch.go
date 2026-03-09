@@ -41,16 +41,13 @@ func Run(
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
-			fmt.Println("[dispatch] Sucsessfully received  coverged system")
 			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
 			assignedOrders, lightUpdate := prepareAssignment(localState, globalState)
 
 			if assignedOrders != previousOrders {
 				localOrders <- assignedOrders
 				previousOrders = assignedOrders
-				fmt.Println("[dispatch] Sucsessfully asigned orders")
 			}
-			fmt.Println("[dispatch] Sucsessfully prepared light update, which is:", lightUpdate)
 			hallLights <- lightUpdate
 		}
 	}

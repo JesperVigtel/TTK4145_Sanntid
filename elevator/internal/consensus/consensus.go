@@ -38,7 +38,6 @@ func Run(
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders)
 		
 		case msg := <-peerMsg:
-			fmt.Println("[consensus] received peer message")
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
 				continue
 			}
@@ -48,6 +47,7 @@ func Run(
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
 
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
@@ -59,9 +59,9 @@ func Run(
 			systemElevStates[selfID] = state.ElevatorState
 			peerIsAlive[selfID] = state.AliveStatus
 
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			
 			fmt.Println("[Consensus] adcanved and sendt Orderstate update")
 			
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {

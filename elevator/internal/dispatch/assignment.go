@@ -87,6 +87,9 @@ func buildHallAssignerInput(
 		if id == elevatorID {
 			elevState.CabRequests = localState.ElevatorState.CabRequests
 		}
+		if elevState.Floor < 0 || elevState.Floor >= NFloors {
+			continue
+		}
 		input.States[fmt.Sprintf("elevator_%d", id)] = elevState
 	}
 
@@ -103,7 +106,6 @@ func buildHallAssignerInput(
 		}
 
 	}
-	fmt.Println("[Assignemnt] Succsessfully used HRA")
 	return input
 }
 
