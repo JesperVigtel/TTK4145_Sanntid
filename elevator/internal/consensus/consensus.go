@@ -58,9 +58,9 @@ func Run(
 			systemElevStates[selfID] = state.ElevatorState
 			peerIsAlive[selfID] = state.AliveStatus
 
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			
 			fmt.Println("[Consensus] adcanved and sendt Orderstate update")
 			
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
