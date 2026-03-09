@@ -1,6 +1,6 @@
 package main
 
-//https://prod.liveshare.vsengsaas.visualstudio.com/join?46089F71FCD1C3423E60AA3D36B1918A9BE8
+//https://prod.liveshare.vsengsaas.visualstudio.com/join?653BD7ECD9B27DA732A843D4219CA6EA2563
 
 import (
 	"elevator/internal/config"

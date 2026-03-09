@@ -36,7 +36,7 @@ func Run(
 				localState = applyButtonPress(localState, *event.NewButtonPress)
 				fmt.Println("[dispatch] Sucsessfully received button press")
 			}
-			fmt.Printf("[dispatch] Sucsessfully received hardvare event")
+			fmt.Println("[dispatch] Sucsessfully received hardvare event")
 			localState = applyHardwareUpdate(localState, event)
 			localStateCh <- localState
 

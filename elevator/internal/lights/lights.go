@@ -28,6 +28,7 @@ func Run(
 				hardware.SetButtonLamp(types.BtnHallUp, floor, hall[floor][types.BtnHallUp] == types.OrderAssigned)
 				hardware.SetButtonLamp(types.BtnHallDown, floor, hall[floor][types.BtnHallDown] == types.OrderAssigned)
 			}
+			
 		}
 	}
 }
