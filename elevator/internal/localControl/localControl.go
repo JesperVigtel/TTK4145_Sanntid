@@ -42,11 +42,14 @@ func Run(
 		select {
 
 		case floor := <-floorChan:
-			fmt.Printf("[EVENT] Floor sensor triggered: floor=%d\n", floor)
+			fmt.Printf("[LocalControl] Floor sensor triggered: floor=%d\n", floor)
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
 			updateFloorIndicator(localLightsChan, elevator)
+			if elevator.Behaviour == types.ElevatorMoving {
+				motorActiveChan <- true
+			}
 
 			if !hasLocalOrderAbove(elevator) && !hasLocalOrderBelow(elevator) &&
 				!hasAnyOrderAtFloor(elevator, floor) {
@@ -54,6 +57,7 @@ func Run(
 				elevator.MotorDirection = types.Stop
 				elevator.Behaviour = types.ElevatorIdle
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+				println("[LocalControl] no orders anywhere -> idle")
 				continue
 			}
 
@@ -64,12 +68,13 @@ func Run(
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 			}
 
-
 		case orders := <-newOrder:
-			fmt.Println("[EVENT] Received new order table")
+			fmt.Println("[LocalControl] Received new order table")
 			elevator.LocalOrders = orders
+			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 			if elevator.Behaviour == types.ElevatorIdle {
 				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
+					
 					completedOrders := handleFloorArrival(&elevator, doorOpenChan, localLightsChan, elevator.MotorDirection)
 					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				} else {
@@ -85,42 +90,46 @@ func Run(
 			}
 
 		case obstruction = <-obstructionChan:
-			fmt.Printf("[EVENT] Obstruction changed: %v\n", obstruction)
+			fmt.Printf("[LocalControl] Obstruction changed: %v\n", obstruction)
 			if obstruction && elevator.Behaviour == types.ElevatorDoorOpen {
-				fmt.Println("[ACTION] Extending door open due to obstruction")
+				fmt.Println("[LocalControl] Extending door open due to obstruction")
 				doorOpenChan <- true
 			}
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 
 		case buttonEvent := <-buttonPressChan:
-			fmt.Printf("[EVENT] Button pressed: floor=%d button=%d\n",
+			fmt.Printf("[LocalControl] Button pressed: floor=%d button=%d\n",
 				buttonEvent.Floor,
 				buttonEvent.Button)
 
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, &buttonEvent)
 
 		case <-doorClosedChan:
-			fmt.Println("[EVENT] Door closed timer triggered")
-
-			if elevator.Behaviour == types.ElevatorDoorOpen {
-				handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
-			}
+    		fmt.Println("[LocalControl] Door closed timer triggered")
+    		if elevator.Behaviour == types.ElevatorDoorOpen {
+        		if obstruction {
+            	doorOpenChan <- true
+        		} else {
+            	handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
+            	sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+        		}
+    		}
 
 		case <-motorInactiveChan:
-			fmt.Println("[EVENT] Motor inactive; watchdog triggered")
+			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
 
 			if elevator.Behaviour == types.ElevatorMoving {
 				elevator.ActiveStatus = false
 				elevator.Behaviour = types.ElevatorIdle
-				elevator.MotorDirection = types.Stop
+				//keeps logical motordir
+				//elevator.MotorDirection = types.Stop
 				hardware.SetMotorDirection(types.Stop)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 				recoveryEnableChan <- true
 			}
 
 		case <-recoveryTickChan:
-			fmt.Println("[EVENT] Recovery tick triggered, tries to move again")
+			fmt.Println("[LocalControl] Recovery tick triggered, tries to move again")
 
 			if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 				newDir := chooseDirection(elevator)
@@ -130,14 +139,14 @@ func Run(
 					hardware.SetMotorDirection(newDir)
 					recoveryEnableChan <- false
 					motorActiveChan <- true
-
-				} else {
-					recoveryEnableChan <- false
 				}
 			}
 		}
 	}
 }
 
-// endre på navn config [Nfloors][Nbtn] i send elevator update
-// i init
+// endre på navn config [Nfloors][Nbtn] i send elevator update til et variabelnavn slik at det blir mer lesbart
+// dersom døren er åpen i en etasje og man trykker på den etasjen skal døren bare være åpen i 3 sekunder til fra trykket, per nå registreres det som ny ordre
+// dersom man har trykket feks "2. etasje ned, men det ikke er noen etasjer nedover og den har en ordre over seg skal den annonsere at den skifter retning og være åpen i 3 sekunder til"
+// ønsker heller en variabel som heter LastMotorDirection slik at jeg kan oppdatere motordirektion logisk
+

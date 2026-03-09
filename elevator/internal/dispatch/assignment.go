@@ -41,31 +41,29 @@ func computeAssignedOrders(
 	localState LocalSystemState,
 	elevatorID int,
 ) LocalOrderTable {
-	var result LocalOrderTable
-
-	// // If this elevator is not recognised as alive by the network, only serve
-	// // cab calls — hall orders require network agreement to assign safely.
-	// if !convergedState.AliveList[elevatorID] {
-	// 	return cabOrdersOnly(localState)
-	// }
-
 	input := buildHallAssignerInput(convergedState, localState, elevatorID)
+	if len(input.States) == 0 {
+		// External HRA asserts on empty state sets.
+		fmt.Println("computeAssignedOrders: no alive elevator states, using local fallback assignment")
+		return localFallbackOrders(localState)
+	}
+
 	jsonBytes, err := json.Marshal(input)
 	if err != nil {
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
-		return result
+		return localFallbackOrders(localState)
 	}
 
 	raw, err := exec.Command("hall_request_assigner", "-i", string(jsonBytes)).CombinedOutput()
 	if err != nil {
 		fmt.Println("computeAssignedOrders: exec:", err, string(raw))
-		return result
+		return localFallbackOrders(localState)
 	}
 
 	output := make(map[string][][2]bool)
 	if err := json.Unmarshal(raw, &output); err != nil {
 		fmt.Println("computeAssignedOrders: json.Unmarshal:", err)
-		return result
+		return localFallbackOrders(localState)
 	}
 
 	return buildLocalOrderTable(output, localState, elevatorID)
@@ -103,7 +101,7 @@ func buildHallAssignerInput(
 			}
 			input.HallRequests[floor][btn] = allAssigned
 		}
-		
+
 	}
 	fmt.Println("[Assignemnt] Succsessfully used HRA")
 	return input
@@ -136,11 +134,14 @@ func computeLightUpdate(convergedState ConvergedSystemState, elevatorID int) Hal
 	return convergedState.HallOrderTable[elevatorID]
 }
 
-
-func cabOrdersOnly(localState LocalSystemState) LocalOrderTable {
+func localFallbackOrders(localState LocalSystemState) LocalOrderTable {
 	var result LocalOrderTable
 	for floor := range NFloors {
 		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
+		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
+			state := localState.HallRequests[floor][btn]
+			result[floor][btn] = state == OrderPending || state == OrderAssigned
+		}
 	}
 	return result
 }

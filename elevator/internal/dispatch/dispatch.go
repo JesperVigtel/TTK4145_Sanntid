@@ -50,7 +50,7 @@ func Run(
 				previousOrders = assignedOrders
 				fmt.Println("[dispatch] Sucsessfully asigned orders")
 			}
-
+			fmt.Println("[dispatch] Sucsessfully prepared light update, which is:", lightUpdate)
 			hallLights <- lightUpdate
 		}
 	}

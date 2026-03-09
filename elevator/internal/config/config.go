@@ -17,6 +17,6 @@ const (
 	HeartbeatTimeout    = 3000 * time.Millisecond
 	Addr                = "localhost:15657"
 	MessagePort         = 1338
-	BroadcastPort		= 9999
-	PeersPort			= 9990
+	BroadcastPort		= 13333
+	PeersPort			= 13334
 )
