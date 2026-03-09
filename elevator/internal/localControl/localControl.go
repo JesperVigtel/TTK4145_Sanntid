@@ -42,7 +42,7 @@ func Run(
 		select {
 
 		case floor := <-floorChan:
-			fmt.Printf("[EVENT] Floor sensor triggered: floor=%d\n", floor)
+			fmt.Printf("[LocalControl] Floor sensor triggered: floor=%d\n", floor)
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
@@ -54,6 +54,7 @@ func Run(
 				elevator.MotorDirection = types.Stop
 				elevator.Behaviour = types.ElevatorIdle
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+				println("[LocalControl] no orders anywhere -> idle")
 				continue
 			}
 
@@ -66,7 +67,7 @@ func Run(
 
 
 		case orders := <-newOrder:
-			fmt.Println("[EVENT] Received new order table")
+			fmt.Println("[LocalControl] Received new order table")
 			elevator.LocalOrders = orders
 			if elevator.Behaviour == types.ElevatorIdle {
 				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
@@ -85,22 +86,22 @@ func Run(
 			}
 
 		case obstruction = <-obstructionChan:
-			fmt.Printf("[EVENT] Obstruction changed: %v\n", obstruction)
+			fmt.Printf("[LocalControl] Obstruction changed: %v\n", obstruction)
 			if obstruction && elevator.Behaviour == types.ElevatorDoorOpen {
-				fmt.Println("[ACTION] Extending door open due to obstruction")
+				fmt.Println("[LocalControl] Extending door open due to obstruction")
 				doorOpenChan <- true
 			}
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 
 		case buttonEvent := <-buttonPressChan:
-			fmt.Printf("[EVENT] Button pressed: floor=%d button=%d\n",
+			fmt.Printf("[LocalControl] Button pressed: floor=%d button=%d\n",
 				buttonEvent.Floor,
 				buttonEvent.Button)
 
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, &buttonEvent)
 
 		case <-doorClosedChan:
-			fmt.Println("[EVENT] Door closed timer triggered")
+			fmt.Println("[LocalControl] Door closed timer triggered")
 
 			if elevator.Behaviour == types.ElevatorDoorOpen {
 				handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
@@ -108,7 +109,7 @@ func Run(
 			}
 
 		case <-motorInactiveChan:
-			fmt.Println("[EVENT] Motor inactive; watchdog triggered")
+			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
 
 			if elevator.Behaviour == types.ElevatorMoving {
 				elevator.ActiveStatus = false
@@ -120,7 +121,7 @@ func Run(
 			}
 
 		case <-recoveryTickChan:
-			fmt.Println("[EVENT] Recovery tick triggered, tries to move again")
+			fmt.Println("[LocalControl] Recovery tick triggered, tries to move again")
 
 			if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 				newDir := chooseDirection(elevator)

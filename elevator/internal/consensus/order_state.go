@@ -13,9 +13,9 @@ import (
 // -----------------------------------------------------------------------------
 
 func advanceLocalOrderStates(
-	systemHallOrders 	[NElevators]HallOrderTable,
-	selfID 				int,
-	peerIsAlive 		[NElevators]bool,
+	systemHallOrders [NElevators]HallOrderTable,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) [NElevators]HallOrderTable {
 	for floor := range NFloors {
 		for btn := range NButtons {
@@ -28,11 +28,11 @@ func advanceLocalOrderStates(
 }
 
 func computeNextOrderState(
-	systemHallOrders 	[NElevators]HallOrderTable,
-	floor 				int,
-	btn 				int,
-	selfID 				int,
-	peerIsAlive 		[NElevators]bool,
+	systemHallOrders [NElevators]HallOrderTable,
+	floor int,
+	btn int,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) OrderState {
 	selfState := systemHallOrders[selfID][floor][btn]
 	peerStates := alivePeerOrderStates(systemHallOrders, floor, btn, selfID, peerIsAlive)
@@ -92,11 +92,11 @@ func peerStatesHaveDiverged(selfState OrderState, peerStates []OrderState) bool 
 }
 
 func alivePeerOrderStates(
-	systemHallOrders 	[NElevators]HallOrderTable,
-	floor 				int,
-	btn 				int,
-	selfID 				int,
-	peerIsAlive 		[NElevators]bool,
+	systemHallOrders [NElevators]HallOrderTable,
+	floor int,
+	btn int,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 ) []OrderState {
 	var peerStates []OrderState
 	for peerID := range NElevators {

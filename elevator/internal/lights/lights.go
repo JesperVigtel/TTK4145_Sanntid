@@ -4,6 +4,7 @@ import (
 	"elevator/internal/config"
 	"elevator/internal/localControl/hardware"
 	"elevator/internal/types"
+	"fmt"
 )
 
 func Run(
@@ -16,11 +17,14 @@ func Run(
 		case local := <-localLights:
 			for floor := range config.NFloors {
 				hardware.SetButtonLamp(types.BtnCab, floor, local.CabLights[floor])
+				fmt.Println("[lights] Sucsessfully updated cab lights")
 			}
 			if local.CurrentFloor >= 0 {
 				hardware.SetFloorIndicator(local.CurrentFloor)
+				fmt.Println("[lights] Sucsessfully updated floor lights")
 			}
 			hardware.SetDoorOpenLamp(local.DoorOpen)
+			fmt.Println("[lights] Sucsessfully updated Door lights")
 
 		case hall := <-hallLights:
 			for floor := range config.NFloors {
@@ -28,7 +32,7 @@ func Run(
 				hardware.SetButtonLamp(types.BtnHallUp, floor, hall[floor][types.BtnHallUp] == types.OrderAssigned)
 				hardware.SetButtonLamp(types.BtnHallDown, floor, hall[floor][types.BtnHallDown] == types.OrderAssigned)
 			}
-			
+			fmt.Println("[lights] Sucsessfully updated hall lights")
 		}
 	}
 }
