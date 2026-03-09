@@ -64,11 +64,16 @@ func Run(
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 			}
 
-
 		case orders := <-newOrder:
 			fmt.Println("[EVENT] Received new order table")
 			elevator.LocalOrders = orders
-			if elevator.Behaviour == types.ElevatorIdle {
+			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
+			
+			if elevator.Behaviour == types.ElevatorDoorOpen {
+				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
+					doorOpenChan <- true  
+				}
+			} else if elevator.Behaviour == types.ElevatorIdle {
 				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
 					completedOrders := handleFloorArrival(&elevator, doorOpenChan, localLightsChan, elevator.MotorDirection)
 					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
