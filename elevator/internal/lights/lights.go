@@ -6,7 +6,7 @@ import (
 	"elevator/internal/types"
 )
 
-func Lights(
+func Run(
 	localLights <-chan types.LocalLightUpdate, // from localControl
 	hallLights <-chan types.HallOrderTable, // from dispatch
 ) {

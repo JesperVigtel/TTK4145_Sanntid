@@ -5,6 +5,7 @@ import (
 	"elevator/internal/localControl/hardware"
 	"elevator/internal/localControl/timer"
 	"elevator/internal/types"
+	"fmt"
 )
 
 func Run(
@@ -41,6 +42,7 @@ func Run(
 		select {
 
 		case floor := <-floorChan:
+			fmt.Printf("[EVENT] Floor sensor triggered: floor=%d\n", floor)
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
@@ -62,7 +64,9 @@ func Run(
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 			}
 
+
 		case orders := <-newOrder:
+			fmt.Println("[EVENT] Received new order table")
 			elevator.LocalOrders = orders
 			if elevator.Behaviour == types.ElevatorIdle {
 				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
@@ -81,40 +85,59 @@ func Run(
 			}
 
 		case obstruction = <-obstructionChan:
+			fmt.Printf("[EVENT] Obstruction changed: %v\n", obstruction)
 			if obstruction && elevator.Behaviour == types.ElevatorDoorOpen {
+				fmt.Println("[ACTION] Extending door open due to obstruction")
 				doorOpenChan <- true
 			}
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 
 		case buttonEvent := <-buttonPressChan:
+			fmt.Printf("[EVENT] Button pressed: floor=%d button=%d\n",
+				buttonEvent.Floor,
+				buttonEvent.Button)
+
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, &buttonEvent)
 
-
 		case <-doorClosedChan:
+			fmt.Println("[EVENT] Door closed timer triggered")
+
 			if elevator.Behaviour == types.ElevatorDoorOpen {
 				handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 			}
 
 		case <-motorInactiveChan:
+			fmt.Println("[EVENT] Motor inactive; watchdog triggered")
+
 			if elevator.Behaviour == types.ElevatorMoving {
 				elevator.ActiveStatus = false
 				elevator.Behaviour = types.ElevatorIdle
+				elevator.MotorDirection = types.Stop
 				hardware.SetMotorDirection(types.Stop)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 				recoveryEnableChan <- true
 			}
 
 		case <-recoveryTickChan:
+			fmt.Println("[EVENT] Recovery tick triggered, tries to move again")
+
 			if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 				newDir := chooseDirection(elevator)
 				if newDir != types.Stop {
 					elevator.MotorDirection = newDir
 					elevator.Behaviour = types.ElevatorMoving
 					hardware.SetMotorDirection(newDir)
+					recoveryEnableChan <- false
 					motorActiveChan <- true
+
+				} else {
+					recoveryEnableChan <- false
 				}
 			}
 		}
 	}
 }
+
+// endre på navn config [Nfloors][Nbtn] i send elevator update
+// i init

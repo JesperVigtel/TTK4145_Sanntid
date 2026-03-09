@@ -59,9 +59,9 @@ func peerStateMatchesRecorded(
 }
 
 func allAlivePeersConsistent(
-	peerIsConsistent [NElevators]bool,
-	peerIsAlive [NElevators]bool,
-	selfID int,
+	peerIsConsistent 	[NElevators]bool,
+	peerIsAlive 		[NElevators]bool,
+	selfID 				int,
 ) bool {
 	for peerID := range NElevators {
 		if peerID == selfID {

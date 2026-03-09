@@ -3,6 +3,7 @@ package consensus
 import (
 	. "elevator/internal/config"
 	. "elevator/internal/types"
+	"fmt"
 )
 
 // -----------------------------------------------------------------------------
@@ -28,18 +29,19 @@ func Run(
 	)
 
 	systemHallOrders = newSystemHallOrders()
+	fmt.Println("[Consensus] succsefffully init")
 
 	for {
 		select {
 
 		case registry := <-peerEvents:
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders)
-
+		
 		case msg := <-peerMsg:
+			fmt.Println("[consensus] received peer message")
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
 				continue
 			}
-
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
 			systemElevStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
@@ -59,10 +61,13 @@ func Run(
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+
+			fmt.Println("[Consensus] adcanved and sendt Orderstate update")
 			
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
 				publishConsistantState(converged, peerIsAlive, systemElevStates, systemHallOrders)
+				fmt.Println("[Consensus] consistent state reached and published")
 			}
 		}
 	}

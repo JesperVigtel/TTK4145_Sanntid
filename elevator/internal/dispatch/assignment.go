@@ -9,8 +9,8 @@ import (
 )
 
 func prepareAssignment(
-	convergedState ConvergedSystemState,
 	localState LocalSystemState,
+	convergedState ConvergedSystemState,
 ) (LocalOrderTable, HallOrderTable) {
 	elevatorID := localState.ElevatorID
 	assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
@@ -103,8 +103,9 @@ func buildHallAssignerInput(
 			}
 			input.HallRequests[floor][btn] = allAssigned
 		}
+		
 	}
-
+	fmt.Println("[Assignemnt] Succsessfully used HRA")
 	return input
 }
 

@@ -1,6 +1,7 @@
 package networkmanager
 
 import (
+	//"fmt"
 	"elevator/internal/config"
 	"elevator/internal/network/peers"
 	"elevator/internal/types"
@@ -16,6 +17,7 @@ func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
 	for _, peer := range update.Peers {
 		id, err := strconv.Atoi(peer)
 		if err != nil || id < 0 || id >= config.NElevators {
+			//fmt.Printf("[NETWORK] Ugyldig peer-ID ignorert: %q\n", peer)
 			continue
 		}
 		registry.Nodes = append(registry.Nodes, id)
@@ -25,6 +27,7 @@ func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
 	if update.New != "" {
 		id, err := strconv.Atoi(update.New)
 		if err == nil && id >= 0 && id < config.NElevators {
+			//fmt.Printf("[NETWORK] Ny heis oppdaget: ID=%d\n", id)
 			registry.New = append(registry.New, id)
 		}
 	}
@@ -35,6 +38,7 @@ func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
 		if err != nil || id < 0 || id >= config.NElevators {
 			continue
 		}
+		//fmt.Printf("[NETWORK] Heis mistet: ID=%d\n", id)
 		registry.Lost = append(registry.Lost, id)
 	}
 
@@ -53,6 +57,7 @@ func Run(
 	incomingMessages 	chan<- types.Message, // til consensus
 	nodeRegistry 		chan<- types.GlobalNodeRegistry, // til consensus
 ) {
+	//fmt.Println("[DEBUG] Networkmanager called")
 	ticker := time.NewTicker(config.BroadcastRate)
 	var lastLocalState types.Message
 	hasState := false
@@ -60,22 +65,27 @@ func Run(
 	for {
 		select {
 		case state := <-localState:
+			//fmt.Printf("[NETWORK] Ny localState mottatt – SenderID=%d\n", selfID)
 			state.SenderID = selfID
 			lastLocalState = state
 			hasState = true
 
 		case <-ticker.C:
 			if hasState {
+				//fmt.Printf("[NETWORK] Sender state periodisk – SenderID=%d\n", lastLocalState.SenderID)
 				msgTx <- lastLocalState // send periodisk
 			}
 
 		case msg := <-msgRx:
 			if msg.SenderID == selfID {
+				//fmt.Printf("[NETWORK] Dropper egen melding fra ID=%d\n", selfID)
 				continue // dropp self
 			}
 			incomingMessages <- msg // videresend til consensus
 
 		case update := <-peerUpdateCh:
+			//fmt.Printf("[NETWORK] PeerUpdate – Aktive: %v | Ny: %q | Mistet: %v\n",
+        		//update.Peers, update.New, update.Lost)
 			nodeRegistry <- convertPeerUpdate(update)
 		}
 	}
