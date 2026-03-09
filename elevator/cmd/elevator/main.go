@@ -1,13 +1,16 @@
 package main
 
+//https://prod.liveshare.vsengsaas.visualstudio.com/join?653BD7ECD9B27DA732A843D4219CA6EA2563
+
 import (
 	"elevator/internal/config"
 	"elevator/internal/consensus"
 	"elevator/internal/dispatch"
-	networkmanager "elevator/internal/network/network_manager"
-	"elevator/internal/network/peers"
-	utilitynetwork "elevator/internal/network/utility_network"
+	"elevator/internal/lights"
 	"elevator/internal/localControl"
+	"elevator/internal/network/network_manager"
+	"elevator/internal/network/peers"
+	"elevator/internal/network/utility_network"
 	"elevator/internal/types"
 	"flag"
 	"fmt"
@@ -19,29 +22,36 @@ func main() {
 	selfID := parseSelfID()
 
 	// -- Channels --
-	localControlEvents 		:= make(chan types.ElevatorEvents, 			config.ChannelBufferSize)
+
+	// -- Channels for LocalControl --
 	localOrders 			:= make(chan types.LocalOrderTable, 		config.ChannelBufferSize)
+	elevatorEvents 			:= make(chan types.ElevatorEvents,			config.ChannelBufferSize)
+	localLightUpdate		:= make(chan types.LocalLightUpdate, 		config.ChannelBufferSize)
+
+	// -- Channels for Decision
 	localSystemState 		:= make(chan types.LocalSystemState, 		config.ChannelBufferSize)
 	convergedSystemState 	:= make(chan types.ConvergedSystemState,	config.ChannelBufferSize)
 	hallLightUpdates 		:= make(chan types.HallOrderTable, 			config.ChannelBufferSize)
-	LocalLightUpdate		:= make(chan types.LocalLightUpdate, 		config.ChannelBufferSize)
+
+	// -- Channels for network
 	peerMsg    				:= make(chan types.Message,            		config.ChannelBufferSize)
 	broadcast  				:= make(chan types.Message,            		config.ChannelBufferSize)
 	peerEvents 				:= make(chan types.GlobalNodeRegistry, 		config.ChannelBufferSize)
-	elevatorEvents 			:= make(chan types.ElevatorEvents,			config.ChannelBufferSize)
-
-	//Rå nettverkskanaler:
-	msgTx := make(chan types.Message, config.BroadcastBufferSize)
-	msgRx := make(chan types.Message, config.BroadcastBufferSize)
-	peerUpdateCh := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
+	msgTx 					:= make(chan types.Message, 				config.BroadcastBufferSize)
+	msgRx 					:= make(chan types.Message, 				config.BroadcastBufferSize)
+	peerUpdateCh 			:= make(chan peers.PeerUpdate, 				config.BroadcastBufferSize)
 	
 	// -- Goroutines --
 	
 	go localControl.Run(
 		localOrders,
 		elevatorEvents,
-		LocalLightUpdate,
+		localLightUpdate,
 	)
+
+	go lights.Run(
+		localLightUpdate, 
+		hallLightUpdates)
 
 	
 
@@ -50,7 +60,7 @@ func main() {
 		localOrders,
 		localSystemState,
 		hallLightUpdates,
-		localControlEvents,
+		elevatorEvents,
 		convergedSystemState,
 		selfID,
 	)
@@ -75,13 +85,10 @@ func main() {
 		msgTx,
 		msgRx,
 		peerUpdateCh,
-		broadcast, //localState fra consnsus
-		peerMsg, //Videre til consensus
+		broadcast, 
+		peerMsg, 
 		peerEvents,
 	)
-
-	
-	// Rest of go rutines
 
 	select {}
 }

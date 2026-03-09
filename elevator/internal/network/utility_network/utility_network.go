@@ -1,6 +1,7 @@
 package utilitynetwork
 
 import (
+	"fmt"
 	// "strconv"
 	// "elevator/internal/config"
 	. "elevator/internal/config"
@@ -10,13 +11,12 @@ import (
 )
 
 func InitNetwork(id string, msgTx chan types.Message, msgRx chan types.Message, peerUpdate chan peers.PeerUpdate) {
+	fmt.Println("[DEBUG] InitNetwork called sucsessfy")
 	go broadcast.Transmitter(BroadcastPort, msgTx)
-    go broadcast.Receiver(BroadcastPort, msgRx)
-    go peers.Transmitter(PeersPort, id, make(chan bool))
-    go peers.Receiver(PeersPort, peerUpdate)
+	go broadcast.Receiver(BroadcastPort, msgRx)
+	go peers.Transmitter(PeersPort, id, make(chan bool))
+	go peers.Receiver(PeersPort, peerUpdate)
 }
-
-
 
 // func PeerUpdates(peerUpdate <-chan peers.PeerUpdate, aliveList *[config.NElevators]bool){
 //     for update := range peerUpdate {

@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	. "elevator/internal/types"
+	"fmt"
 )
 
 // ------------------------------------------------------------------------------
@@ -24,6 +25,8 @@ func Run(
 
 	localState = initLocalSystemState(<-elevEvents, elevatorID)
 	localStateCh <- localState
+	fmt.Println("[dispatch] succsessfully initialized")
+	
 
 	for {
 		select {
@@ -31,20 +34,23 @@ func Run(
 		case event := <-elevEvents:
 			if event.NewButtonPress != nil {
 				localState = applyButtonPress(localState, *event.NewButtonPress)
+				fmt.Println("[dispatch] Sucsessfully received button press")
 			}
-
+			fmt.Println("[dispatch] Sucsessfully received hardvare event")
 			localState = applyHardwareUpdate(localState, event)
 			localStateCh <- localState
 
-		case converged := <-convergedSystem:
-			localState = mergeConvergedHallOrders(localState, converged, localState.ElevatorID)
-			assignedOrders, lightUpdate := prepareAssignment(converged, localState)
+		case globalState := <-convergedSystem:
+			fmt.Println("[dispatch] Sucsessfully received  coverged system")
+			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
+			assignedOrders, lightUpdate := prepareAssignment(localState, globalState)
 
 			if assignedOrders != previousOrders {
 				localOrders <- assignedOrders
 				previousOrders = assignedOrders
+				fmt.Println("[dispatch] Sucsessfully asigned orders")
 			}
-
+			fmt.Println("[dispatch] Sucsessfully prepared light update, which is:", lightUpdate)
 			hallLights <- lightUpdate
 		}
 	}
