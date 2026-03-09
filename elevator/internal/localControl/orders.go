@@ -7,7 +7,7 @@ import (
 
 func hasLocalOrderAbove(elevator types.Elevator) bool {
 	for floor := elevator.CurrentFloor + 1; floor < config.NFloors; floor++ {
-		for btn := 0; btn < config.NButtons; btn++ {
+		for btn := range config.NButtons {
 			if elevator.LocalOrders[floor][btn] {
 				return true
 			}
@@ -18,7 +18,7 @@ func hasLocalOrderAbove(elevator types.Elevator) bool {
 
 func hasLocalOrderBelow(elevator types.Elevator) bool {
 	for floor := elevator.CurrentFloor - 1; floor >= 0; floor-- {
-		for btn := 0; btn < config.NButtons; btn++ {
+		for btn := range config.NButtons {
 			if elevator.LocalOrders[floor][btn] {
 				return true
 			}
