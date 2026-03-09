@@ -38,7 +38,6 @@ func Run(
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders)
 		
 		case msg := <-peerMsg:
-			fmt.Println("[consensus] received peer message")
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
 				continue
 			}
