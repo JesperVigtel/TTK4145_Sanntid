@@ -114,7 +114,8 @@ func Run(
 			if elevator.Behaviour == types.ElevatorMoving {
 				elevator.ActiveStatus = false
 				elevator.Behaviour = types.ElevatorIdle
-				elevator.MotorDirection = types.Stop
+				//keeps logical motordir
+				//elevator.MotorDirection = types.Stop
 				hardware.SetMotorDirection(types.Stop)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
 				recoveryEnableChan <- true

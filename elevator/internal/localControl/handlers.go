@@ -22,6 +22,8 @@ func handleFloorArrival(
 	localLightsChan chan<- types.LocalLightUpdate,
 	arrivalDir types.MotorDirection,
 ) [config.NFloors][config.NButtons]bool {
+	// keep logical direction
+	//elevator.MotorDirection = types.Stop
 	hardware.SetMotorDirection(types.Stop)
 	elevator.Behaviour = types.ElevatorDoorOpen
 	doorOpenChan <- true
