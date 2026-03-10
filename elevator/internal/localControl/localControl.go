@@ -34,8 +34,7 @@ func Run(
 
 	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan, doorClosedChan, motorInactiveChan, tryRecovery)
 
-	elevator := elevatorInit()
-	obstruction = false
+	elevator := newElevator()
 
 	hardware.SetMotorDirection(types.Down)
 	sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
@@ -82,7 +81,7 @@ func Run(
 			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
 			if elevator.Behaviour == types.ElevatorDoorOpen && hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
-				completedOrders, _ := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection, false)
+				completedOrders, _ := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				doorOpenChan <- true
 				sendLightUpdate(localLightsChan, elevator, true)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
@@ -128,7 +127,7 @@ func Run(
 				} else if directionChange {
 					fmt.Println("[LocalControl] Announcing direction change - clearing opposite hall order")
 					directionChange = false
-					completedOrders, _ := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection, true)
+					completedOrders := clearDirectionChangeOrders(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 					sendLightUpdate(localLightsChan, elevator, true)
 					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 					doorOpenChan <- true
@@ -140,19 +139,17 @@ func Run(
 
 		case <-motorInactiveChan:
 			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
-			killElevator(&elevator)
+			stopMotorOnTimeout(&elevator)
 			recoveryEnableChan <- true
 
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
-			
 
-// Under er good
 		case <-tryRecovery:
 			fmt.Println("[LocalControl] Recovery timer triggered, tries to move again")
 
-			tryMoving(&elevator)
+			resumeAfterRecovery(&elevator)
 			recoveryEnableChan <- false
-			motorActiveChan <-true
+			motorActiveChan <- true
 		}
 	}
 }
