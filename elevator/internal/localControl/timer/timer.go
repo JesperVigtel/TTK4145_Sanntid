@@ -16,7 +16,7 @@ const (
 func Timer(
 	doorOpenChan <-chan bool,
 	motorActiveChan <-chan bool,
-	recoveryEnableChan <- chan bool,
+	recoveryEnableChan <-chan bool,
 
 	doorClosedChan chan<- bool,
 	motorInactiveChan chan<- bool,
@@ -30,10 +30,19 @@ func Timer(
 	motorTimer.Stop()
 	motorRecoveryTimer := time.NewTimer(config.MotorRecoveryTime)
 	motorRecoveryTimer.Stop()
-	
-	select {case <-doorTimer.C: default:}
-	select {case <-motorTimer.C: default:}
-	select {case <- motorRecoveryTimer.C: default:}
+
+	select {
+	case <-doorTimer.C:
+	default:
+	}
+	select {
+	case <-motorTimer.C:
+	default:
+	}
+	select {
+	case <-motorRecoveryTimer.C:
+	default:
+	}
 
 	for {
 		select {
@@ -46,7 +55,7 @@ func Timer(
 				stopAndDrain(doorTimer)
 			}
 
-		case  isMotorActive := <-motorActiveChan:
+		case isMotorActive := <-motorActiveChan:
 			watchDogActive = isMotorActive
 			if watchDogActive {
 				stopAndDrain(motorTimer)
@@ -63,7 +72,6 @@ func Timer(
 				stopAndDrain(motorRecoveryTimer)
 			}
 
-
 		case <-doorTimer.C:
 			if doorActive {
 				doorActive = false
@@ -76,7 +84,7 @@ func Timer(
 				motorInactiveChan <- true
 			}
 		case <-motorRecoveryTimer.C:
-			if recoveryActive{
+			if recoveryActive {
 				recoveryTickChan <- true
 				stopAndDrain(motorRecoveryTimer)
 				motorRecoveryTimer.Reset(config.MotorRecoveryTime)

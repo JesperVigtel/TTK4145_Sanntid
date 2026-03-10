@@ -40,12 +40,15 @@ const (
 )
 
 type Elevator struct {
-	CurrentFloor   int
-	MotorDirection MotorDirection
-	LocalOrders    LocalOrderTable
-	Behaviour      ElevatorBehaviour
-	ActiveStatus   bool
+	CurrentFloor           int
+	CurrentTravelDirection MotorDirection
+	PhysicalMotorDirection MotorDirection
+	LocalOrders            LocalOrderTable
+	Behaviour              ElevatorBehaviour
+	ActiveStatus           bool
 }
+
+type CompletedOrderTable [NFloors][NButtons]bool
 
 type ButtonType int
 
@@ -70,7 +73,7 @@ type ButtonEvent struct {
 
 type ElevatorEvents struct {
 	Elevator       Elevator
-	CompletedOrder LocalOrderTable
+	CompletedOrder CompletedOrderTable
 	NewButtonPress *ButtonEvent
 	Obstructed     bool
 }
@@ -85,6 +88,7 @@ type HallLightUpdate struct {
 	HallUp   [NFloors]bool
 	HallDown [NFloors]bool
 }
+
 //Elevator types stop
 
 //Network types START:
@@ -100,7 +104,6 @@ type GlobalNodeRegistry struct {
 // ------------------------------------------------------------------------------------
 //	enum types for Local Control
 // ------------------------------------------------------------------------------------
-
 
 type ClearRequestType int
 
@@ -121,7 +124,9 @@ type State struct {
 }
 
 // ------------------------------------------------------------------------------------
+//
 //	enum types for order domain
+//
 // ------------------------------------------------------------------------------------
 type OrderState int
 
@@ -135,8 +140,7 @@ const (
 type HallOrderTable [NFloors][NButtons]OrderState
 type LocalOrderTable [NFloors][NButtons]bool
 
-
-// er det en ide å lage en completedorders matrise som man kan bruke?? bruk dette til å fjerne matrisehelvete fra 
+// er det en ide å lage en completedorders matrise som man kan bruke?? bruk dette til å fjerne matrisehelvete fra
 // sendElevatorUpdate()
 
 // ------------------------------------------------------------------------------------

@@ -54,6 +54,8 @@ func main() {
 		hallLightUpdates)
 
 	
+
+	
 	go dispatch.Run(
 		localOrders,
 		localSystemState,

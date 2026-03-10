@@ -14,16 +14,17 @@ func Run(
 	localLightsChan chan<- types.LocalLightUpdate,
 ) {
 	var (
-		floorChan          = make(chan int, config.ChannelBufferSize)
-		doorOpenChan       = make(chan bool, config.ChannelBufferSize)
-		motorActiveChan    = make(chan bool, config.ChannelBufferSize)
-		recoveryEnableChan = make(chan bool, config.ChannelBufferSize)
-		doorClosedChan     = make(chan bool, config.ChannelBufferSize)
-		motorInactiveChan  = make(chan bool, config.ChannelBufferSize)
-		recoveryTickChan   = make(chan bool, config.ChannelBufferSize)
-		obstructionChan    = make(chan bool, config.ChannelBufferSize)
-		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
-		obstruction        bool
+		floorChan                = make(chan int, config.ChannelBufferSize)
+		doorOpenChan             = make(chan bool, config.ChannelBufferSize)
+		motorActiveChan          = make(chan bool, config.ChannelBufferSize)
+		recoveryEnableChan       = make(chan bool, config.ChannelBufferSize)
+		doorClosedChan           = make(chan bool, config.ChannelBufferSize)
+		motorInactiveChan        = make(chan bool, config.ChannelBufferSize)
+		recoveryTickChan         = make(chan bool, config.ChannelBufferSize)
+		obstructionChan          = make(chan bool, config.ChannelBufferSize)
+		buttonPressChan          = make(chan types.ButtonEvent, config.ChannelBufferSize)
+		obstruction              bool
+		directionChangeAnnounced bool
 	)
 	hardware.Init(config.Addr, config.NFloors)
 
@@ -56,37 +57,54 @@ func Run(
 			if !hasLocalOrderAbove(elevator) && !hasLocalOrderBelow(elevator) &&
 				!hasAnyOrderAtFloor(elevator, floor) {
 				hardware.SetMotorDirection(types.Stop)
-				elevator.MotorDirection = types.Stop
+				elevator.PhysicalMotorDirection = types.Stop
 				elevator.Behaviour = types.ElevatorIdle
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+				motorActiveChan <- false
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 				println("[LocalControl] no orders anywhere -> idle")
 				continue
 			}
 
 			if shouldStopAtFloor(elevator, floor) {
-				completedOrders := handleFloorArrival(&elevator, doorOpenChan, localLightsChan, elevator.MotorDirection)
+				completedOrders, dirChanged := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
+				if dirChanged {
+					directionChangeAnnounced = true
+				}
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 			} else {
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 			}
 
 		case orders := <-newOrder:
 			fmt.Println("[LocalControl] Received new order table")
 			elevator.LocalOrders = orders
 			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
+
+			if elevator.Behaviour == types.ElevatorDoorOpen && hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
+				completedOrders, _ := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
+				doorOpenChan <- true
+				sendLightUpdate(localLightsChan, elevator, true)
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
+				continue
+			}
+
 			if elevator.Behaviour == types.ElevatorIdle {
 				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
-					
-					completedOrders := handleFloorArrival(&elevator, doorOpenChan, localLightsChan, elevator.MotorDirection)
+
+					completedOrders, dirChanged := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
+					if dirChanged {
+						directionChangeAnnounced = true
+					}
 					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				} else {
 					newDir := chooseDirection(elevator)
 					if newDir != types.Stop {
-						elevator.MotorDirection = newDir
+						elevator.CurrentTravelDirection = newDir
+						elevator.PhysicalMotorDirection = newDir
 						elevator.Behaviour = types.ElevatorMoving
 						hardware.SetMotorDirection(newDir)
 						motorActiveChan <- true
-						sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+						sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 					}
 				}
 			}
@@ -97,25 +115,29 @@ func Run(
 				fmt.Println("[LocalControl] Extending door open due to obstruction")
 				doorOpenChan <- true
 			}
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case buttonEvent := <-buttonPressChan:
 			fmt.Printf("[LocalControl] Button pressed: floor=%d button=%d\n",
 				buttonEvent.Floor,
 				buttonEvent.Button)
 
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, &buttonEvent)
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, &buttonEvent)
 
 		case <-doorClosedChan:
-    		fmt.Println("[LocalControl] Door closed timer triggered")
-    		if elevator.Behaviour == types.ElevatorDoorOpen {
-        		if obstruction {
-            	doorOpenChan <- true
-        		} else {
-            	handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
-            	sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
-        		}
-    		}
+			fmt.Println("[LocalControl] Door closed timer triggered")
+			if elevator.Behaviour == types.ElevatorDoorOpen {
+				if obstruction {
+					doorOpenChan <- true
+				} else if directionChangeAnnounced {
+					fmt.Println("[LocalControl] Announcing direction change - extending door time")
+					directionChangeAnnounced = false
+					doorOpenChan <- true
+				} else {
+					handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
+					sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+				}
+			}
 
 		case <-motorInactiveChan:
 			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
@@ -123,10 +145,9 @@ func Run(
 			if elevator.Behaviour == types.ElevatorMoving {
 				elevator.ActiveStatus = false
 				elevator.Behaviour = types.ElevatorIdle
-				//keeps logical motordir
-				//elevator.MotorDirection = types.Stop
+				elevator.PhysicalMotorDirection = types.Stop
 				hardware.SetMotorDirection(types.Stop)
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, [config.NFloors][config.NButtons]bool{}, nil)
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 				recoveryEnableChan <- true
 			}
 
@@ -136,7 +157,8 @@ func Run(
 			if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 				newDir := chooseDirection(elevator)
 				if newDir != types.Stop {
-					elevator.MotorDirection = newDir
+					elevator.CurrentTravelDirection = newDir
+					elevator.PhysicalMotorDirection = newDir
 					elevator.Behaviour = types.ElevatorMoving
 					hardware.SetMotorDirection(newDir)
 					recoveryEnableChan <- false
@@ -147,8 +169,10 @@ func Run(
 	}
 }
 
-// endre på navn config [Nfloors][Nbtn] i send elevator update til et variabelnavn slik at det blir mer lesbart
-// dersom døren er åpen i en etasje og man trykker på den etasjen skal døren bare være åpen i 3 sekunder til fra trykket, per nå registreres det som ny ordre
-// dersom man har trykket feks "2. etasje ned, men det ikke er noen etasjer nedover og den har en ordre over seg skal den annonsere at den skifter retning og være åpen i 3 sekunder til"
-// ønsker heller en variabel som heter LastMotorDirection slik at jeg kan oppdatere motordirektion logisk
 
+
+// feil med recoverytick når den lokale heisen er stuck og en annen heis fullfører orderen den skulle gjøre, da skjer det ingen ting
+// dersom man da trykker på en hallorder på heisen som er stoppet, skjer det ingen ting før man trykker på en caborder. da betjenes også hallorderen i henhold til HRA
+
+// directionchange blir annonsert ved øverste etasje og nederste etasje og døren holdes åpen i forlenga tid. det skal ikke skje, den skal bare annonsere retningsbytte dersom begge knappene er trykket i en etasje
+// og det ikke er noen ordre i annkommstretningen, men det er det i motsatt retning

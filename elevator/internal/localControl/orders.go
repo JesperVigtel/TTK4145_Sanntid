@@ -7,7 +7,7 @@ import (
 
 func hasLocalOrderAbove(elevator types.Elevator) bool {
 	for floor := elevator.CurrentFloor + 1; floor < config.NFloors; floor++ {
-		for btn := 0; btn < config.NButtons; btn++ {
+		for btn := range config.NButtons {
 			if elevator.LocalOrders[floor][btn] {
 				return true
 			}
@@ -18,7 +18,7 @@ func hasLocalOrderAbove(elevator types.Elevator) bool {
 
 func hasLocalOrderBelow(elevator types.Elevator) bool {
 	for floor := elevator.CurrentFloor - 1; floor >= 0; floor-- {
-		for btn := 0; btn < config.NButtons; btn++ {
+		for btn := range config.NButtons {
 			if elevator.LocalOrders[floor][btn] {
 				return true
 			}
@@ -33,10 +33,8 @@ func hasAnyOrderAtFloor(elevator types.Elevator, floor int) bool {
 		elevator.LocalOrders[floor][int(types.BtnHallDown)]
 }
 
-
-
 func chooseDirection(elevator types.Elevator) types.MotorDirection {
-	switch elevator.MotorDirection {
+	switch elevator.CurrentTravelDirection {
 	case types.Up:
 		if hasLocalOrderAbove(elevator) {
 			return types.Up
@@ -70,7 +68,7 @@ func shouldStopAtFloor(elevator types.Elevator, floor int) bool {
 	hallUp := elevator.LocalOrders[floor][int(types.BtnHallUp)]
 	hallDown := elevator.LocalOrders[floor][int(types.BtnHallDown)]
 
-	switch elevator.MotorDirection {
+	switch elevator.CurrentTravelDirection {
 	case types.Up:
 		return hallUp || (!hasLocalOrderAbove(elevator) && hallDown)
 	case types.Down:
@@ -79,7 +77,6 @@ func shouldStopAtFloor(elevator types.Elevator, floor int) bool {
 		return hallUp || hallDown
 	}
 }
-
 
 func clearCabOrder(elevator *types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
@@ -105,7 +102,7 @@ func clearOrdersAtFloor(
 	elevator *types.Elevator,
 	floor int,
 	arrivalDir types.MotorDirection,
-) (completed [config.NFloors][config.NButtons]bool, needsExtraDoorTime bool) {
+) (completed types.CompletedOrderTable, needsExtraDoorTime bool) {
 	if clearCabOrder(elevator, floor) {
 		completed[floor][int(types.BtnCab)] = true
 	}
