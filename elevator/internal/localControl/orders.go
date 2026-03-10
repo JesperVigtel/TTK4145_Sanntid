@@ -133,7 +133,13 @@ func clearOrdersAtFloor(
 		}
 
 		if !hasLocalOrderAbove(*elevator) && elevator.LocalOrders[floor][int(types.BtnHallDown)] {
-			if elevator.CurrentFloor != lastFloor {
+			if elevator.CurrentFloor == lastFloor {
+				// At top floor: clear opposite immediately
+				if clearHallOrder(elevator, floor, types.Down) {
+					completed[floor][int(types.BtnHallDown)] = true
+				}
+			} else {
+				// Middle floor: need direction change announcement
 				needsExtraDoorTime = true
 			}
 		}
@@ -143,7 +149,13 @@ func clearOrdersAtFloor(
 		}
 
 		if !hasLocalOrderBelow(*elevator) && elevator.LocalOrders[floor][int(types.BtnHallUp)] {
-			if elevator.CurrentFloor != firstFloor {
+			if elevator.CurrentFloor == firstFloor {
+				// At bottom floor: clear opposite immediately
+				if clearHallOrder(elevator, floor, types.Up) {
+					completed[floor][int(types.BtnHallUp)] = true
+				}
+			} else {
+				// Middle floor: need direction change announcement
 				needsExtraDoorTime = true
 			}
 		}
