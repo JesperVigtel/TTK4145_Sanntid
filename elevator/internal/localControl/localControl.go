@@ -80,7 +80,7 @@ func Run(
 			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
 			if elevator.Behaviour == types.ElevatorDoorOpen && hasOrderAtFloor(elevator, elevator.CurrentFloor) {
-				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection, false)
+				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection,)
 				directionChange = directionChange || needsExtraDoorTime
 				doorOpenChan <- true
 				sendLightUpdate(localLightsChan, elevator, true)
