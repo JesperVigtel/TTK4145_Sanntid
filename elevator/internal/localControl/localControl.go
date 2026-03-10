@@ -35,7 +35,7 @@ func Run(
 
 	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan, doorClosedChan, motorInactiveChan, tryRecovery)
 
-	elevator := elevatorInit()
+	elevator := newElevator()
 	obstruction = false
 
 	hardware.SetMotorDirection(types.Down)
@@ -69,9 +69,7 @@ func Run(
 
 			if anyOrdersAtCurrentFloor(elevator, floor) {
 				completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
-				if needsExtraDoorTime {
-					directionChange = true
-				}
+				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 			} else {
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
@@ -83,10 +81,8 @@ func Run(
 			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
 			if elevator.Behaviour == types.ElevatorDoorOpen && hasOrderAtFloor(elevator, elevator.CurrentFloor) {
-				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection, false)
-				if needsExtraDoorTime {
-					directionChange = true
-				}
+				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection,)
+				directionChange = directionChange || needsExtraDoorTime
 				doorOpenChan <- true
 				sendLightUpdate(localLightsChan, elevator, true)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
@@ -97,9 +93,7 @@ func Run(
 				if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 
 					completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
-					if needsExtraDoorTime {
-						directionChange = true
-					}
+					directionChange = directionChange || needsExtraDoorTime
 					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				} else {
 					newDir := chooseDirection(elevator)
@@ -116,6 +110,7 @@ func Run(
 
 		case obstruction = <-obstructionChan:
 			fmt.Printf("[LocalControl] Obstruction changed: %v\n", obstruction)
+			RapportInactive(&elevator)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case buttonEvent := <-buttonPressChan:
@@ -132,8 +127,7 @@ func Run(
 				} else if directionChange {
 					fmt.Println("[LocalControl] Announcing direction change - clearing opposite hall order")
 					directionChange = false
-					completedOrders, _ := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection, true)
-					sendLightUpdate(localLightsChan, elevator, true)
+					completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 					doorOpenChan <- true
 				} else {
@@ -145,19 +139,20 @@ func Run(
 
 		case <-motorInactiveChan:
 			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
-
-			killElevator(&elevator)
+			stopOnMotorTimeout(&elevator)
 			recoveryEnableChan <- true
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case <-tryRecovery:
 			fmt.Println("[LocalControl] Recovery timer triggered, tries to move again")
 
-			tryMoving(&elevator)
+			resumeMovement(&elevator)
 			recoveryEnableChan <- false
 			motorActiveChan <- true
 		}
 	}
 }
+
+
 // buggen skjer når heisen ankommer en etasje for å betjene orderen i logisk motorretning, dersom man så trykker motsatt kjøreretning samtidig som døren er åpen, blir ikke denne orderen klarert selv om det ikke er flere ordre tilstede andre steder
 

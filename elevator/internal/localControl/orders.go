@@ -107,25 +107,10 @@ func clearOrdersAtFloor(
 	elevator *types.Elevator,
 	floor int,
 	arrivalDir types.MotorDirection,
-	hasDirectionChangeAnnouncement bool,
 ) (completed types.CompletedOrderTable, needsExtraDoorTime bool) {
 
 	lastFloor := config.NFloors - 1
 	firstFloor := 0
-
-	if hasDirectionChangeAnnouncement {
-		switch arrivalDir {
-		case types.Up:
-			if clearHallOrder(elevator, floor, types.Down) {
-				completed[floor][int(types.BtnHallDown)] = true
-			}
-		case types.Down:
-			if clearHallOrder(elevator, floor, types.Up) {
-				completed[floor][int(types.BtnHallUp)] = true
-			}
-		}
-		return
-	}
 
 	if clearCabOrder(elevator, floor) {
 		completed[floor][int(types.BtnCab)] = true
@@ -169,6 +154,27 @@ func clearOrdersAtFloor(
 		}
 	}
 	return
+}
+
+func clearOppositeHallOrder(
+	elevator *types.Elevator,
+	floor int,
+	arrivalDir types.MotorDirection,
+	) types.CompletedOrderTable {
+
+	var completed types.CompletedOrderTable
+
+	switch arrivalDir {
+	case types.Up:
+		if clearHallOrder(elevator, floor, types.Down) {
+			completed[floor][int(types.BtnHallDown)] = true
+		}
+	case types.Down:
+		if clearHallOrder(elevator, floor, types.Up) {
+			completed[floor][int(types.BtnHallUp)] = true
+		}
+	}
+	return completed
 }
 
 // Jeg tror det skal være en bedre måte å gjøre det her på

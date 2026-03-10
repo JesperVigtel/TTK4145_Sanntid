@@ -6,7 +6,7 @@ import (
 	"elevator/internal/types"
 )
 
-func elevatorInit() types.Elevator {
+func newElevator() types.Elevator {
 	return types.Elevator{
 		CurrentFloor:           -1,
 		CurrentTravelDirection: types.Down,
@@ -31,7 +31,7 @@ func handleFloorArrival(
 	doorOpenChan <- true
 	motorActiveChan <- false
 
-	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, arrivalDir, false)
+	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, arrivalDir,)
 
 	sendLightUpdate(localLightsChan, *elevator, true)
 	return completed, needsExtraDoorTime
@@ -61,7 +61,7 @@ func handleDoorClosed(
 
 // Denne er good
 
-func tryMoving(elevator *types.Elevator,) {
+func resumeMovement(elevator *types.Elevator,) {
 
 	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 		newDir := chooseDirection(*elevator)
@@ -78,13 +78,19 @@ func tryMoving(elevator *types.Elevator,) {
 	}
 }
 
-func killElevator(elevator *types.Elevator,){
-				if elevator.Behaviour == types.ElevatorMoving {
-				elevator.ActiveStatus = false
-				elevator.Behaviour = types.ElevatorIdle
-				elevator.PhysicalMotorDirection = types.Stop
-				hardware.SetMotorDirection(types.Stop)
-			}
+func stopOnMotorTimeout(elevator *types.Elevator,){
+	if elevator.Behaviour == types.ElevatorMoving {
+		elevator.ActiveStatus = false
+		elevator.Behaviour = types.ElevatorIdle
+		elevator.PhysicalMotorDirection = types.Stop
+		hardware.SetMotorDirection(types.Stop)
+	}
+	
+}
+func RapportInactive(elevator *types.Elevator) {
+	if elevator.Behaviour == types.ElevatorDoorOpen{
+		elevator.ActiveStatus = false
+	}
 }
 
 
