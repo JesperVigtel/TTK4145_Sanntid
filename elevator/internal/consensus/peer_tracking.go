@@ -36,8 +36,8 @@ func updatePeerAvailability(
 			continue
 		}
 		peerIsAlive[peerID] = false
-		//systemHallOrders[peerID] = recreateOnLoss(systemHallOrders, selfID)
-		systemHallOrders[peerID] = newStandbyHallOrders()
+		systemHallOrders[peerID] = recreateOnLoss(systemHallOrders, selfID)
+		//systemHallOrders[peerID] = newStandbyHallOrders() remove if works
 	}
 
 	for _, peerID := range nodeRegistry.New {
@@ -45,6 +45,7 @@ func updatePeerAvailability(
 			continue
 		}
 		peerIsAlive[peerID] = true
+		systemHallOrders[peerID] = recreateOnLoss(systemHallOrders, selfID)		//New adding
 	}
 	return peerIsAlive, systemHallOrders
 }
