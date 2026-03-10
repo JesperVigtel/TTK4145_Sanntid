@@ -3,7 +3,6 @@ package consensus
 import (
 	. "elevator/internal/config"
 	. "elevator/internal/types"
-	"fmt"
 )
 
 // -----------------------------------------------------------------------------
@@ -29,7 +28,6 @@ func Run(
 	)
 
 	systemHallOrders = newSystemHallOrders()
-	fmt.Println("[Consensus] succsefffully init")
 
 	for {
 		select {
@@ -62,12 +60,9 @@ func Run(
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
 			
-			fmt.Println("[Consensus] adcanved and sendt Orderstate update")
-			
 			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 				peerIsConsistent = [NElevators]bool{}
 				publishConsistantState(converged, peerIsAlive, systemElevStates, systemHallOrders)
-				fmt.Println("[Consensus] consistent state reached and published")
 			}
 		}
 	}

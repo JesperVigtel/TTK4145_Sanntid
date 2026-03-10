@@ -49,6 +49,7 @@ func computeNextOrderState(
 	return selfState
 }
 
+
 func tryCyclicAdvance(currentState OrderState, peerStates []OrderState) (OrderState, bool) {
 	alone := len(peerStates) == 0
 
@@ -74,6 +75,7 @@ func tryCyclicAdvance(currentState OrderState, peerStates []OrderState) (OrderSt
 	}
 	return currentState, false
 }
+
 
 func peerStatesHaveDiverged(selfState OrderState, peerStates []OrderState) bool {
 	switch selfState {
@@ -108,6 +110,7 @@ func alivePeerOrderStates(
 	}
 	return peerStates
 }
+
 
 func allAreEither(peerStates []OrderState, stateA, stateB OrderState) bool {
 	for _, state := range peerStates {
