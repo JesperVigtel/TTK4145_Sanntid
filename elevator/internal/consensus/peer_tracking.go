@@ -28,16 +28,18 @@ func updatePeerAvailability(
 	nodeRegistry GlobalNodeRegistry,
 	peerIsAlive [NElevators]bool,
 	systemHallOrders [NElevators]HallOrderTable,
+	selfID int,
 ) ([NElevators]bool, [NElevators]HallOrderTable) {
 
 	for _, peerID := range nodeRegistry.Lost {
 		if peerID < 0 || peerID >= NElevators {
 			continue
 		}
-		// Reset to Standby on peer loss: we can no longer confirm the state of orders
-		// that peer was tracking, so we return to the cycle's safe starting state.
 		peerIsAlive[peerID] = false
-		systemHallOrders[peerID] = newStandbyHallOrders()
+		// Promote the lost peer's slot to match surviving self-state for active
+		// orders so that advanceLocalOrderStates never sees a divergence and
+		// silently erases an Assigned/Pending call.
+		systemHallOrders[peerID] = redistributeOnLoss(systemHallOrders, selfID)
 	}
 
 	for _, peerID := range nodeRegistry.New {
@@ -47,6 +49,61 @@ func updatePeerAvailability(
 		peerIsAlive[peerID] = true
 	}
 	return peerIsAlive, systemHallOrders
+}
+
+// redistributeOnLoss builds a replacement HallOrderTable for a lost peer.
+// For each (floor, btn) where the surviving self holds an active order
+// (OrderPending or OrderAssigned), that value is copied into the peer slot
+// so the divergence check in advanceLocalOrderStates never fires.
+// All other slots are set to OrderStandby.
+func redistributeOnLoss(
+	systemHallOrders [NElevators]HallOrderTable,
+	selfID int,
+) HallOrderTable {
+	var table HallOrderTable
+	for floor := range table {
+		for btn := range table[floor] {
+			selfState := systemHallOrders[selfID][floor][btn]
+			if isActiveOrder(selfState) {
+				table[floor][btn] = selfState
+			} else {
+				table[floor][btn] = OrderStandby
+			}
+		}
+	}
+	return table
+}
+
+// mergeIncomingHallOrders prevents a rejoining peer's stale Standby from
+// overwriting an active OrderAssigned or OrderPending on the surviving node.
+// For every (floor, btn) where self holds an active order and the incoming
+// message carries OrderStandby, the current recorded peer value is replaced
+// with the self state so consensus can continue without a divergence reset.
+func mergeIncomingHallOrders(
+	selfOrders HallOrderTable,
+	incomingOrders HallOrderTable,
+) HallOrderTable {
+	var merged HallOrderTable
+	for floor := range merged {
+		for btn := range merged[floor] {
+			selfState := selfOrders[floor][btn]
+			incoming := incomingOrders[floor][btn]
+			if isActiveOrder(selfState) && incoming == OrderStandby {
+				// Block the stale Standby; mirror the self state so the peer
+				// slot is consistent and no divergence reset occurs.
+				merged[floor][btn] = selfState
+			} else {
+				merged[floor][btn] = incoming
+			}
+		}
+	}
+	return merged
+}
+
+// isActiveOrder reports whether an order is in an active (in-progress) state
+// that must not be silently reset when a peer is lost or rejoins.
+func isActiveOrder(state OrderState) bool {
+	return state == OrderPending || state == OrderAssigned
 }
 
 func peerStateMatchesRecorded(
