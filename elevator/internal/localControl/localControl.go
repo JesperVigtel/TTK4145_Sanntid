@@ -9,24 +9,25 @@ import (
 )
 
 func Run(
+	elevAddr string,
 	newOrder <-chan types.LocalOrderTable,
 	elevatorEvents chan<- types.ElevatorEvents,
 	localLightsChan chan<- types.LocalLightUpdate,
 ) {
 	var (
-		floorChan                = make(chan int, config.ChannelBufferSize)
-		doorOpenChan             = make(chan bool, config.ChannelBufferSize)
-		motorActiveChan          = make(chan bool, config.ChannelBufferSize)
-		recoveryEnableChan       = make(chan bool, config.ChannelBufferSize)
-		doorClosedChan           = make(chan bool, config.ChannelBufferSize)
-		motorInactiveChan        = make(chan bool, config.ChannelBufferSize)
-		tryRecovery		         = make(chan bool, config.ChannelBufferSize)
-		obstructionChan          = make(chan bool, config.ChannelBufferSize)
-		buttonPressChan          = make(chan types.ButtonEvent, config.ChannelBufferSize)
-		obstruction              bool
-		directionChange			 bool
+		floorChan          = make(chan int, config.ChannelBufferSize)
+		doorOpenChan       = make(chan bool, config.ChannelBufferSize)
+		motorActiveChan    = make(chan bool, config.ChannelBufferSize)
+		recoveryEnableChan = make(chan bool, config.ChannelBufferSize)
+		doorClosedChan     = make(chan bool, config.ChannelBufferSize)
+		motorInactiveChan  = make(chan bool, config.ChannelBufferSize)
+		tryRecovery        = make(chan bool, config.ChannelBufferSize)
+		obstructionChan    = make(chan bool, config.ChannelBufferSize)
+		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
+		obstruction        bool
+		directionChange    bool
 	)
-	hardware.Init(config.Addr, config.NFloors)
+	hardware.Init(elevAddr, config.NFloors)
 
 	go hardware.PollFloorSensor(floorChan)
 	go hardware.PollObstructionSwitch(obstructionChan)
@@ -39,7 +40,7 @@ func Run(
 
 	hardware.SetMotorDirection(types.Down)
 	sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
-	
+
 	for {
 		select {
 
@@ -144,16 +145,14 @@ func Run(
 			recoveryEnableChan <- true
 
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
-			
 
-// Under er good
+			// Under er good
 		case <-tryRecovery:
 			fmt.Println("[LocalControl] Recovery timer triggered, tries to move again")
 
 			tryMoving(&elevator)
 			recoveryEnableChan <- false
-			motorActiveChan <-true
+			motorActiveChan <- true
 		}
 	}
 }
-
