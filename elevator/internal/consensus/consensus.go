@@ -35,7 +35,7 @@ func Run(
 		select {
 
 		case registry := <-peerEvents:
-			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders)
+			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
 		
 		case msg := <-peerMsg:
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
@@ -43,7 +43,7 @@ func Run(
 			}
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
 			systemElevStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
-			systemHallOrders[msg.SenderID] = msg.HallOrderTable
+			systemHallOrders[msg.SenderID] = mergeIncomingHallOrders(systemHallOrders[selfID], msg.HallOrderTable)
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
