@@ -49,6 +49,7 @@ func updatePeerAvailability(
 		// reference pattern where a reconnecting peer's slot is left as-is
 		// and their broadcasts fill it in naturally.
 		peerIsAlive[peerID] = true
+		systemHallOrders[peerID] = newStandbyHallOrders()
 	}
 	return peerIsAlive, systemHallOrders
 }
