@@ -120,7 +120,7 @@ func Run(
 
 		case obstruction = <-obstructionChan:
 			fmt.Printf("[LocalControl] Obstruction changed: %v\n", obstruction)
-			RapportInactive(&elevator)
+			RapportInactive(&elevator, obstruction)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case buttonEvent := <-buttonPressChan:

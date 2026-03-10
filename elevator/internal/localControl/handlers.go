@@ -87,9 +87,12 @@ func stopOnMotorTimeout(elevator *types.Elevator,){
 	}
 	
 }
-func RapportInactive(elevator *types.Elevator) {
-	if elevator.Behaviour == types.ElevatorDoorOpen{
+func RapportInactive(elevator *types.Elevator, obstruction bool) {
+
+	if elevator.Behaviour == types.ElevatorDoorOpen && obstruction{
 		elevator.ActiveStatus = false
+	} else {
+		elevator.ActiveStatus = true
 	}
 }
 
