@@ -156,14 +156,16 @@ func Run(
 
 			if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 				newDir := chooseDirection(elevator)
-				if newDir != types.Stop {
-					elevator.CurrentTravelDirection = newDir
-					elevator.PhysicalMotorDirection = newDir
+				if newDir == types.Stop {
 					elevator.Behaviour = types.ElevatorMoving
-					hardware.SetMotorDirection(newDir)
-					recoveryEnableChan <- false
-					motorActiveChan <- true
+					hardware.SetMotorDirection(elevator.CurrentTravelDirection)
 				}
+				elevator.CurrentTravelDirection = newDir
+				elevator.PhysicalMotorDirection = newDir
+				elevator.Behaviour = types.ElevatorMoving
+				hardware.SetMotorDirection(newDir)
+				recoveryEnableChan <- false
+				motorActiveChan <- true
 			}
 		}
 	}
