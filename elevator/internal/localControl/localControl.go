@@ -164,5 +164,4 @@ func Run(
 }
 
 
-// buggen skjer når heisen ankommer en etasje for å betjene orderen i logisk motorretning, dersom man så trykker motsatt kjøreretning samtidig som døren er åpen, blir ikke denne orderen klarert selv om det ikke er flere ordre tilstede andre steder
-
+// fiks bug fra jesper, når man slår av mellom to etasjer og initialiserer igjen går den alltid ned først, den skal sjekke ordre med en gang etter init
