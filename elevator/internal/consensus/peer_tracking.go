@@ -32,65 +32,25 @@ func updatePeerAvailability(
 ) ([NElevators]bool, [NElevators]HallOrderTable) {
 
 	for _, peerID := range nodeRegistry.Lost {
-		if peerID < 0 || peerID >= NElevators {
+		if peerID < 0 || peerID >= NElevators || peerID == selfID {
 			continue
 		}
 		peerIsAlive[peerID] = false
-		systemHallOrders[peerID] = recreateOnLoss(systemHallOrders, selfID)
-		//systemHallOrders[peerID] = newSystemHallOrders() remove if works
+		systemHallOrders[peerID] = newStandbyHallOrders()
 	}
 
 	for _, peerID := range nodeRegistry.New {
-		if peerID < 0 || peerID >= NElevators {
+		if peerID < 0 || peerID >= NElevators || peerID == selfID {
 			continue
 		}
+		// Only mark the peer alive. Do NOT reset their hall orders here —
+		// their actual state arrives via the first broadcast, which will be
+		// recorded directly in the peerMsg case (no merge). This matches the
+		// reference pattern where a reconnecting peer's slot is left as-is
+		// and their broadcasts fill it in naturally.
 		peerIsAlive[peerID] = true
-		systemHallOrders[peerID] = recreateOnLoss(systemHallOrders, selfID)		//New adding
 	}
 	return peerIsAlive, systemHallOrders
-}
-
-func recreateOnLoss(
-	systemHallOrders [NElevators]HallOrderTable,
-	selfID int,
-) HallOrderTable {
-	var table HallOrderTable
-	for floor := range table {
-		for btn := range table[floor] {
-			selfState := systemHallOrders[selfID][floor][btn]
-			if isActiveOrder(selfState) {
-				table[floor][btn] = selfState
-			} else {
-				table[floor][btn] = OrderStandby
-			}
-		}
-	}
-	return table
-}
-
-func mergeIncomingHallOrders(
-	selfOrders HallOrderTable,
-	incomingOrders HallOrderTable,
-) HallOrderTable {
-	var merged HallOrderTable
-	for floor := range merged {
-		for btn := range merged[floor] {
-			selfState := selfOrders[floor][btn]
-			incoming := incomingOrders[floor][btn]
-			if isActiveOrder(selfState) && incoming == OrderStandby {
-				// Block the stale Standby; mirror the self state so the peer
-				// slot is consistent and no divergence reset occurs.
-				merged[floor][btn] = selfState
-			} else {
-				merged[floor][btn] = incoming
-			}
-		}
-	}
-	return merged
-}
-
-func isActiveOrder(state OrderState) bool {
-	return state == OrderPending || state == OrderAssigned
 }
 
 func peerStateMatchesRecorded(
