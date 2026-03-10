@@ -57,7 +57,7 @@ func Run(
 			}
 
 			if !hasLocalOrderAbove(elevator) && !hasLocalOrderBelow(elevator) &&
-				!hasAnyOrderAtFloor(elevator, floor) {
+				!hasOrderAtFloor(elevator, floor) {
 				hardware.SetMotorDirection(types.Stop)
 				elevator.PhysicalMotorDirection = types.Stop
 				elevator.Behaviour = types.ElevatorIdle
@@ -67,7 +67,7 @@ func Run(
 				continue
 			}
 
-			if shouldStopAtFloor(elevator, floor) {
+			if anyOrdersAtCurrentFloor(elevator, floor) {
 				completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				if needsExtraDoorTime {
 					directionChange = true
@@ -82,8 +82,11 @@ func Run(
 			elevator.LocalOrders = orders
 			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
-			if elevator.Behaviour == types.ElevatorDoorOpen && hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
-				completedOrders, _ := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection, false)
+			if elevator.Behaviour == types.ElevatorDoorOpen && hasOrderAtFloor(elevator, elevator.CurrentFloor) {
+				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection, false)
+				if needsExtraDoorTime {
+					directionChange = true
+				}
 				doorOpenChan <- true
 				sendLightUpdate(localLightsChan, elevator, true)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
@@ -91,7 +94,7 @@ func Run(
 			}
 
 			if elevator.Behaviour == types.ElevatorIdle {
-				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
+				if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 
 					completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 					if needsExtraDoorTime {
@@ -138,15 +141,15 @@ func Run(
 					sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 				}
 			}
+			// Under er good
 
 		case <-motorInactiveChan:
 			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
+
 			killElevator(&elevator)
 			recoveryEnableChan <- true
-
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
-			// Under er good
 		case <-tryRecovery:
 			fmt.Println("[LocalControl] Recovery timer triggered, tries to move again")
 
@@ -156,3 +159,5 @@ func Run(
 		}
 	}
 }
+// buggen skjer når heisen ankommer en etasje for å betjene orderen i logisk motorretning, dersom man så trykker motsatt kjøreretning samtidig som døren er åpen, blir ikke denne orderen klarert selv om det ikke er flere ordre tilstede andre steder
+
