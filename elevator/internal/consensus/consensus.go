@@ -46,6 +46,7 @@ func Run(
 			}
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
 			systemElevStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
+
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			//systemHallOrders[msg.SenderID] = mergeIncomingHallOrders(systemHallOrders[selfID], msg.HallOrderTable)
 			peerIsAlive[msg.SenderID] = msg.AliveStatus

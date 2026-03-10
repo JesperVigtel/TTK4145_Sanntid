@@ -58,6 +58,11 @@ func tryCyclicAdvance(currentState OrderState, peerStates []OrderState) (OrderSt
 		if allAreEither(peerStates, OrderStandby, OrderPending) && slices.Contains(peerStates, OrderPending) {
 			return OrderPending, true
 		}
+		// Catch-up: a reconnecting elevator that missed the Pending phase advances
+		// directly to Pending when it sees a peer already at Assigned.
+		if slices.Contains(peerStates, OrderAssigned) {
+			return OrderPending, true
+		}
 	case OrderPending:
 		if alone || allAreEither(peerStates, OrderPending, OrderAssigned) {
 			return OrderAssigned, true
@@ -87,7 +92,8 @@ func peerStatesHaveDiverged(selfState OrderState, peerStates []OrderState) bool 
 			!allAreEither(peerStates, OrderStandby, OrderPending)
 	case OrderAssigned:
 		return !allAreEither(peerStates, OrderAssigned, OrderComplete) &&
-			!allAreEither(peerStates, OrderAssigned, OrderPending)
+			!allAreEither(peerStates, OrderAssigned, OrderPending) &&
+			!allAreEither(peerStates, OrderAssigned, OrderStandby)
 	case OrderComplete:
 		return !allAreEither(peerStates, OrderComplete, OrderStandby) &&
 			!allAreEither(peerStates, OrderAssigned, OrderComplete)
