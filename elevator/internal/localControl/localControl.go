@@ -72,16 +72,13 @@ func Run(
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 			} else {
-
-				//Fix for cab stuff, with bug of alway going down:))
-				// newDir := chooseDirection(elevator)
-				// if newDir != elevator.CurrentTravelDirection && newDir != types.Stop {
-				// 	elevator.CurrentTravelDirection = newDir
-				// 	elevator.PhysicalMotorDirection = newDir
-				// 	hardware.SetMotorDirection(newDir)
-				// }
-
-
+				
+				newDir := chooseDirection(elevator)
+				if newDir != types.Stop && newDir != elevator.CurrentTravelDirection {
+					elevator.CurrentTravelDirection = newDir
+					elevator.PhysicalMotorDirection = newDir
+					hardware.SetMotorDirection(newDir)
+				}
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 			}
 
@@ -91,7 +88,7 @@ func Run(
 			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
 			if elevator.Behaviour == types.ElevatorDoorOpen && hasOrderAtFloor(elevator, elevator.CurrentFloor) {
-				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection,)
+				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				doorOpenChan <- true
 				sendLightUpdate(localLightsChan, elevator, true)
@@ -163,5 +160,5 @@ func Run(
 	}
 }
 
-
-// fiks bug fra jesper, når man slår av mellom to etasjer og initialiserer igjen går den alltid ned først, den skal sjekke ordre med en gang etter init
+// gå over kodekvalitet, fokus på lite side affects, encapsulation og i henhold til code complete
+// høy cohesion og lav coupling
