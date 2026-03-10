@@ -9,6 +9,7 @@ import (
 )
 
 func Run(
+	elevAddr string,
 	newOrder <-chan types.LocalOrderTable,
 	elevatorEvents chan<- types.ElevatorEvents,
 	localLightsChan chan<- types.LocalLightUpdate,
@@ -26,7 +27,7 @@ func Run(
 		obstruction        bool
 		directionChange    bool
 	)
-	hardware.Init(config.Addr, config.NFloors)
+	hardware.Init(elevAddr, config.NFloors)
 
 	go hardware.PollFloorSensor(floorChan)
 	go hardware.PollObstructionSwitch(obstructionChan)
@@ -154,3 +155,4 @@ func Run(
 
 
 // buggen skjer når heisen ankommer en etasje for å betjene orderen i logisk motorretning, dersom man så trykker motsatt kjøreretning samtidig som døren er åpen, blir ikke denne orderen klarert selv om det ikke er flere ordre tilstede andre steder
+

@@ -14,48 +14,47 @@ import (
 	"elevator/internal/types"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 )
 
 func main() {
-	selfID := parseSelfID()
+	selfID, elevAddr := parseArgs()
 
 	// -- Channels --
 
 	// -- Channels for LocalControl --
-	localOrders 			:= make(chan types.LocalOrderTable, 		config.ChannelBufferSize)
-	elevatorEvents 			:= make(chan types.ElevatorEvents,			config.ChannelBufferSize)
-	localLightUpdate		:= make(chan types.LocalLightUpdate, 		config.ChannelBufferSize)
+	localOrders := make(chan types.LocalOrderTable, config.ChannelBufferSize)
+	elevatorEvents := make(chan types.ElevatorEvents, config.ChannelBufferSize)
+	localLightUpdate := make(chan types.LocalLightUpdate, config.ChannelBufferSize)
 
 	// -- Channels for Decision
-	localSystemState 		:= make(chan types.LocalSystemState, 		config.ChannelBufferSize)
-	convergedSystemState 	:= make(chan types.ConvergedSystemState,	config.ChannelBufferSize)
-	hallLightUpdates 		:= make(chan types.HallOrderTable, 			config.ChannelBufferSize)
+	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
+	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
+	hallLightUpdates := make(chan types.HallOrderTable, config.ChannelBufferSize)
 
 	// -- Channels for network
-	peerMsg    				:= make(chan types.Message,            		config.ChannelBufferSize)
-	broadcast  				:= make(chan types.Message,            		config.ChannelBufferSize)
-	peerEvents 				:= make(chan types.GlobalNodeRegistry, 		config.ChannelBufferSize)
-	msgTx 					:= make(chan types.Message, 				config.BroadcastBufferSize)
-	msgRx 					:= make(chan types.Message, 				config.BroadcastBufferSize)
-	peerUpdateCh 			:= make(chan peers.PeerUpdate, 				config.BroadcastBufferSize)
-	
+	peerMsg := make(chan types.Message, config.ChannelBufferSize)
+	broadcast := make(chan types.Message, config.ChannelBufferSize)
+	peerEvents := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
+	msgTx := make(chan types.Message, config.BroadcastBufferSize)
+	msgRx := make(chan types.Message, config.BroadcastBufferSize)
+	peerUpdateCh := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
+
 	// -- Goroutines --
-	
+
 	go localControl.Run(
+		elevAddr,
 		localOrders,
 		elevatorEvents,
 		localLightUpdate,
 	)
 
 	go lights.Run(
-		localLightUpdate, 
+		localLightUpdate,
 		hallLightUpdates)
 
-	
-
-	
 	go dispatch.Run(
 		localOrders,
 		localSystemState,
@@ -85,29 +84,33 @@ func main() {
 		msgTx,
 		msgRx,
 		peerUpdateCh,
-		broadcast, 
-		peerMsg, 
+		broadcast,
+		peerMsg,
 		peerEvents,
 	)
 
 	select {}
 }
 
-func parseSelfID() int {
+func parseArgs() (int, string) {
 	id := flag.Int("id", 0, "Elevator node ID (0-2)")
+	port := flag.Int("port", 15657, "TCP port for elevator hardware/simulator")
+	addr := flag.String("addr", "", "Full TCP address for elevator hardware/simulator (overrides --port)")
 	flag.Parse()
+
 	if *id < 0 || *id >= config.NElevators {
 		fmt.Fprintf(os.Stderr, "invalid --id %d: must be 0..%d\n", *id, config.NElevators-1)
 		os.Exit(1)
 	}
-	return *id
+
+	elevAddr := *addr
+	if elevAddr == "" {
+		if *port <= 0 || *port > 65535 {
+			fmt.Fprintf(os.Stderr, "invalid --port %d: must be 1..65535\n", *port)
+			os.Exit(1)
+		}
+		elevAddr = net.JoinHostPort("localhost", strconv.Itoa(*port))
+	}
+
+	return *id, elevAddr
 }
-
-
-//Pot
-// func parseArgs() int {
-// 	var nodeID int
-// 	flag.IntVar(&nodeID, "id", 0, "Node ID")
-// 	flag.Parse()
-// 	return nodeID
-// }
