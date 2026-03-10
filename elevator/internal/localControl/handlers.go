@@ -24,16 +24,17 @@ func handleFloorArrival(
 	localLightsChan chan<- types.LocalLightUpdate,
 	arrivalDir types.MotorDirection,
 ) (types.CompletedOrderTable, bool) {
+
 	hardware.SetMotorDirection(types.Stop)
 	elevator.PhysicalMotorDirection = types.Stop
 	elevator.Behaviour = types.ElevatorDoorOpen
 	doorOpenChan <- true
 	motorActiveChan <- false
 
-	completed, directionChanged := clearOrdersAtFloor(elevator, elevator.CurrentFloor, arrivalDir)
+	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, arrivalDir, false)
 
 	sendLightUpdate(localLightsChan, *elevator, true)
-	return completed, directionChanged
+	return completed, needsExtraDoorTime
 }
 
 func handleDoorClosed(
@@ -58,6 +59,35 @@ func handleDoorClosed(
 	sendLightUpdate(localLightsChan, *elevator, false)
 }
 
+// Denne er good
+
+func tryMoving(elevator *types.Elevator,) {
+
+	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
+		newDir := chooseDirection(*elevator)
+		if newDir == types.Stop {
+			elevator.Behaviour = types.ElevatorMoving
+			elevator.PhysicalMotorDirection = elevator.CurrentTravelDirection
+			hardware.SetMotorDirection(elevator.CurrentTravelDirection)
+			return
+		}
+		elevator.CurrentTravelDirection = newDir
+		elevator.PhysicalMotorDirection = newDir
+		elevator.Behaviour = types.ElevatorMoving
+		hardware.SetMotorDirection(newDir)
+	}
+}
+
+func killElevator(elevator *types.Elevator,){
+				if elevator.Behaviour == types.ElevatorMoving {
+				elevator.ActiveStatus = false
+				elevator.Behaviour = types.ElevatorIdle
+				elevator.PhysicalMotorDirection = types.Stop
+				hardware.SetMotorDirection(types.Stop)
+			}
+}
+
+
 func sendElevatorUpdate(
 	channel chan<- types.ElevatorEvents,
 	elevator types.Elevator,
@@ -65,6 +95,7 @@ func sendElevatorUpdate(
 	completed types.CompletedOrderTable,
 	btn *types.ButtonEvent,
 ) {
+
 	channel <- types.ElevatorEvents{
 		Elevator:       elevator,
 		CompletedOrder: completed,
@@ -74,6 +105,7 @@ func sendElevatorUpdate(
 }
 
 func sendLightUpdate(channel chan<- types.LocalLightUpdate, elevator types.Elevator, doorOpen bool) {
+
 	var cabLights [config.NFloors]bool
 	for floor := range config.NFloors {
 		cabLights[floor] = elevator.LocalOrders[floor][int(types.BtnCab)]
@@ -87,5 +119,6 @@ func sendLightUpdate(channel chan<- types.LocalLightUpdate, elevator types.Eleva
 }
 
 func updateFloorIndicator(channel chan<- types.LocalLightUpdate, elevator types.Elevator) {
+
 	sendLightUpdate(channel, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 }
