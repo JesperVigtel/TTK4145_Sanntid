@@ -32,7 +32,7 @@ func Run(
 	go hardware.PollObstructionSwitch(obstructionChan)
 	go hardware.PollButtons(buttonPressChan)
 
-	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan, doorClosedChan, motorInactiveChan, recoveryTickChan)
+	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan, doorClosedChan, motorInactiveChan, tryRecovery)
 
 	elevator := elevatorInit()
 	obstruction = false
@@ -142,7 +142,7 @@ func Run(
 			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
 			killElevator(&elevator)
 			recoveryEnableChan <- true
-			
+
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 			
 
