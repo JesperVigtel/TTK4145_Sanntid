@@ -91,7 +91,6 @@ func sendElevatorUpdate(
 	completed types.CompletedOrderTable,
 	btn *types.ButtonEvent,
 ) {
-
 	channel <- types.ElevatorEvents{
 		Elevator:       elevator,
 		CompletedOrder: completed,
@@ -101,7 +100,6 @@ func sendElevatorUpdate(
 }
 
 func sendLightUpdate(channel chan<- types.LocalLightUpdate, elevator types.Elevator, doorOpen bool) {
-
 	var cabLights [config.NFloors]bool
 	for floor := range config.NFloors {
 		cabLights[floor] = elevator.LocalOrders[floor][int(types.BtnCab)]
@@ -115,6 +113,5 @@ func sendLightUpdate(channel chan<- types.LocalLightUpdate, elevator types.Eleva
 }
 
 func updateFloorIndicator(channel chan<- types.LocalLightUpdate, elevator types.Elevator) {
-
 	sendLightUpdate(channel, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 }
