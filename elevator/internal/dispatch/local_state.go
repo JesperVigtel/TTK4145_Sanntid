@@ -39,6 +39,19 @@ func applyButtonPress(
 
 
 
+func restoreOwnCabsFromNetwork(
+	localState     LocalSystemState,
+	convergedState ConvergedSystemState,
+) LocalSystemState {
+	networkCabs := convergedState.ElevatorList[localState.ElevatorID].CabRequests
+	for floor := range len(networkCabs) {
+		if networkCabs[floor] {
+			localState.ElevatorState.CabRequests[floor] = true
+		}
+	}
+	return localState
+}
+
 func applyHardwareUpdate(
 	state 	LocalSystemState,
 	event   ElevatorEvents,

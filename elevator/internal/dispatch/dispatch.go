@@ -2,7 +2,6 @@ package dispatch
 
 import (
 	. "elevator/internal/types"
-	"fmt"
 )
 
 // ------------------------------------------------------------------------------
@@ -21,11 +20,11 @@ func Run(
 	var (
 		localState     LocalSystemState
 		previousOrders LocalOrderTable
+		cabsRestored   bool // one-shot: restore cabs from network once per session
 	)
 
 	localState = initLocalSystemState(<-elevEvents, elevatorID)
 	localStateCh <- localState
-	fmt.Println("[dispatch] succsessfully initialized")
 	
 
 	for {
@@ -34,19 +33,17 @@ func Run(
 		case event := <-elevEvents:
 			if event.NewButtonPress != nil {
 				localState = applyButtonPress(localState, *event.NewButtonPress)
-				fmt.Println("[dispatch] Sucsessfully received button press")
 			}
-			fmt.Println("[dispatch] Sucsessfully received hardvare event")
 			localState = applyHardwareUpdate(localState, event)
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
-			networkCabs := globalState.ElevatorList[localState.ElevatorID].CabRequests
-			for floor := range len(networkCabs) {
-				if networkCabs[floor] {
-					localState.ElevatorState.CabRequests[floor] = true
-				}
+
+			if !cabsRestored {
+				localState = restoreOwnCabsFromNetwork(localState, globalState)
+				cabsRestored = true
 			}
+
 			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
 			assignedOrders, lightUpdate := prepareAssignment(localState, globalState)
 

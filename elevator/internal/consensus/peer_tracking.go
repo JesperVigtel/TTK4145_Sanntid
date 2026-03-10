@@ -110,3 +110,40 @@ func publishConsistantState(
 	default:
 	}
 }
+
+func adoptPeerElevatorStates(
+	received         [NElevators]HRAElevState,
+	current          [NElevators]HRAElevState,
+	selfID           int,
+	selfCabsRestored bool,
+) ([NElevators]HRAElevState, bool) {
+	for id := range NElevators {
+		incoming := received[id]
+		if len(incoming.CabRequests) != NFloors {
+			continue
+		}
+		if id != selfID {
+			current[id] = incoming
+			continue
+		}
+		if selfCabsRestored {
+			continue
+		}
+		current[selfID] = orMergeCabRequests(current[selfID], incoming)
+		selfCabsRestored = true
+	}
+	return current, selfCabsRestored
+}
+
+
+func orMergeCabRequests(base, overlay HRAElevState) HRAElevState {
+	if len(base.CabRequests) != NFloors {
+		return base
+	}
+	for floor := range NFloors {
+		if overlay.CabRequests[floor] {
+			base.CabRequests[floor] = true
+		}
+	}
+	return base
+}

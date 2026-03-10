@@ -21,10 +21,11 @@ func Run(
 	selfID 		int,
 ) {
 	var (
-		systemHallOrders [NElevators]HallOrderTable
-		systemElevStates [NElevators]HRAElevState
-		peerIsAlive      [NElevators]bool
-		peerIsConsistent [NElevators]bool
+		systemHallOrders  [NElevators]HallOrderTable
+		systemElevStates  [NElevators]HRAElevState
+		peerIsAlive       [NElevators]bool
+		peerIsConsistent  [NElevators]bool
+		selfCabsRestored  bool // one-shot: restore own cabs from network on first peer message only
 	)
 
 	systemHallOrders = newSystemHallOrders()
@@ -40,25 +41,7 @@ func Run(
 				continue
 			}
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			for id := range NElevators {
-				received := msg.ElevatorList[id]
-				if len(received.CabRequests) != NFloors {
-					continue
-				}
-				if id == selfID {
-					current := systemElevStates[selfID]
-					if len(current.CabRequests) == NFloors {
-						for floor := range NFloors {
-							if received.CabRequests[floor] {
-								current.CabRequests[floor] = true
-							}
-						}
-						systemElevStates[selfID] = current
-					}
-				} else {
-					systemElevStates[id] = received
-				}
-			}
+			systemElevStates, selfCabsRestored = adoptPeerElevatorStates(msg.ElevatorList, systemElevStates, selfID, selfCabsRestored)
 
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
