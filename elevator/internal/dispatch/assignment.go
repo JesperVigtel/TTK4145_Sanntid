@@ -85,7 +85,18 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			elevState.CabRequests = localState.ElevatorState.CabRequests
+			merged := make([]bool, NFloors)
+			for floor := range NFloors {
+				var localCall, networkCall bool
+				if floor < len(localState.ElevatorState.CabRequests) {
+					localCall = localState.ElevatorState.CabRequests[floor]
+				}
+				if floor < len(elevState.CabRequests) {
+					networkCall = elevState.CabRequests[floor]
+				}
+				merged[floor] = localCall || networkCall
+			}
+			elevState.CabRequests = merged
 		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue
@@ -95,10 +106,6 @@ func buildHallAssignerInput(
 
 	for floor := range NFloors {
 		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
-			// A hall request is active from this elevator's perspective when the
-			// converged consensus shows this elevator's own slot as Assigned.
-			// Requiring all peers to be Assigned (the old check) silently suppressed
-			// orders when a reconnecting peer still had Standby in its slot.
 			input.HallRequests[floor][btn] = convergedState.HallOrderTable[elevatorID][floor][btn] == OrderAssigned
 		}
 	}

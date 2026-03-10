@@ -41,6 +41,12 @@ func Run(
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
+			networkCabs := globalState.ElevatorList[localState.ElevatorID].CabRequests
+			for floor := range len(networkCabs) {
+				if networkCabs[floor] {
+					localState.ElevatorState.CabRequests[floor] = true
+				}
+			}
 			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
 			assignedOrders, lightUpdate := prepareAssignment(localState, globalState)
 
