@@ -43,11 +43,6 @@ func updatePeerAvailability(
 		if peerID < 0 || peerID >= NElevators || peerID == selfID {
 			continue
 		}
-		// Only mark the peer alive. Do NOT reset their hall orders here —
-		// their actual state arrives via the first broadcast, which will be
-		// recorded directly in the peerMsg case (no merge). This matches the
-		// reference pattern where a reconnecting peer's slot is left as-is
-		// and their broadcasts fill it in naturally.
 		peerIsAlive[peerID] = true
 		systemHallOrders[peerID] = newStandbyHallOrders()
 	}
