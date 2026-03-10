@@ -56,7 +56,7 @@ func Run(
 			}
 
 			if !hasLocalOrderAbove(elevator) && !hasLocalOrderBelow(elevator) &&
-				!hasAnyOrderAtFloor(elevator, floor) {
+				!hasOrderAtFloor(elevator, floor) {
 				hardware.SetMotorDirection(types.Stop)
 				elevator.PhysicalMotorDirection = types.Stop
 				elevator.Behaviour = types.ElevatorIdle
@@ -66,7 +66,7 @@ func Run(
 				continue
 			}
 
-			if shouldStopAtFloor(elevator, floor) {
+			if anyOrdersAtCurrentFloor(elevator, floor) {
 				completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				if needsExtraDoorTime {
 					directionChange = true
@@ -81,7 +81,7 @@ func Run(
 			elevator.LocalOrders = orders
 			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
-			if elevator.Behaviour == types.ElevatorDoorOpen && hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
+			if elevator.Behaviour == types.ElevatorDoorOpen && hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 				completedOrders, _ := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection, false)
 				doorOpenChan <- true
 				sendLightUpdate(localLightsChan, elevator, true)
@@ -90,7 +90,7 @@ func Run(
 			}
 
 			if elevator.Behaviour == types.ElevatorIdle {
-				if hasAnyOrderAtFloor(elevator, elevator.CurrentFloor) {
+				if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 
 					completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 					if needsExtraDoorTime {
@@ -137,16 +137,15 @@ func Run(
 					sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 				}
 			}
+// Under er good
 
 		case <-motorInactiveChan:
 			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
+
 			killElevator(&elevator)
 			recoveryEnableChan <- true
-
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 			
-
-// Under er good
 		case <-tryRecovery:
 			fmt.Println("[LocalControl] Recovery timer triggered, tries to move again")
 

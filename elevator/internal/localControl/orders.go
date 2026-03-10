@@ -27,7 +27,7 @@ func hasLocalOrderBelow(elevator types.Elevator) bool {
 	return false
 }
 
-func hasAnyOrderAtFloor(elevator types.Elevator, floor int) bool {
+func hasOrderAtFloor(elevator types.Elevator, floor int) bool {
 	return elevator.LocalOrders[floor][int(types.BtnCab)] ||
 		elevator.LocalOrders[floor][int(types.BtnHallUp)] ||
 		elevator.LocalOrders[floor][int(types.BtnHallDown)]
@@ -60,7 +60,10 @@ func chooseDirection(elevator types.Elevator) types.MotorDirection {
 	return types.Stop
 }
 
-func shouldStopAtFloor(elevator types.Elevator, floor int) bool {
+// Er det ikke mulig å legge til håndtering av edgecase -> recoverytick
+
+
+func anyOrdersAtCurrentFloor(elevator types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
 		return true
 	}
@@ -77,6 +80,8 @@ func shouldStopAtFloor(elevator types.Elevator, floor int) bool {
 		return hallUp || hallDown
 	}
 }
+
+// tror det er en bedre måte å gjøre det her på
 
 func clearCabOrder(elevator *types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
@@ -134,12 +139,10 @@ func clearOrdersAtFloor(
 
 		if !hasLocalOrderAbove(*elevator) && elevator.LocalOrders[floor][int(types.BtnHallDown)] {
 			if elevator.CurrentFloor == lastFloor {
-				// At top floor: clear opposite immediately
 				if clearHallOrder(elevator, floor, types.Down) {
 					completed[floor][int(types.BtnHallDown)] = true
 				}
 			} else {
-				// Middle floor: need direction change announcement
 				needsExtraDoorTime = true
 			}
 		}
@@ -150,12 +153,10 @@ func clearOrdersAtFloor(
 
 		if !hasLocalOrderBelow(*elevator) && elevator.LocalOrders[floor][int(types.BtnHallUp)] {
 			if elevator.CurrentFloor == firstFloor {
-				// At bottom floor: clear opposite immediately
 				if clearHallOrder(elevator, floor, types.Up) {
 					completed[floor][int(types.BtnHallUp)] = true
 				}
 			} else {
-				// Middle floor: need direction change announcement
 				needsExtraDoorTime = true
 			}
 		}
@@ -169,3 +170,5 @@ func clearOrdersAtFloor(
 	}
 	return
 }
+
+// Jeg tror det skal være en bedre måte å gjøre det her på
