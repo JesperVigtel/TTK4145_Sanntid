@@ -6,7 +6,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 )
+
+// getHallRequestAssignerPath returns the absolute path to the hall_request_assigner binary
+// for the current OS. The binary must be placed in the same directory as this source file.
+//
+func getHallRequestAssignerPath() string {
+	_, currentFile, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(currentFile)
+
+	switch runtime.GOOS {
+	case "darwin":
+		return filepath.Join(dir, "hall_request_assigner_mac")
+	default: // linux and others
+		return filepath.Join(dir, "hall_request_assigner")
+	}
+}
+//
 
 func prepareAssignment(
 	localState LocalSystemState,
@@ -53,8 +71,11 @@ func computeAssignedOrders(
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
 		return localFallbackOrders(localState)
 	}
-
-	raw, err := exec.Command("hall_request_assigner", "-i", string(jsonBytes)).CombinedOutput()
+// gjorde bare sånn at jeg kan kjøre simulator på mac
+//
+	hraPath := getHallRequestAssignerPath()
+	raw, err := exec.Command(hraPath, "-i", string(jsonBytes)).CombinedOutput()
+//
 	if err != nil {
 		fmt.Println("computeAssignedOrders: exec:", err, string(raw))
 		return localFallbackOrders(localState)
