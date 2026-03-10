@@ -36,8 +36,7 @@ func updatePeerAvailability(
 			continue
 		}
 		peerIsAlive[peerID] = false
-		systemHallOrders[peerID] = recreateOnLoss(systemHallOrders, selfID)
-		//systemHallOrders[peerID] = newSystemHallOrders() remove if works
+		systemHallOrders[peerID] = newStandbyHallOrders()
 	}
 
 	for _, peerID := range nodeRegistry.New {
@@ -45,7 +44,7 @@ func updatePeerAvailability(
 			continue
 		}
 		peerIsAlive[peerID] = true
-		systemHallOrders[peerID] = recreateOnLoss(systemHallOrders, selfID)		//New adding
+		systemHallOrders[peerID] = newStandbyHallOrders()
 	}
 	return peerIsAlive, systemHallOrders
 }
@@ -68,7 +67,7 @@ func recreateOnLoss(
 	return table
 }
 
-func mergeIncomingHallOrders(
+func mergeIncomingHallOrders(		//Possibly remove if unused
 	selfOrders HallOrderTable,
 	incomingOrders HallOrderTable,
 ) HallOrderTable {
@@ -78,8 +77,6 @@ func mergeIncomingHallOrders(
 			selfState := selfOrders[floor][btn]
 			incoming := incomingOrders[floor][btn]
 			if isActiveOrder(selfState) && incoming == OrderStandby {
-				// Block the stale Standby; mirror the self state so the peer
-				// slot is consistent and no divergence reset occurs.
 				merged[floor][btn] = selfState
 			} else {
 				merged[floor][btn] = incoming

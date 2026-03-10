@@ -4,37 +4,98 @@ Et distribuert heis-system implementert i Go, basert på `golang-standards/proje
 
 ## Prosjektstruktur
 
-```
-├── cmd/
-│   └── elevator/
-│       └── main.go              Programmets inngangspunkt
-├── internal/
-│   ├── localControll/
-│   │   └── localControll.go      Tilstandsmaskinen (FSM)
-│   │   └── hardware/
-│   │       └── elevio.go         Driver-grensesnitt mot maskinvare
-│   ├── network/
-│   │   ├── network.go           Nettverksinitialisering
-│   │   ├── peers.go             Peer discovery (online/offline)
-│   │   └── transmitter.go       Sending/mottak av tilstandsdata
-│   ├── decisionMaker/
-│   │   └── decisionMaker.go          Kostnadsfunksjon for ordre-fordeling
-│   ├── lights/
-│   │   └── lights.go            Synkronisering av knappelys
-│   └── types/
-│       └── types.go             Felles datatyper og konstanter
-└── README.md                    Denne filen
-```
+/home/runner/work/TTK4145_Sanntid/TTK4145_Sanntid/
+├── elevator/                              # Main elevator control system
+│   ├── cmd/elevator/
+│   │   └── main.go                       # Entry point
+│   ├── internal/
+│   │   ├── config/
+│   │   │   └── config.go                 # Configuration constants
+│   │   ├── consensus/
+│   │   │   ├── consensus.go              # Distributed consensus engine
+│   │   │   ├── order_state.go            # Order state machine (Standby→Pending→Assigned→Complete)
+│   │   │   └── peer_tracking.go          # Peer availability and hall order merging
+│   │   ├── dispatch/
+│   │   │   ├── dispatch.go               # Main dispatcher logic
+│   │   │   ├── assignment.go             # Hall request assignment via HRA
+│   │   │   ├── local_state.go            # Local system state management
+│   │   │   ├── elevator_format.go        # Elevator state format conversion
+│   │   │   └── hall_request_assigner/    # External binary for order assignment
+│   │   ├── lights/
+│   │   │   └── lights.go                 # Light control (cab + hall)
+│   │   ├── localControl/
+│   │   │   ├── localControl.go           # Local elevator FSM
+│   │   │   ├── handlers.go               # Order/movement handlers
+│   │   │   ├── orders.go                 # Order management
+│   │   │   ├── hardware/
+│   │   │   │   └── elevio.go             # Hardware interface
+│   │   │   └── timer/
+│   │   │       └── timer.go              # Watchdog timers
+│   │   ├── network/
+│   │   │   ├── peers/
+│   │   │   │   └── peers.go              # Peer discovery (heartbeat + UDP)
+│   │   │   ├── broadcast/
+│   │   │   │   └── broadcast.go          # Type-tagged JSON broadcasting
+│   │   │   ├── network_manager/
+│   │   │   │   └── network_manager.go    # Network orchestration
+│   │   │   ├── conn/                     # OS-specific UDP broadcast
+│   │   │   │   ├── bcast_conn_linux.go
+│   │   │   │   ├── bcast_conn_windows.go
+│   │   │   │   └── bcast_conn_darwin.go
+│   │   │   └── utility_network/
+│   │   │       └── utility_network.go    # Network initialization
+│   │   └── types/
+│   │       └── types.go                  # Shared type definitions
+│   ├── go.mod
+│   └── README.md
 
 ## Moduloversikt
 
-| Pakke | Ansvar |
-|-------|--------|
-| `cmd/elevator` | Orkestrator: Initialiserer kanaler, driver og goroutiner |
-| `localControll` | Tilstandsmaskin som kontrollerer heisens adferd |
-| `network` | Distribuert statusdeling via UDP broadcast |
-| `decisionMaker` | Kostnadsfunksjon for fordeling av hall-ordrer |
-| `types` | Felles datastrukturer og konstanter |
+┌─────────────────────────────────────────────────────────────┐
+│                    LOCAL HARDWARE                            │
+│  (Floor sensors, buttons, obstruction, motor)               │
+└────────────────────┬────────────────────────────────────────┘
+                     │ (ElevatorEvents)
+                     ▼
+        ┌────────────────────────────┐
+        │     LOCAL CONTROL FSM      │ (localControl.go)
+        │  Current Floor/Behavior    │
+        │  Door Control              │
+        └────────────┬───────────────┘
+                     │ (LocalSystemState + ButtonPress)
+                     ▼
+        ┌────────────────────────────┐
+        │      DISPATCH LAYER        │ (dispatch.go)
+        │  Button→Order conversion   │
+        │  State tracking            │
+        └────────────┬───────────────┘
+                     │ (LocalSystemState)
+                     ▼
+    ┌────────────────────────────────────────┐
+    │     DISTRIBUTED CONSENSUS ENGINE       │
+    │  Synchronizes hall orders across all   │ (consensus.go)
+    │  elevators using cyclic state machine  │
+    └────────────┬─────────────────────────┬─┘
+                 │                         │
+         (ConvergedSystemState)    (broadcast Message)
+                 │                         │
+                 ▼                         ▼
+    ┌────────────────────────┐   ┌──────────────────┐
+    │   ASSIGNMENT ENGINE    │   │  NETWORK LAYER   │
+    │  (dispatch/assignment) │   │  (peers, bcast)  │
+    │  Calls HRA binary      │   │  UDP multicast   │
+    └────────────┬───────────┘   └──────────────────┘
+                 │                         ▲
+         (LocalOrderTable)           (PeerMessages)
+                 │                         │
+                 ▼                         │
+    ┌────────────────────────┐            │
+    │      LIGHTS CONTROL    │            │
+    │  Hall + Cab indicators │            │
+    └────────────────────────┘            │
+                                          │
+                   All Elevators ─────────┘
+                   Exchange state via UDP
 
 ## Design-prinsipper
 
