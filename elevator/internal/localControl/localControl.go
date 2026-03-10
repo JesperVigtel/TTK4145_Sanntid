@@ -74,6 +74,18 @@ func Run(
 				}
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 			} else {
+
+				// No order at this floor. Re-evaluate direction in case orders
+				// exist only in the opposite direction (e.g. cabs restored after
+				// a crash while the elevator was initialising downward).
+				newDir := chooseDirection(elevator)
+				if newDir != elevator.CurrentTravelDirection && newDir != types.Stop {
+					elevator.CurrentTravelDirection = newDir
+					elevator.PhysicalMotorDirection = newDir
+					hardware.SetMotorDirection(newDir)
+				}
+
+				
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 			}
 
