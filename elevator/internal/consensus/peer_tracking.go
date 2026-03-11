@@ -3,7 +3,6 @@ package consensus
 import (
 	. "elevator/internal/config"
 	. "elevator/internal/types"
-	"reflect"
 )
 
 func newSystemHallOrders() [NElevators]HallOrderTable {
@@ -49,20 +48,39 @@ func updatePeerAvailability(
 	return peerIsAlive, systemHallOrders
 }
 
+func elevStateEquals(a, b HRAElevState) bool {
+	if a.Behavior != b.Behavior || a.Floor != b.Floor || a.Direction != b.Direction {
+		return false
+	}
+	if (a.CabRequests == nil) != (b.CabRequests == nil) {
+		return false
+	}
+	if len(a.CabRequests) != len(b.CabRequests) {
+		return false
+	}
+	for i := range a.CabRequests {
+		if a.CabRequests[i] != b.CabRequests[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func peerStateMatchesRecorded(
 	msg Message,
 	systemHallOrders [NElevators]HallOrderTable,
 	systemElevStates [NElevators]HRAElevState,
 ) bool {
-	return reflect.DeepEqual(systemHallOrders[msg.SenderID], msg.HallOrderTable) &&
-		reflect.DeepEqual(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
+	// HallOrderTable is a fixed array, so direct == works (CC §12.6).
+	// HRAElevState contains a slice, so use explicit equality helper for clarity and speed.
+	return systemHallOrders[msg.SenderID] == msg.HallOrderTable &&
+		elevStateEquals(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
 
-
 func allAlivePeersConsistent(
-	peerIsConsistent 	[NElevators]bool,
-	peerIsAlive 		[NElevators]bool,
-	selfID 				int,
+	peerIsConsistent [NElevators]bool,
+	peerIsAlive [NElevators]bool,
+	selfID int,
 ) bool {
 	for peerID := range NElevators {
 		if peerID == selfID {
@@ -76,29 +94,29 @@ func allAlivePeersConsistent(
 }
 
 func sendStateUpdate(
-	outgoingMessages 	chan<- Message,
-	selfID 				int,
-	peerIsAlive 		[NElevators]bool,
-	systemElevStates 	[NElevators]HRAElevState,
-	systemHallOrders 	[NElevators]HallOrderTable,
+	outgoingMessages chan<- Message,
+	selfID int,
+	peerIsAlive [NElevators]bool,
+	systemElevStates [NElevators]HRAElevState,
+	systemHallOrders [NElevators]HallOrderTable,
 ) {
 	select {
 	case outgoingMessages <- Message{
-		SenderID:      selfID,
-		ElevatorList:  systemElevStates,
+		SenderID:       selfID,
+		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders[selfID],
-		AliveStatus:   peerIsAlive[selfID],
-		AliveList:     peerIsAlive,
+		AliveStatus:    peerIsAlive[selfID],
+		AliveList:      peerIsAlive,
 	}:
 	default:
 	}
 }
 
 func publishConsistentState(
-	convergedSystemState 	chan<- ConvergedSystemState,
-	peerIsAlive 			[NElevators]bool,
-	systemElevStates 		[NElevators]HRAElevState,
-	systemHallOrders 		[NElevators]HallOrderTable,
+	convergedSystemState chan<- ConvergedSystemState,
+	peerIsAlive [NElevators]bool,
+	systemElevStates [NElevators]HRAElevState,
+	systemHallOrders [NElevators]HallOrderTable,
 ) {
 	state := ConvergedSystemState{
 		AliveList:      peerIsAlive,
@@ -112,9 +130,9 @@ func publishConsistentState(
 }
 
 func adoptPeerElevatorStates(
-	received         [NElevators]HRAElevState,
-	current          [NElevators]HRAElevState,
-	selfID           int,
+	received [NElevators]HRAElevState,
+	current [NElevators]HRAElevState,
+	selfID int,
 	selfCabsRestored bool,
 ) ([NElevators]HRAElevState, bool) {
 	for id := range NElevators {
@@ -134,7 +152,6 @@ func adoptPeerElevatorStates(
 	}
 	return current, selfCabsRestored
 }
-
 
 func orMergeCabRequests(base, overlay HRAElevState) HRAElevState {
 	if len(base.CabRequests) != NFloors {

@@ -154,6 +154,41 @@ type HRAElevState struct {
 	CabRequests []bool `json:"cabRequests"`
 }
 
+// NewHRAElevState converts an Elevator to HRAElevState for protocol transmission.
+// Centralized here (CC §5.2) for cohesion: conversion logic lives with type definition.
+func NewHRAElevState(elev Elevator) HRAElevState {
+	return HRAElevState{
+		Behavior:    elevBehaviorToString(elev.Behaviour),
+		Floor:       elev.CurrentFloor,
+		Direction:   elevDirectionToString(elev.CurrentTravelDirection),
+		CabRequests: make([]bool, NFloors),
+	}
+}
+
+func elevBehaviorToString(b ElevatorBehaviour) string {
+	switch b {
+	case ElevatorIdle:
+		return "idle"
+	case ElevatorMoving:
+		return "moving"
+	case ElevatorDoorOpen:
+		return "doorOpen"
+	default:
+		return "idle"
+	}
+}
+
+func elevDirectionToString(d MotorDirection) string {
+	switch d {
+	case Up:
+		return "up"
+	case Down:
+		return "down"
+	default:
+		return "stop"
+	}
+}
+
 type HRAInput struct {
 	HallRequests [NFloors][2]bool        `json:"hallRequests"`
 	States       map[string]HRAElevState `json:"states"`
