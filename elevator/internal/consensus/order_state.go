@@ -125,22 +125,3 @@ func allAreEither(peerStates []OrderState, stateA, stateB OrderState) bool {
 }
 
 
-func advanceAndBroadcast(
-	broadcast chan<- Message,
-	converged chan<- ConvergedSystemState,
-	selfID int,
-	peerIsAlive [NElevators]bool,
-	peerIsConsistent [NElevators]bool,
-	systemElevStates [NElevators]HRAElevState,
-	systemHallOrders [NElevators]HallOrderTable,
-) ([NElevators]HallOrderTable, [NElevators]bool) {
-	systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-	sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-
-	if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
-		peerIsConsistent = [NElevators]bool{}
-		publishConsistentState(converged, peerIsAlive, systemElevStates, systemHallOrders)
-	}
-
-	return systemHallOrders, peerIsConsistent
-}
