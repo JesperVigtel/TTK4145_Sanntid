@@ -44,13 +44,14 @@ func restoreOwnCabsFromNetwork(
 	localState     LocalSystemState,
 	convergedState ConvergedSystemState,
 ) (LocalSystemState, bool) {
-	networkCabs := convergedState.ElevatorList[localState.ElevatorID].CabRequests
-	if len(networkCabs) != NFloors {
+	localElevator := convergedState.ElevatorList[localState.ElevatorID]
+	localCabs := localElevator.CabRequests
+	if len(localCabs) != NFloors {
 		return localState, false
 	}
 	restoredAny := false
-	for floor := range len(networkCabs) {
-		if networkCabs[floor] {
+	for floor := range len(localCabs) {
+		if localCabs[floor] {
 			localState.ElevatorState.CabRequests[floor] = true
 			restoredAny = true
 		}

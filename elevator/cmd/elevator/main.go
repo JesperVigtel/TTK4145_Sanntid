@@ -20,7 +20,9 @@ import (
 )
 
 func main() {
-	selfID, elevAddr := parseArgs()
+	//selfID, elevAddr := parseArgs()
+	selfID := parseArgs()
+	elevAddr := "localhost:15657"
 
 	// -- Channels --
 
@@ -92,25 +94,33 @@ func main() {
 	select {}
 }
 
-func parseArgs() (int, string) {
-	id := flag.Int("id", 0, "Elevator node ID (0-2)")
-	port := flag.Int("port", 15657, "TCP port for elevator hardware/simulator")
-	addr := flag.String("addr", "", "Full TCP address for elevator hardware/simulator (overrides --port)")
+// func parseArgs() (int, string) {
+// 	id := flag.Int("id", 0, "Elevator node ID (0-2)")
+// 	port := flag.Int("port", 15657, "TCP port for elevator hardware/simulator")
+// 	addr := flag.String("addr", "", "Full TCP address for elevator hardware/simulator (overrides --port)")
+// 	flag.Parse()
+
+// 	if *id < 0 || *id >= config.NElevators {
+// 		fmt.Fprintf(os.Stderr, "invalid --id %d: must be 0..%d\n", *id, config.NElevators-1)
+// 		os.Exit(1)
+// 	}
+
+// 	elevAddr := *addr
+// 	if elevAddr == "" {
+// 		if *port <= 0 || *port > 65535 {
+// 			fmt.Fprintf(os.Stderr, "invalid --port %d: must be 1..65535\n", *port)
+// 			os.Exit(1)
+// 		}
+// 		elevAddr = net.JoinHostPort("localhost", strconv.Itoa(*port))
+// 	}
+
+// 	return *id, elevAddr
+// }
+
+
+func parseArgs() int {
+	var nodeID int
+	flag.IntVar(&nodeID, "id", 0, "Node ID")
 	flag.Parse()
-
-	if *id < 0 || *id >= config.NElevators {
-		fmt.Fprintf(os.Stderr, "invalid --id %d: must be 0..%d\n", *id, config.NElevators-1)
-		os.Exit(1)
-	}
-
-	elevAddr := *addr
-	if elevAddr == "" {
-		if *port <= 0 || *port > 65535 {
-			fmt.Fprintf(os.Stderr, "invalid --port %d: must be 1..65535\n", *port)
-			os.Exit(1)
-		}
-		elevAddr = net.JoinHostPort("localhost", strconv.Itoa(*port))
-	}
-
-	return *id, elevAddr
+	return nodeID
 }

@@ -36,6 +36,7 @@ func Run(
 			}
 			localState = applyHardwareUpdate(localState, event)
 			localStateCh <- localState
+			
 
 		case globalState := <-convergedSystem:
 
