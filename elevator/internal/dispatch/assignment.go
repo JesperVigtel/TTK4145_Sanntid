@@ -88,26 +88,6 @@ func computeAssignedOrders(
 	return buildLocalOrderTable(output, convergedState, localState, elevatorID)
 }
 
-func mergedSelfCabRequests(
-	convergedState ConvergedSystemState,
-	localState LocalSystemState,
-	elevatorID int,
-) []bool {
-	merged := make([]bool, NFloors)
-	networkCabs := convergedState.ElevatorList[elevatorID].CabRequests
-	for floor := range NFloors {
-		var localCall, networkCall bool
-		if floor < len(localState.ElevatorState.CabRequests) {
-			localCall = localState.ElevatorState.CabRequests[floor]
-		}
-		if floor < len(networkCabs) {
-			networkCall = networkCabs[floor]
-		}
-		merged[floor] = localCall || networkCall
-	}
-	return merged
-}
-
 func buildHallAssignerInput(
 	convergedState ConvergedSystemState,
 	localState LocalSystemState,
@@ -124,7 +104,7 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			elevState.CabRequests = mergedSelfCabRequests(convergedState, localState, elevatorID)
+			elevState.CabRequests = localState.ElevatorState.CabRequests
 		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue
@@ -157,9 +137,8 @@ func buildLocalOrderTable(
 		}
 	}
 
-	mergedCabs := mergedSelfCabRequests(convergedState, localState, elevatorID)
 	for floor := range NFloors {
-		result[floor][BtnCab] = mergedCabs[floor]
+		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
 	}
 
 	return result
@@ -175,9 +154,8 @@ func localFallbackOrders(
 	elevatorID int,
 ) LocalOrderTable {
 	var result LocalOrderTable
-	mergedCabs := mergedSelfCabRequests(convergedState, localState, elevatorID)
 	for floor := range NFloors {
-		result[floor][BtnCab] = mergedCabs[floor]
+		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
 		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
 			state := localState.HallRequests[floor][btn]
 			result[floor][btn] = state == OrderPending || state == OrderAssigned

@@ -58,8 +58,6 @@ func Run(
 
 
 
-
-
 func advanceAndBroadcast(
 	broadcast 			chan<- Message,
 	converged 			chan<- ConvergedSystemState,
