@@ -5,7 +5,7 @@ import (
 	"elevator/internal/types"
 )
 
-func handleFloorArrival(
+func stopAndServeFloor(
 	elevator *types.Elevator,
 	doorOpenChan chan<- bool,
 	motorActiveChan chan<- bool,
