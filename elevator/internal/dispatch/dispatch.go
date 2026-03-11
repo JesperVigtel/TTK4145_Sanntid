@@ -20,7 +20,7 @@ func Run(
 	var (
 		localState     LocalSystemState
 		previousOrders LocalOrderTable
-		cabsRestored   bool 
+		//cabsRestored   bool 
 	)
 
 	localState = initLocalSystemState(<-elevEvents, elevatorID)
@@ -40,14 +40,14 @@ func Run(
 
 		case globalState := <-convergedSystem:
 
-			if !cabsRestored {
-				var restored bool
-				localState, restored = restoreOwnCabsFromNetwork(localState, globalState)
-				cabsRestored = restored
-				if restored {
-					localStateCh <- localState
-				}
-			}
+			// if !cabsRestored {
+			// 	var restored bool
+			// 	localState, restored = restoreOwnCabsFromNetwork(localState, globalState)
+			// 	cabsRestored = restored
+			// 	if restored {
+			// 		localStateCh <- localState
+			// 	}
+			// }
 
 			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
 			assignedOrders, lightUpdate := prepareAssignment(localState, globalState)
