@@ -3,7 +3,6 @@ package consensus
 import (
 	. "elevator/internal/config"
 	. "elevator/internal/types"
-	"fmt"
 )
 
 //Peer event
@@ -39,17 +38,16 @@ func peerStateMatchesRecorded(
 	msg Message,
 	systemHallOrders [NElevators]HallOrderTable,
 	systemElevStates [NElevators]HRAElevState,
-) bool { 
+) bool {
 	return systemHallOrders[msg.SenderID] == msg.HallOrderTable &&
 		elevStateEqual(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
 
-
 func adoptPeerElevatorStates(
-	msg 				[NElevators]HRAElevState,
-	systemStates 		[NElevators]HRAElevState,
-	selfID 				int,
-	selfCabsRestored 	bool,
+	msg [NElevators]HRAElevState,
+	systemStates [NElevators]HRAElevState,
+	selfID int,
+	selfCabsRestored bool,
 ) ([NElevators]HRAElevState, bool) {
 	for peerID := range NElevators {
 		if len(msg[peerID].CabRequests) != NFloors {
@@ -66,12 +64,10 @@ func adoptPeerElevatorStates(
 			systemStates[selfID].CabRequests = make([]bool, NFloors)
 		}
 		systemStates[selfID] = mergeCabsOnRecovery(systemStates[selfID], msg[peerID])
-		fmt.Println("Consensus: cabs recovered")
 		selfCabsRestored = true
 	}
 	return systemStates, selfCabsRestored
 }
-
 
 func mergeCabsOnRecovery(self, peer HRAElevState) HRAElevState {
 	if len(self.CabRequests) != NFloors {
@@ -88,12 +84,10 @@ func mergeCabsOnRecovery(self, peer HRAElevState) HRAElevState {
 	return self
 }
 
-
-
 func allAlivePeersConsistent(
-	peerIsConsistent 	[NElevators]bool,
-	peerIsAlive 		[NElevators]bool,
-	selfID 				int,
+	peerIsConsistent [NElevators]bool,
+	peerIsAlive [NElevators]bool,
+	selfID int,
 ) bool {
 	for peerID := range NElevators {
 		if peerID == selfID {
@@ -107,9 +101,9 @@ func allAlivePeersConsistent(
 }
 
 func sendStateUpdate(
-	broadcast 		chan<- Message,
-	selfID 			int,
-	peerIsAlive 	[NElevators]bool,
+	broadcast chan<- Message,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 	systemElevStates [NElevators]HRAElevState,
 	systemHallOrders [NElevators]HallOrderTable,
 ) {
@@ -131,7 +125,7 @@ func publishConsistentState(
 	systemElevStates [NElevators]HRAElevState,
 	systemHallOrders [NElevators]HallOrderTable,
 ) {
-	
+
 	select {
 	case convergedSystemState <- ConvergedSystemState{
 		AliveList:      peerIsAlive,
