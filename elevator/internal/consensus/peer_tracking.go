@@ -38,10 +38,11 @@ func peerStateMatchesRecorded(
 	msg Message,
 	systemHallOrders [NElevators]HallOrderTable,
 	systemElevStates [NElevators]HRAElevState,
-) bool {
+) bool { 
 	return systemHallOrders[msg.SenderID] == msg.HallOrderTable &&
-		elevStateEquals(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
+		elevStateEqual(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
+
 
 func adoptPeerElevatorStates(
 	msg 				[NElevators]HRAElevState,
@@ -68,9 +69,6 @@ func adoptPeerElevatorStates(
 
 
 func mergeCabsOnRecovery(self, peer HRAElevState) HRAElevState {
-	if len(self.CabRequests) != NFloors {
-		return self
-	}
 	for floor := range NFloors {
 		if peer.CabRequests[floor] == true {
 			self.CabRequests[floor] = true
@@ -98,14 +96,14 @@ func allAlivePeersConsistent(
 }
 
 func sendStateUpdate(
-	outgoingMessages chan<- Message,
-	selfID int,
-	peerIsAlive [NElevators]bool,
+	broadcast 		chan<- Message,
+	selfID 			int,
+	peerIsAlive 	[NElevators]bool,
 	systemElevStates [NElevators]HRAElevState,
 	systemHallOrders [NElevators]HallOrderTable,
 ) {
 	select {
-	case outgoingMessages <- Message{
+	case broadcast <- Message{
 		SenderID:       selfID,
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders[selfID],
@@ -122,20 +120,20 @@ func publishConsistentState(
 	systemElevStates [NElevators]HRAElevState,
 	systemHallOrders [NElevators]HallOrderTable,
 ) {
-	state := ConvergedSystemState{
+	
+	select {
+	case convergedSystemState <- ConvergedSystemState{
 		AliveList:      peerIsAlive,
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders,
-	}
-	select {
-	case convergedSystemState <- state:
+	}:
 	default:
 	}
 }
 
 func newSystemHallOrders() [NElevators]HallOrderTable {
 	var table [NElevators]HallOrderTable
-	for peerID := range table {
+	for peerID := range NElevators {
 		table[peerID] = newStandbyHallOrders()
 	}
 	return table
@@ -143,15 +141,15 @@ func newSystemHallOrders() [NElevators]HallOrderTable {
 
 func newStandbyHallOrders() HallOrderTable {
 	var table HallOrderTable
-	for floor := range table {
-		for btn := range table[floor] {
+	for floor := range NFloors {
+		for btn := range NButtons {
 			table[floor][btn] = OrderStandby
 		}
 	}
 	return table
 }
 
-func elevStateEquals(a, b HRAElevState) bool {
+func elevStateEqual(a, b HRAElevState) bool {
 	if a.Behavior != b.Behavior || a.Floor != b.Floor || a.Direction != b.Direction {
 		return false
 	}

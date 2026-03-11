@@ -12,7 +12,7 @@ func initLocalSystemState(
 	return LocalSystemState{
 		ElevatorID:    elevatorID,
 		AliveStatus:   event.Elevator.ActiveStatus,
-		ElevatorState: toHRAElevState(event.Elevator),
+		ElevatorState: NewHRAElevState(event.Elevator),
 		HallRequests:  HallOrderTable{},
 	}
 }
@@ -56,7 +56,7 @@ func applyHardwareUpdate(
 	state 	LocalSystemState,
 	event   ElevatorEvents,
 ) LocalSystemState {
-	updatedElevState             := toHRAElevState(event.Elevator)
+	updatedElevState             := NewHRAElevState(event.Elevator)
 	updatedElevState.CabRequests  = state.ElevatorState.CabRequests
 	state.ElevatorState           = updatedElevState
 	state.AliveStatus             = event.Elevator.ActiveStatus

@@ -154,8 +154,7 @@ type HRAElevState struct {
 	CabRequests []bool `json:"cabRequests"`
 }
 
-// NewHRAElevState converts an Elevator to HRAElevState for protocol transmission.
-// Centralized here (CC §5.2) for cohesion: conversion logic lives with type definition.
+
 func NewHRAElevState(elev Elevator) HRAElevState {
 	return HRAElevState{
 		Behavior:    elevBehaviorToString(elev.Behaviour),

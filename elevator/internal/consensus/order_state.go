@@ -37,15 +37,13 @@ func computeNextOrderState(
 	selfState := systemHallOrders[selfID][floor][btn]
 	peerStates := alivePeerOrderStates(systemHallOrders, floor, btn, selfID, peerIsAlive)
 
-	next, advanced := tryCyclicAdvance(selfState, peerStates)
+	nextState, advanced := tryCyclicAdvance(selfState, peerStates)
 	if advanced {
-		return next
+		return nextState
 	}
-
 	if peerStatesHaveDiverged(selfState, peerStates) {
 		return OrderStandby
 	}
-
 	return selfState
 }
 
