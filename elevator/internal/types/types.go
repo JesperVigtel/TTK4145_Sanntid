@@ -154,7 +154,6 @@ type HRAElevState struct {
 	CabRequests []bool `json:"cabRequests"`
 }
 
-
 func NewHRAElevState(elev Elevator) HRAElevState {
 	return HRAElevState{
 		Behavior:    elevBehaviorToString(elev.Behaviour),

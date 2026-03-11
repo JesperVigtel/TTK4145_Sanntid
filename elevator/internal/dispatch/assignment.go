@@ -21,6 +21,7 @@ func getHallRequestAssignerPath() string {
 		return filepath.Join(dir, "hall_request_assigner")
 	}
 }
+
 //
 
 func prepareAssignment(
@@ -60,31 +61,51 @@ func computeAssignedOrders(
 	if len(input.States) == 0 {
 		// External HRA asserts on empty state sets.
 		fmt.Println("computeAssignedOrders: no alive elevator states, using local fallback assignment")
-		return localFallbackOrders(localState)
+		return localFallbackOrders(convergedState, localState, elevatorID)
 	}
 
 	jsonBytes, err := json.Marshal(input)
 	if err != nil {
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
-		return localFallbackOrders(localState)
+		return localFallbackOrders(convergedState, localState, elevatorID)
 	}
-// gjorde bare sånn at jeg kan kjøre simulator på mac
-//
+	// gjorde bare sånn at jeg kan kjøre simulator på mac
+	//
 	hraPath := getHallRequestAssignerPath()
 	raw, err := exec.Command(hraPath, "-i", string(jsonBytes)).CombinedOutput()
-//
+	//
 	if err != nil {
 		fmt.Println("computeAssignedOrders: exec:", err, string(raw))
-		return localFallbackOrders(localState)
+		return localFallbackOrders(convergedState, localState, elevatorID)
 	}
 
 	output := make(map[string][][2]bool)
 	if err := json.Unmarshal(raw, &output); err != nil {
 		fmt.Println("computeAssignedOrders: json.Unmarshal:", err)
-		return localFallbackOrders(localState)
+		return localFallbackOrders(convergedState, localState, elevatorID)
 	}
 
-	return buildLocalOrderTable(output, localState, elevatorID)
+	return buildLocalOrderTable(output, convergedState, localState, elevatorID)
+}
+
+func mergedSelfCabRequests(
+	convergedState ConvergedSystemState,
+	localState LocalSystemState,
+	elevatorID int,
+) []bool {
+	merged := make([]bool, NFloors)
+	networkCabs := convergedState.ElevatorList[elevatorID].CabRequests
+	for floor := range NFloors {
+		var localCall, networkCall bool
+		if floor < len(localState.ElevatorState.CabRequests) {
+			localCall = localState.ElevatorState.CabRequests[floor]
+		}
+		if floor < len(networkCabs) {
+			networkCall = networkCabs[floor]
+		}
+		merged[floor] = localCall || networkCall
+	}
+	return merged
 }
 
 func buildHallAssignerInput(
@@ -103,18 +124,7 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			merged := make([]bool, NFloors)
-			for floor := range NFloors {
-				var localCall, networkCall bool
-				if floor < len(localState.ElevatorState.CabRequests) {
-					localCall = localState.ElevatorState.CabRequests[floor]
-				}
-				if floor < len(elevState.CabRequests) {
-					networkCall = elevState.CabRequests[floor]
-				}
-				merged[floor] = localCall || networkCall
-			}
-			elevState.CabRequests = merged
+			elevState.CabRequests = mergedSelfCabRequests(convergedState, localState, elevatorID)
 		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue
@@ -132,6 +142,7 @@ func buildHallAssignerInput(
 
 func buildLocalOrderTable(
 	output map[string][][2]bool,
+	convergedState ConvergedSystemState,
 	localState LocalSystemState,
 	elevatorID int,
 ) LocalOrderTable {
@@ -146,8 +157,9 @@ func buildLocalOrderTable(
 		}
 	}
 
+	mergedCabs := mergedSelfCabRequests(convergedState, localState, elevatorID)
 	for floor := range NFloors {
-		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
+		result[floor][BtnCab] = mergedCabs[floor]
 	}
 
 	return result
@@ -157,10 +169,15 @@ func computeLightUpdate(convergedState ConvergedSystemState, elevatorID int) Hal
 	return convergedState.HallOrderTable[elevatorID]
 }
 
-func localFallbackOrders(localState LocalSystemState) LocalOrderTable {
+func localFallbackOrders(
+	convergedState ConvergedSystemState,
+	localState LocalSystemState,
+	elevatorID int,
+) LocalOrderTable {
 	var result LocalOrderTable
+	mergedCabs := mergedSelfCabRequests(convergedState, localState, elevatorID)
 	for floor := range NFloors {
-		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
+		result[floor][BtnCab] = mergedCabs[floor]
 		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
 			state := localState.HallRequests[floor][btn]
 			result[floor][btn] = state == OrderPending || state == OrderAssigned
