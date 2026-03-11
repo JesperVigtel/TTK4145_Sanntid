@@ -44,13 +44,13 @@ func startNextMovement(
 	motorActiveChan chan<- bool,
 ) {
 	newDir := chooseDirection(*elevator)
-	elevator.CurrentTravelDirection = newDir
 
-	if elevator.CurrentTravelDirection == types.Stop {
+	if newDir == types.Stop {
 		elevator.Behaviour = types.ElevatorIdle
 		elevator.PhysicalMotorDirection = types.Stop
 		hardware.SetMotorDirection(types.Stop)
 	} else {
+		elevator.CurrentTravelDirection = newDir
 		elevator.Behaviour = types.ElevatorMoving
 		elevator.PhysicalMotorDirection = newDir
 		hardware.SetMotorDirection(newDir)
@@ -64,7 +64,7 @@ func resumeMovement(elevator *types.Elevator) {
 	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 		newDir := chooseDirection(*elevator)
 		fmt.Printf("new dir is %v\n", newDir)
-		// No orders found, but keep moving in current direction to reach a floor sensor
+		// No orders found — keep moving in current direction to reach a floor sensor
 		if newDir == types.Stop {
 			elevator.Behaviour = types.ElevatorMoving
 			elevator.PhysicalMotorDirection = elevator.CurrentTravelDirection
