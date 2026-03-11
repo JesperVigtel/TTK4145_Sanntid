@@ -25,7 +25,7 @@ func Run(
 		systemElevStates  [NElevators]HRAElevState
 		peerIsAlive       [NElevators]bool
 		peerIsConsistent  [NElevators]bool
-		selfCabsRestored  bool // one-shot: restore own cabs from network on first peer message only
+		selfCabsRestored  bool 
 	)
 
 	systemHallOrders = newSystemHallOrders()
@@ -35,24 +35,21 @@ func Run(
 
 		case registry := <-peerEvents:
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
-			//Possibly change updatePeerAvailability name
 		
 		case msg := <-peerMsg:
-			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
-				continue
-			}	//Is this possibly surpulus?
-			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			systemElevStates, selfCabsRestored = adoptPeerElevatorStates(msg.ElevatorList, systemElevStates, selfID, selfCabsRestored)
+			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {continue}	//Is this possibly surpulus?
 
-			systemHallOrders[msg.SenderID] = msg.HallOrderTable
-			peerIsAlive[msg.SenderID] = msg.AliveStatus
+			peerIsConsistent[msg.SenderID] 		= peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
+			systemElevStates, selfCabsRestored 	= adoptPeerElevatorStates(msg.ElevatorList, systemElevStates, selfID, selfCabsRestored)
+			systemHallOrders[msg.SenderID] 		= msg.HallOrderTable
+			peerIsAlive[msg.SenderID] 			= msg.AliveStatus
 
 			systemHallOrders, peerIsConsistent = advanceAndBroadcast(broadcast, converged, selfID, peerIsAlive, peerIsConsistent, systemElevStates, systemHallOrders)
 
 		case state := <-localState:
-			systemHallOrders[selfID] = state.HallRequests
-			systemElevStates[selfID] = state.ElevatorState
-			peerIsAlive[selfID] = state.AliveStatus
+			systemHallOrders[selfID] 	= state.HallRequests
+			systemElevStates[selfID] 	= state.ElevatorState
+			peerIsAlive[selfID] 		= state.AliveStatus
 
 			systemHallOrders, peerIsConsistent = advanceAndBroadcast(broadcast, converged, selfID, peerIsAlive, peerIsConsistent, systemElevStates, systemHallOrders)
 		}
@@ -64,13 +61,13 @@ func Run(
 
 
 func advanceAndBroadcast(
-	broadcast chan<- Message,
-	converged chan<- ConvergedSystemState,
-	selfID int,
-	peerIsAlive [NElevators]bool,
-	peerIsConsistent [NElevators]bool,
-	systemElevStates [NElevators]HRAElevState,
-	systemHallOrders [NElevators]HallOrderTable,
+	broadcast 			chan<- Message,
+	converged 			chan<- ConvergedSystemState,
+	selfID 				int,
+	peerIsAlive 		[NElevators]bool,
+	peerIsConsistent 	[NElevators]bool,
+	systemElevStates 	[NElevators]HRAElevState,
+	systemHallOrders 	[NElevators]HallOrderTable,
 ) ([NElevators]HallOrderTable, [NElevators]bool) {
 	systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 	sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)

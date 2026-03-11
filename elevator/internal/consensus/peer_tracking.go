@@ -5,23 +5,7 @@ import (
 	. "elevator/internal/types"
 )
 
-func newSystemHallOrders() [NElevators]HallOrderTable {
-	var table [NElevators]HallOrderTable
-	for peerID := range table {
-		table[peerID] = newStandbyHallOrders()
-	}
-	return table
-}
-
-func newStandbyHallOrders() HallOrderTable {
-	var table HallOrderTable
-	for floor := range table {
-		for btn := range table[floor] {
-			table[floor][btn] = OrderStandby
-		}
-	}
-	return table
-}
+//Peer event
 
 func updatePeerAvailability(
 	nodeRegistry GlobalNodeRegistry,
@@ -31,56 +15,76 @@ func updatePeerAvailability(
 ) ([NElevators]bool, [NElevators]HallOrderTable) {
 
 	for _, peerID := range nodeRegistry.Lost {
-		if peerID < 0 || peerID >= NElevators || peerID == selfID {
+		if peerID == selfID || peerID < 0 || peerID >= NElevators {
 			continue
-		}
+		} //Spør studass, possibly surpplus and can be removed
 		peerIsAlive[peerID] = false
 		systemHallOrders[peerID] = newStandbyHallOrders()
 	}
 
 	for _, peerID := range nodeRegistry.New {
-		if peerID < 0 || peerID >= NElevators || peerID == selfID {
+		if peerID == selfID || peerID < 0 || peerID >= NElevators {
 			continue
-		}
+		} //Spør studass
 		peerIsAlive[peerID] = true
-		systemHallOrders[peerID] = newStandbyHallOrders()
+		systemHallOrders[peerID] = newStandbyHallOrders() //Possibly removem, test. Can improve contnuity
 	}
 	return peerIsAlive, systemHallOrders
 }
 
-func elevStateEquals(a, b HRAElevState) bool {
-	if a.Behavior != b.Behavior || a.Floor != b.Floor || a.Direction != b.Direction {
-		return false
-	}
-	if (a.CabRequests == nil) != (b.CabRequests == nil) {
-		return false
-	}
-	if len(a.CabRequests) != len(b.CabRequests) {
-		return false
-	}
-	for i := range a.CabRequests {
-		if a.CabRequests[i] != b.CabRequests[i] {
-			return false
-		}
-	}
-	return true
-}
+//Peer messages
 
 func peerStateMatchesRecorded(
 	msg Message,
 	systemHallOrders [NElevators]HallOrderTable,
 	systemElevStates [NElevators]HRAElevState,
 ) bool {
-	// HallOrderTable is a fixed array, so direct == works (CC §12.6).
-	// HRAElevState contains a slice, so use explicit equality helper for clarity and speed.
 	return systemHallOrders[msg.SenderID] == msg.HallOrderTable &&
 		elevStateEquals(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
 
+func adoptPeerElevatorStates(
+	msg 				[NElevators]HRAElevState,
+	systemStates 		[NElevators]HRAElevState,
+	selfID 				int,
+	selfCabsRestored 	bool,
+) ([NElevators]HRAElevState, bool) {
+	for peerID := range NElevators {
+		if len(msg[peerID].CabRequests) != NFloors {
+			continue
+		}
+		if peerID != selfID {
+			systemStates[peerID] = msg[peerID]
+			continue
+		}
+		if selfCabsRestored {
+			continue
+		}
+		systemStates[selfID] = mergeCabsOnRecovery(systemStates[selfID], msg[peerID])
+		selfCabsRestored = true
+	}
+	return systemStates, selfCabsRestored
+}
+
+
+func mergeCabsOnRecovery(self, peer HRAElevState) HRAElevState {
+	if len(self.CabRequests) != NFloors {
+		return self
+	}
+	for floor := range NFloors {
+		if peer.CabRequests[floor] == true {
+			self.CabRequests[floor] = true
+		}
+	}
+	return self
+}
+
+
+
 func allAlivePeersConsistent(
-	peerIsConsistent [NElevators]bool,
-	peerIsAlive [NElevators]bool,
-	selfID int,
+	peerIsConsistent 	[NElevators]bool,
+	peerIsAlive 		[NElevators]bool,
+	selfID 				int,
 ) bool {
 	for peerID := range NElevators {
 		if peerID == selfID {
@@ -129,38 +133,38 @@ func publishConsistentState(
 	}
 }
 
-func adoptPeerElevatorStates(
-	received [NElevators]HRAElevState,
-	current [NElevators]HRAElevState,
-	selfID int,
-	selfCabsRestored bool,
-) ([NElevators]HRAElevState, bool) {
-	for id := range NElevators {
-		incoming := received[id]
-		if len(incoming.CabRequests) != NFloors {
-			continue
-		}
-		if id != selfID {
-			current[id] = incoming
-			continue
-		}
-		if selfCabsRestored {
-			continue
-		}
-		current[selfID] = orMergeCabRequests(current[selfID], incoming)
-		selfCabsRestored = true
+func newSystemHallOrders() [NElevators]HallOrderTable {
+	var table [NElevators]HallOrderTable
+	for peerID := range table {
+		table[peerID] = newStandbyHallOrders()
 	}
-	return current, selfCabsRestored
+	return table
 }
 
-func orMergeCabRequests(base, overlay HRAElevState) HRAElevState {
-	if len(base.CabRequests) != NFloors {
-		return base
-	}
-	for floor := range NFloors {
-		if overlay.CabRequests[floor] {
-			base.CabRequests[floor] = true
+func newStandbyHallOrders() HallOrderTable {
+	var table HallOrderTable
+	for floor := range table {
+		for btn := range table[floor] {
+			table[floor][btn] = OrderStandby
 		}
 	}
-	return base
+	return table
+}
+
+func elevStateEquals(a, b HRAElevState) bool {
+	if a.Behavior != b.Behavior || a.Floor != b.Floor || a.Direction != b.Direction {
+		return false
+	}
+	if (a.CabRequests == nil) != (b.CabRequests == nil) {
+		return false
+	}
+	if len(a.CabRequests) != len(b.CabRequests) {
+		return false
+	}
+	for i := range a.CabRequests {
+		if a.CabRequests[i] != b.CabRequests[i] {
+			return false
+		}
+	}
+	return true
 }
