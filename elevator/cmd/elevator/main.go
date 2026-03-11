@@ -13,9 +13,9 @@ import (
 	"elevator/internal/network/utility_network"
 	"elevator/internal/types"
 	"flag"
-	"fmt"
-	"net"
-	"os"
+	//"fmt"
+	//"net"
+	//"os"
 	"strconv"
 )
 
