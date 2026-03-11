@@ -64,6 +64,9 @@ func resumeMovement(elevator *types.Elevator) {
 	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 		newDir := chooseDirection(*elevator)
 		fmt.Printf("new dir is %v\n", newDir)
+		fmt.Printf("travelDirection is %v\n", elevator.CurrentTravelDirection)
+		
+
 		// No orders found — keep moving in current direction to reach a floor sensor
 		if newDir == types.Stop {
 			elevator.Behaviour = types.ElevatorMoving
