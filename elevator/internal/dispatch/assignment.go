@@ -6,21 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 )
-
-func getHallRequestAssignerPath() string {
-	_, currentFile, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(currentFile)
-
-	switch runtime.GOOS {
-	case "darwin":
-		return filepath.Join(dir, "hall_request_assigner_mac")
-	default: // linux and others
-		return filepath.Join(dir, "hall_request_assigner")
-	}
-}
 
 //
 
@@ -69,11 +55,7 @@ func computeAssignedOrders(
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
 		return localFallbackOrders(convergedState, localState, elevatorID)
 	}
-	// gjorde bare sånn at jeg kan kjøre simulator på mac
-	//
-	hraPath := getHallRequestAssignerPath()
-	raw, err := exec.Command(hraPath, "-i", string(jsonBytes)).CombinedOutput()
-	//
+	raw, err := exec.Command("hall_request_assigner", "-i", string(jsonBytes)).CombinedOutput()
 	if err != nil {
 		fmt.Println("computeAssignedOrders: exec:", err, string(raw))
 		return localFallbackOrders(convergedState, localState, elevatorID)
