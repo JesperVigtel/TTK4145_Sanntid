@@ -49,7 +49,7 @@ func Run(
 		case state := <-localState:
 			systemHallOrders[selfID] 	= state.HallRequests
 			//systemElevStates[selfID] 	= state.ElevatorState
-			systemElevStates[selfID] = mergeCabsOnRecovery(state.ElevatorState, systemElevStates[selfID])
+			systemElevStates[selfID] 	= mergeCabs(state.ElevatorState, systemElevStates[selfID])
 			peerIsAlive[selfID] 		= state.AliveStatus
 
 			systemHallOrders, peerIsConsistent = advanceAndBroadcast(broadcast, converged, selfID, peerIsAlive, peerIsConsistent, systemElevStates, systemHallOrders)
