@@ -60,7 +60,6 @@ func chooseDirection(elevator types.Elevator) types.MotorDirection {
 	return types.Stop
 }
 
-
 func shouldStopAtCurrentFloor(elevator types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
 		return true
@@ -79,7 +78,26 @@ func shouldStopAtCurrentFloor(elevator types.Elevator, floor int) bool {
 	}
 }
 
-// tror det er en bedre måte å gjøre det her på
+func buttonForDirection(dir types.MotorDirection) types.ButtonType {
+	if dir == types.Up {
+		return types.BtnHallUp
+	}
+	return types.BtnHallDown
+}
+
+func hasOrdersInDirection(elevator types.Elevator, dir types.MotorDirection) bool {
+	if dir == types.Up {
+		return hasLocalOrderAbove(elevator)
+	}
+	return hasLocalOrderBelow(elevator)
+}
+
+func isEndFloor(floor int, dir types.MotorDirection) bool {
+	if dir == types.Up {
+		return floor == config.NFloors-1
+	}
+	return floor == 0
+}
 
 func clearCabOrder(elevator *types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
@@ -90,10 +108,7 @@ func clearCabOrder(elevator *types.Elevator, floor int) bool {
 }
 
 func clearHallOrder(elevator *types.Elevator, floor int, dir types.MotorDirection) bool {
-	btn := types.BtnHallUp
-	if dir == types.Down {
-		btn = types.BtnHallDown
-	}
+	btn := buttonForDirection(dir)
 	if elevator.LocalOrders[floor][int(btn)] {
 		elevator.LocalOrders[floor][int(btn)] = false
 		return true
@@ -104,83 +119,57 @@ func clearHallOrder(elevator *types.Elevator, floor int, dir types.MotorDirectio
 func clearOrdersAtFloor(
 	elevator *types.Elevator,
 	floor int,
-	arrivalDir types.MotorDirection,
+	travelDir types.MotorDirection,
 ) (completed types.CompletedOrderTable, needsExtraDoorTime bool) {
-
-	lastFloor := config.NFloors - 1
-	firstFloor := 0
 
 	if clearCabOrder(elevator, floor) {
 		completed[floor][int(types.BtnCab)] = true
 	}
 
-	switch arrivalDir {
-	case types.Up:
-		if clearHallOrder(elevator, floor, types.Up) {
-			completed[floor][int(types.BtnHallUp)] = true
-		}
-
-		if !hasLocalOrderAbove(*elevator) {
-			if elevator.LocalOrders[floor][int(types.BtnHallDown)] {
-				if elevator.CurrentFloor == lastFloor {
-					if clearHallOrder(elevator, floor, types.Down) {
-						completed[floor][int(types.BtnHallDown)] = true
-					}
-				} else {
-					needsExtraDoorTime = true
-				}
-			} else if hasLocalOrderBelow(*elevator) {
-				needsExtraDoorTime = true
-			}
-		}
-	case types.Down:
-		if clearHallOrder(elevator, floor, types.Down) {
-			completed[floor][int(types.BtnHallDown)] = true
-		}
-
-		if !hasLocalOrderBelow(*elevator) {
-			if elevator.LocalOrders[floor][int(types.BtnHallUp)] {
-				if elevator.CurrentFloor == firstFloor {
-					if clearHallOrder(elevator, floor, types.Up) {
-						completed[floor][int(types.BtnHallUp)] = true
-					}
-				} else {
-					needsExtraDoorTime = true
-				}
-			} else if hasLocalOrderAbove(*elevator) {
-				needsExtraDoorTime = true
-			}
-		}
-	default:
+	if travelDir == types.Stop {
 		if clearHallOrder(elevator, floor, types.Up) {
 			completed[floor][int(types.BtnHallUp)] = true
 		}
 		if clearHallOrder(elevator, floor, types.Down) {
 			completed[floor][int(types.BtnHallDown)] = true
 		}
+		return
 	}
+
+	if clearHallOrder(elevator, floor, travelDir) {
+		completed[floor][int(buttonForDirection(travelDir))] = true
+	}
+
+	oppositeDir := -travelDir
+
+	if hasOrdersInDirection(*elevator, travelDir) {
+		return
+	}
+
+	if elevator.LocalOrders[floor][int(buttonForDirection(oppositeDir))] {
+		if isEndFloor(floor, travelDir) {
+			if clearHallOrder(elevator, floor, oppositeDir) {
+				completed[floor][int(buttonForDirection(oppositeDir))] = true
+			}
+		} else {
+			needsExtraDoorTime = true
+		}
+	} else if hasOrdersInDirection(*elevator, oppositeDir) {
+		needsExtraDoorTime = true
+	}
+
 	return
 }
 
 func clearOppositeHallOrder(
 	elevator *types.Elevator,
 	floor int,
-	arrivalDir types.MotorDirection,
+	travelDir types.MotorDirection,
 ) types.CompletedOrderTable {
-
 	var completed types.CompletedOrderTable
-
-	switch arrivalDir {
-	case types.Up:
-		if clearHallOrder(elevator, floor, types.Down) {
-			completed[floor][int(types.BtnHallDown)] = true
-		}
-	case types.Down:
-		if clearHallOrder(elevator, floor, types.Up) {
-			completed[floor][int(types.BtnHallUp)] = true
-		}
+	oppositeDir := -travelDir
+	if clearHallOrder(elevator, floor, oppositeDir) {
+		completed[floor][int(buttonForDirection(oppositeDir))] = true
 	}
 	return completed
 }
-
-// Jeg tror det skal være en bedre måte å gjøre det her på

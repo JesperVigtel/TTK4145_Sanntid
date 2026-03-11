@@ -22,7 +22,7 @@ func stopAndServeFloor(
 	doorOpenChan chan<- bool,
 	motorActiveChan chan<- bool,
 	localLightsChan chan<- types.LocalLightUpdate,
-	arrivalDir types.MotorDirection,
+	travelDir types.MotorDirection,
 ) (types.CompletedOrderTable, bool) {
 
 	hardware.SetMotorDirection(types.Stop)
@@ -31,7 +31,7 @@ func stopAndServeFloor(
 	doorOpenChan <- true
 	motorActiveChan <- false
 
-	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, arrivalDir)
+	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, travelDir)
 
 	sendLightUpdate(localLightsChan, *elevator, true)
 	return completed, needsExtraDoorTime
@@ -55,8 +55,6 @@ func startNextMovement(
 		motorActiveChan <- true
 	}
 }
-
-// Denne er good
 
 func resumeMovement(elevator *types.Elevator) {
 
