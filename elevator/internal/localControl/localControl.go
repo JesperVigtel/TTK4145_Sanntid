@@ -65,7 +65,7 @@ func Run(
 			}
 
 			// Order to serve at this floor - stop and serve
-			if anyOrdersAtCurrentFloor(elevator, floor) {
+			if shouldStopAtCurrentFloor(elevator, floor) {
 				completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)

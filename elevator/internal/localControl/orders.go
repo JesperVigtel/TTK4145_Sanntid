@@ -60,9 +60,8 @@ func chooseDirection(elevator types.Elevator) types.MotorDirection {
 	return types.Stop
 }
 
-// Er det ikke mulig å legge til håndtering av edgecase -> recoverytick
 
-func anyOrdersAtCurrentFloor(elevator types.Elevator, floor int) bool {
+func shouldStopAtCurrentFloor(elevator types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
 		return true
 	}
