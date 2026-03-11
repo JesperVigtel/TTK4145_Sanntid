@@ -5,6 +5,23 @@ import (
 	. "elevator/internal/types"
 )
 
+func restoreOwnCabsFromNetwork(
+	state LocalSystemState,
+	convergedState ConvergedSystemState,
+	elevatorID int,
+) (LocalSystemState, bool) {
+	networkCabs := convergedState.ElevatorList[elevatorID].CabRequests
+	if len(networkCabs) != NFloors {
+		return state, false
+	}
+	for floor := range NFloors {
+		if networkCabs[floor] {
+			state.ElevatorState.CabRequests[floor] = true
+		}
+	}
+	return state, true
+}
+
 func initLocalSystemState(
 	event ElevatorEvents,
 	elevatorID int,
