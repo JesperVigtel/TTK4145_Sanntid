@@ -45,17 +45,15 @@ func Run(
 		select {
 
 		case floor := <-floorChan:
-			fmt.Printf("[LocalControl] Floor sensor triggered: floor=%d\n", floor)
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
 			updateFloorIndicator(localLightsChan, elevator)
 
-			// -- Restart Watchdog --
 			if elevator.Behaviour == types.ElevatorMoving {
 				motorActiveChan <- true
 			}
-
+			// No orders to serve - Elevator idle
 			if !hasLocalOrderAbove(elevator) && !hasLocalOrderBelow(elevator) &&
 				!hasOrderAtFloor(elevator, floor) {
 				hardware.SetMotorDirection(types.Stop)
@@ -63,27 +61,27 @@ func Run(
 				elevator.Behaviour = types.ElevatorIdle
 				motorActiveChan <- false
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
-				println("[LocalControl] no orders anywhere -> idle")
 				continue
 			}
 
+			// Order to serve at this floor - stop and serve
 			if anyOrdersAtCurrentFloor(elevator, floor) {
 				completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
-			} else {
-				
-				newDir := chooseDirection(elevator)
-				if newDir != types.Stop && newDir != elevator.CurrentTravelDirection {
-					elevator.CurrentTravelDirection = newDir
-					elevator.PhysicalMotorDirection = newDir
-					hardware.SetMotorDirection(newDir)
-				}
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+				continue
 			}
 
+			// Passing floor without order, checking if direction should change
+			newDir := chooseDirection(elevator)
+			if newDir != types.Stop && newDir != elevator.CurrentTravelDirection {
+				elevator.CurrentTravelDirection = newDir
+				elevator.PhysicalMotorDirection = newDir
+				hardware.SetMotorDirection(newDir)
+			}
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+
 		case orders := <-newOrder:
-			fmt.Println("[LocalControl] Received new order table")
 			elevator.LocalOrders = orders
 			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
@@ -96,63 +94,52 @@ func Run(
 				continue
 			}
 
-			if elevator.Behaviour == types.ElevatorIdle {
-				if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
-
-					completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
-					directionChange = directionChange || needsExtraDoorTime
-					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
-				} else {
-					newDir := chooseDirection(elevator)
-					if newDir != types.Stop {
-						elevator.CurrentTravelDirection = newDir
-						elevator.PhysicalMotorDirection = newDir
-						elevator.Behaviour = types.ElevatorMoving
-						hardware.SetMotorDirection(newDir)
-						motorActiveChan <- true
-						sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
-					}
-				}
+			if elevator.Behaviour != types.ElevatorIdle {
+				continue
 			}
+
+			if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
+				completedOrders, needsExtraDoorTime := handleFloorArrival(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
+				directionChange = directionChange || needsExtraDoorTime
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
+				continue
+			}
+
+			startNextMovement(&elevator, motorActiveChan)
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case obstruction = <-obstructionChan:
 			fmt.Printf("[LocalControl] Obstruction changed: %v\n", obstruction)
-			RapportInactive(&elevator, obstruction)
+			updateActiveStatus(&elevator, obstruction)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case buttonEvent := <-buttonPressChan:
-			fmt.Printf("[LocalControl] Button pressed: floor=%d button=%d\n",
-				buttonEvent.Floor,
-				buttonEvent.Button)
-
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, &buttonEvent)
 
 		case <-doorClosedChan:
-			if elevator.Behaviour == types.ElevatorDoorOpen {
-				if obstruction {
-					doorOpenChan <- true
-				} else if directionChange {
-					fmt.Println("[LocalControl] Announcing direction change - clearing opposite hall order")
-					directionChange = false
-					completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
-					sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
-					doorOpenChan <- true
-				} else {
-					handleDoorClosed(&elevator, motorActiveChan, localLightsChan)
-					sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
-				}
+			if obstruction {
+				doorOpenChan <- true
+				continue
 			}
-			// Under er good
+			if directionChange {
+				directionChange = false
+				completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
+				elevator.CurrentTravelDirection = -elevator.CurrentTravelDirection
+				fmt.Printf("Be advised, the elevator will now change traveldirection")
+				doorOpenChan <- true
+				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
+				continue
+			}
+			startNextMovement(&elevator, motorActiveChan)
+			sendLightUpdate(localLightsChan, elevator, false)
+			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case <-motorInactiveChan:
-			fmt.Println("[LocalControl] Motor inactive; watchdog triggered")
 			stopOnMotorTimeout(&elevator)
 			recoveryEnableChan <- true
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case <-tryRecovery:
-			fmt.Println("[LocalControl] Recovery timer triggered, tries to move again")
-
 			resumeMovement(&elevator)
 			recoveryEnableChan <- false
 			motorActiveChan <- true
@@ -162,3 +149,6 @@ func Run(
 
 // gå over kodekvalitet, fokus på lite side affects, encapsulation og i henhold til code complete
 // høy cohesion og lav coupling
+
+
+// er Send... et godt start på navn? den sender over channels, men 

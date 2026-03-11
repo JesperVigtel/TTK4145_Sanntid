@@ -62,7 +62,6 @@ func chooseDirection(elevator types.Elevator) types.MotorDirection {
 
 // Er det ikke mulig å legge til håndtering av edgecase -> recoverytick
 
-
 func anyOrdersAtCurrentFloor(elevator types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
 		return true
@@ -122,12 +121,16 @@ func clearOrdersAtFloor(
 			completed[floor][int(types.BtnHallUp)] = true
 		}
 
-		if !hasLocalOrderAbove(*elevator) && elevator.LocalOrders[floor][int(types.BtnHallDown)] {
-			if elevator.CurrentFloor == lastFloor {
-				if clearHallOrder(elevator, floor, types.Down) {
-					completed[floor][int(types.BtnHallDown)] = true
+		if !hasLocalOrderAbove(*elevator) {
+			if elevator.LocalOrders[floor][int(types.BtnHallDown)] {
+				if elevator.CurrentFloor == lastFloor {
+					if clearHallOrder(elevator, floor, types.Down) {
+						completed[floor][int(types.BtnHallDown)] = true
+					}
+				} else {
+					needsExtraDoorTime = true
 				}
-			} else {
+			} else if hasLocalOrderBelow(*elevator) {
 				needsExtraDoorTime = true
 			}
 		}
@@ -136,12 +139,16 @@ func clearOrdersAtFloor(
 			completed[floor][int(types.BtnHallDown)] = true
 		}
 
-		if !hasLocalOrderBelow(*elevator) && elevator.LocalOrders[floor][int(types.BtnHallUp)] {
-			if elevator.CurrentFloor == firstFloor {
-				if clearHallOrder(elevator, floor, types.Up) {
-					completed[floor][int(types.BtnHallUp)] = true
+		if !hasLocalOrderBelow(*elevator) {
+			if elevator.LocalOrders[floor][int(types.BtnHallUp)] {
+				if elevator.CurrentFloor == firstFloor {
+					if clearHallOrder(elevator, floor, types.Up) {
+						completed[floor][int(types.BtnHallUp)] = true
+					}
+				} else {
+					needsExtraDoorTime = true
 				}
-			} else {
+			} else if hasLocalOrderAbove(*elevator) {
 				needsExtraDoorTime = true
 			}
 		}
@@ -160,7 +167,7 @@ func clearOppositeHallOrder(
 	elevator *types.Elevator,
 	floor int,
 	arrivalDir types.MotorDirection,
-	) types.CompletedOrderTable {
+) types.CompletedOrderTable {
 
 	var completed types.CompletedOrderTable
 
