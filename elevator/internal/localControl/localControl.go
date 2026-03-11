@@ -150,3 +150,6 @@ func Run(
 		}
 	}
 }
+
+
+// vi har en bug med at 
