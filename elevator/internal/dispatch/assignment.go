@@ -10,9 +10,6 @@ import (
 	"runtime"
 )
 
-// getHallRequestAssignerPath returns the absolute path to the hall_request_assigner binary
-// for the current OS. The binary must be placed in the same directory as this source file.
-//
 func getHallRequestAssignerPath() string {
 	_, currentFile, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(currentFile)
