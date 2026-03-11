@@ -133,7 +133,6 @@ func buildHallAssignerInput(
 func buildLocalOrderTable(
 	output map[string][][2]bool,
 	localState LocalSystemState,
-	convergedState ConvergedSystemState,
 	elevatorID int,
 ) LocalOrderTable {
 	var result LocalOrderTable
