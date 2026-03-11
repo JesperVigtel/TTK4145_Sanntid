@@ -69,6 +69,12 @@ func adoptPeerElevatorStates(
 
 
 func mergeCabsOnRecovery(self, peer HRAElevState) HRAElevState {
+	if len(self.CabRequests) != NFloors {
+		return self
+	}
+	if len(peer.CabRequests) != NFloors {
+		return self
+	}
 	for floor := range NFloors {
 		if peer.CabRequests[floor] == true {
 			self.CabRequests[floor] = true

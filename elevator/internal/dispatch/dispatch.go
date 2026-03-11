@@ -40,8 +40,9 @@ func Run(
 		case globalState := <-convergedSystem:
 
 			if !cabsRestored {
-				localState = restoreOwnCabsFromNetwork(localState, globalState)
-				cabsRestored = true
+				var restored bool
+				localState, restored = restoreOwnCabsFromNetwork(localState, globalState)
+				cabsRestored = restored
 			}
 
 			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
