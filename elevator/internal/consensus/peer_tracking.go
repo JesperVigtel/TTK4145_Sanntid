@@ -3,7 +3,6 @@ package consensus
 import (
 	. "elevator/internal/config"
 	. "elevator/internal/types"
-	"fmt"
 )
 
 //Peer event
@@ -49,8 +48,8 @@ func adoptPeerElevatorStates(
 	msg 				[NElevators]HRAElevState,
 	systemStates 		[NElevators]HRAElevState,
 	selfID 				int,
-	selfCabsRestored 	bool,
-) ([NElevators]HRAElevState, bool) {
+	//selfCabsRestored 	bool,
+) ([NElevators]HRAElevState) {	// return bool
 	for peerID := range NElevators {
 		if len(msg[peerID].CabRequests) != NFloors {
 			continue
@@ -59,17 +58,16 @@ func adoptPeerElevatorStates(
 			systemStates[peerID] = msg[peerID]
 			continue
 		}
-		if selfCabsRestored {
-			continue
-		}
+		// if selfCabsRestored {
+		// 	continue
+		// }
 		if len(systemStates[selfID].CabRequests) != NFloors {
 			systemStates[selfID].CabRequests = make([]bool, NFloors)
 		}
 		systemStates[selfID] = mergeCabsOnRecovery(systemStates[selfID], msg[peerID])
-		fmt.Println("Consensus: cabs recovered")
-		selfCabsRestored = true
+		//selfCabsRestored = true
 	}
-	return systemStates, selfCabsRestored
+	return systemStates//, selfCabsRestored
 }
 
 

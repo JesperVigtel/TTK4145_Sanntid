@@ -25,7 +25,7 @@ func Run(
 		systemElevStates  [NElevators]HRAElevState
 		peerIsAlive       [NElevators]bool
 		peerIsConsistent  [NElevators]bool
-		selfCabsRestored  bool 
+		//selfCabsRestored  bool 
 	)
 
 	systemHallOrders = newSystemHallOrders()
@@ -40,7 +40,7 @@ func Run(
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {continue}	//Is this possibly surpulus?
 
 			peerIsConsistent[msg.SenderID] 		= peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			systemElevStates, selfCabsRestored 	= adoptPeerElevatorStates(msg.ElevatorList, systemElevStates, selfID, selfCabsRestored)
+			systemElevStates 	= adoptPeerElevatorStates(msg.ElevatorList, systemElevStates, selfID) //return selfCabsRestored
 			systemHallOrders[msg.SenderID] 		= msg.HallOrderTable
 			peerIsAlive[msg.SenderID] 			= msg.AliveStatus
 
