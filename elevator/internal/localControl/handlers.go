@@ -4,6 +4,7 @@ import (
 	"elevator/internal/config"
 	"elevator/internal/localControl/hardware"
 	"elevator/internal/types"
+	"fmt"
 )
 
 // Floor -1 is unknown position, moves down to nearest floor
@@ -62,7 +63,7 @@ func resumeMovement(elevator *types.Elevator) {
 
 	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 		newDir := chooseDirection(*elevator)
-		
+		fmt.Printf("new dir is %v\n", newDir)
 		// No orders found, but keep moving in current direction to reach a floor sensor
 		if newDir == types.Stop {
 			elevator.Behaviour = types.ElevatorMoving
