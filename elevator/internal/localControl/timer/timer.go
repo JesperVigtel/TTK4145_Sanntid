@@ -49,27 +49,27 @@ func Timer(
 		case isDoorOpen := <-doorOpenChan:
 			doorActive = isDoorOpen
 			if doorActive {
-				safeStop(doorTimer)
+				stopAndDrain(doorTimer)
 				doorTimer.Reset(config.DoorOpenTime)
 			} else {
-				safeStop(doorTimer)
+				stopAndDrain(doorTimer)
 			}
 
 		case isMotorActive := <-motorActiveChan:
 			watchDogActive = isMotorActive
 			if watchDogActive {
-				safeStop(motorTimer)
+				stopAndDrain(motorTimer)
 				motorTimer.Reset(config.MotorTimeout)
 			} else {
-				safeStop(motorTimer)
+				stopAndDrain(motorTimer)
 			}
 		case isRecoveryActive := <-recoveryEnableChan:
 			recoveryActive = isRecoveryActive
 			if recoveryActive {
-				safeStop(motorRecoveryTimer)
+				stopAndDrain(motorRecoveryTimer)
 				motorRecoveryTimer.Reset(config.MotorRecoveryTime)
 			} else {
-				safeStop(motorRecoveryTimer)
+				stopAndDrain(motorRecoveryTimer)
 			}
 
 		case <-doorTimer.C:
@@ -86,14 +86,14 @@ func Timer(
 		case <-motorRecoveryTimer.C:
 			if recoveryActive {
 				recoveryTickChan <- true
-				safeStop(motorRecoveryTimer)
+				stopAndDrain(motorRecoveryTimer)
 				motorRecoveryTimer.Reset(config.MotorRecoveryTime)
 			}
 		}
 	}
 }
 
-func safeStop(timerInstance *time.Timer) {
+func stopAndDrain(timerInstance *time.Timer) {
 	if !timerInstance.Stop() {
 		select {
 		case <-timerInstance.C:

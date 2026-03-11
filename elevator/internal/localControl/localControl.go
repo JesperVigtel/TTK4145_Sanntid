@@ -66,8 +66,7 @@ func Run(
 
 			// Order to serve at this floor - stop and serve
 			if shouldStopAtCurrentFloor(elevator, floor) {
-				stopElevator(&elevator, doorOpenChan, motorActiveChan)
-				completedOrders, needsExtraDoorTime := serveFloorOrders(&elevator, localLightsChan, elevator.CurrentTravelDirection)
+				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
@@ -100,8 +99,7 @@ func Run(
 			}
 
 			if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
-				stopElevator(&elevator, doorOpenChan, motorActiveChan)
-				completedOrders, needsExtraDoorTime := serveFloorOrders(&elevator, localLightsChan, elevator.CurrentTravelDirection)
+				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
