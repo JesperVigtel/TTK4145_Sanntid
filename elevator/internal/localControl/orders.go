@@ -33,6 +33,7 @@ func hasOrderAtFloor(elevator types.Elevator, floor int) bool {
 		elevator.LocalOrders[floor][int(types.BtnHallDown)]
 }
 
+
 func chooseDirection(elevator types.Elevator) types.MotorDirection {
 	switch elevator.CurrentTravelDirection {
 	case types.Up:
@@ -60,6 +61,7 @@ func chooseDirection(elevator types.Elevator) types.MotorDirection {
 	return types.Stop
 }
 
+// Stops for opposite-direction hall orders only if no more orders ahead 
 func shouldStopAtCurrentFloor(elevator types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
 		return true
@@ -142,10 +144,12 @@ func clearOrdersAtFloor(
 
 	oppositeDir := -travelDir
 
+	// More orders ahead — no direction change needed
 	if hasOrdersInDirection(*elevator, travelDir) {
 		return
 	}
 
+	// Opposite hall order or orders behind: schedule direction change via extra door-open cycle
 	if elevator.LocalOrders[floor][int(buttonForDirection(oppositeDir))] {
 		if isEndFloor(floor, travelDir) {
 			if clearHallOrder(elevator, floor, oppositeDir) {

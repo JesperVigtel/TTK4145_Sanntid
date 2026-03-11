@@ -31,6 +31,7 @@ func Timer(
 	motorRecoveryTimer := time.NewTimer(config.MotorRecoveryTime)
 	motorRecoveryTimer.Stop()
 
+	// Drain any timer events from initialization to prevent false triggers
 	select {
 	case <-doorTimer.C:
 	default:
@@ -83,6 +84,7 @@ func Timer(
 				watchDogActive = false
 				motorInactiveChan <- true
 			}
+		// Periodically retries movement after motor timeout 
 		case <-motorRecoveryTimer.C:
 			if recoveryActive {
 				recoveryTickChan <- true
@@ -92,7 +94,7 @@ func Timer(
 		}
 	}
 }
-
+// Drain the channel if the timer has fired 
 func safeStopTimer(timerInstance *time.Timer) {
 	if !timerInstance.Stop() {
 		select {

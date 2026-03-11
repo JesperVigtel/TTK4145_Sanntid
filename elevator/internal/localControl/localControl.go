@@ -25,7 +25,9 @@ func Run(
 		obstructionChan    = make(chan bool, config.ChannelBufferSize)
 		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
 		obstruction        bool
-		directionChange    bool
+
+		// directionChange is set across select iterations — set by clearOrdersAtFloor, used by doorClosedChan
+		directionChange bool
 	)
 	hardware.Init(elevAddr, config.NFloors)
 
@@ -38,6 +40,7 @@ func Run(
 	elevator := newElevator()
 	obstruction = false
 
+	// Initialize by driving down until a floor sensor is reached
 	hardware.SetMotorDirection(types.Down)
 	sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
@@ -64,7 +67,7 @@ func Run(
 				continue
 			}
 
-			// Order to serve at this floor - stop and serve
+			
 			if shouldStopAtCurrentFloor(elevator, floor) {
 				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
@@ -121,6 +124,7 @@ func Run(
 				doorOpenChan <- true
 				continue
 			}
+			// Serve opposite hall order before reversing — extra door-open cycle required
 			if directionChange {
 				directionChange = false
 				completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
@@ -146,9 +150,3 @@ func Run(
 		}
 	}
 }
-
-// gå over kodekvalitet, fokus på lite side affects, encapsulation og i henhold til code complete
-// høy cohesion og lav coupling
-
-
-// er Send... et godt start på navn? den sender over channels, men 

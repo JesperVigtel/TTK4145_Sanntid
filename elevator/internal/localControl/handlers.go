@@ -6,6 +6,7 @@ import (
 	"elevator/internal/types"
 )
 
+// Floor -1 is unknown position, moves down to nearest floor
 func newElevator() types.Elevator {
 	return types.Elevator{
 		CurrentFloor:           -1,
@@ -56,10 +57,13 @@ func startNextMovement(
 	}
 }
 
+// Called periodically after motor timeout — retries movement to escape stuck state
 func resumeMovement(elevator *types.Elevator) {
 
 	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 		newDir := chooseDirection(*elevator)
+		
+		// No orders found, but keep moving in current direction to reach a floor sensor
 		if newDir == types.Stop {
 			elevator.Behaviour = types.ElevatorMoving
 			elevator.PhysicalMotorDirection = elevator.CurrentTravelDirection
