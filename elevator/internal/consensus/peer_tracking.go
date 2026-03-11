@@ -94,7 +94,7 @@ func sendStateUpdate(
 	}
 }
 
-func publishConsistantState(
+func publishConsistentState(
 	convergedSystemState 	chan<- ConvergedSystemState,
 	peerIsAlive 			[NElevators]bool,
 	systemElevStates 		[NElevators]HRAElevState,

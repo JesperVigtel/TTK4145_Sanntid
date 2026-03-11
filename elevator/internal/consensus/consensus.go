@@ -12,6 +12,27 @@ import (
 // so that state transitions are self-synchronising without a central coordinator.
 // -----------------------------------------------------------------------------
 
+
+func advanceAndBroadcast(
+	broadcast chan<- Message,
+	converged chan<- ConvergedSystemState,
+	selfID int,
+	peerIsAlive [NElevators]bool,
+	peerIsConsistent [NElevators]bool,
+	systemElevStates [NElevators]HRAElevState,
+	systemHallOrders [NElevators]HallOrderTable,
+) ([NElevators]HallOrderTable, [NElevators]bool) {
+	systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
+	sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+
+	if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
+		peerIsConsistent = [NElevators]bool{}
+		publishConsistentState(converged, peerIsAlive, systemElevStates, systemHallOrders)
+	}
+
+	return systemHallOrders, peerIsConsistent
+}
+
 func Run(
 	peerMsg   	<-chan Message,
 	broadcast  	chan<- Message,
@@ -35,37 +56,26 @@ func Run(
 
 		case registry := <-peerEvents:
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
+			//Possibly change updatePeerAvailability name
 		
 		case msg := <-peerMsg:
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
 				continue
-			}
+			}	//Is this possibly surpulus?
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
 			systemElevStates, selfCabsRestored = adoptPeerElevatorStates(msg.ElevatorList, systemElevStates, selfID, selfCabsRestored)
 
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
-			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-
-			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
-				peerIsConsistent = [NElevators]bool{}
-				publishConsistantState(converged, peerIsAlive, systemElevStates, systemHallOrders)
-			}
+			systemHallOrders, peerIsConsistent = advanceAndBroadcast(broadcast, converged, selfID, peerIsAlive, peerIsConsistent, systemElevStates, systemHallOrders)
 
 		case state := <-localState:
 			systemHallOrders[selfID] = state.HallRequests
 			systemElevStates[selfID] = state.ElevatorState
 			peerIsAlive[selfID] = state.AliveStatus
 
-			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-			
-			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
-				peerIsConsistent = [NElevators]bool{}
-				publishConsistantState(converged, peerIsAlive, systemElevStates, systemHallOrders)
-			}
+			systemHallOrders, peerIsConsistent = advanceAndBroadcast(broadcast, converged, selfID, peerIsAlive, peerIsConsistent, systemElevStates, systemHallOrders)
 		}
 	}
 }
