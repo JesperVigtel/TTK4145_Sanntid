@@ -50,7 +50,9 @@ func Run(
 			}
 
 			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
-			assignedOrders, lightUpdate := prepareAssignment(localState, globalState)
+			//assignedOrders, lightUpdate := prepareAssignment(localState, globalState)
+			assignedOrders := computeAssignedOrders(globalState, localState, elevatorID)
+			lightUpdate := computeLightUpdate(globalState, elevatorID)
 
 			if assignedOrders != previousOrders {
 				localOrders <- assignedOrders
