@@ -37,15 +37,14 @@ func handleFloorArrival(
 	return completed, needsExtraDoorTime
 }
 
-func handleDoorClosed(
+func startNextMovement(
 	elevator *types.Elevator,
 	motorActiveChan chan<- bool,
-	localLightsChan chan<- types.LocalLightUpdate,
 ) {
 	newDir := chooseDirection(*elevator)
 	elevator.CurrentTravelDirection = newDir
 
-	if newDir == types.Stop {
+	if elevator.CurrentTravelDirection == types.Stop {
 		elevator.Behaviour = types.ElevatorIdle
 		elevator.PhysicalMotorDirection = types.Stop
 		hardware.SetMotorDirection(types.Stop)
@@ -55,8 +54,6 @@ func handleDoorClosed(
 		hardware.SetMotorDirection(newDir)
 		motorActiveChan <- true
 	}
-
-	sendLightUpdate(localLightsChan, *elevator, false)
 }
 
 // Denne er good
@@ -87,7 +84,7 @@ func stopOnMotorTimeout(elevator *types.Elevator) {
 	}
 
 }
-func RapportInactive(elevator *types.Elevator, obstruction bool) {
+func updateActiveStatus(elevator *types.Elevator, obstruction bool) {
 
 	if elevator.Behaviour == types.ElevatorDoorOpen && obstruction {
 		elevator.ActiveStatus = false
