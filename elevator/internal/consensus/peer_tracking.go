@@ -61,6 +61,9 @@ func adoptPeerElevatorStates(
 		if selfCabsRestored {
 			continue
 		}
+		if len(systemStates[selfID].CabRequests) != NFloors {
+			systemStates[selfID].CabRequests = make([]bool, NFloors)
+		}
 		systemStates[selfID] = mergeCabsOnRecovery(systemStates[selfID], msg[peerID])
 		selfCabsRestored = true
 	}
@@ -69,6 +72,12 @@ func adoptPeerElevatorStates(
 
 
 func mergeCabsOnRecovery(self, peer HRAElevState) HRAElevState {
+	if len(self.CabRequests) != NFloors {
+		return self
+	}
+	if len(peer.CabRequests) != NFloors {
+		return self
+	}
 	for floor := range NFloors {
 		if peer.CabRequests[floor] == true {
 			self.CabRequests[floor] = true
