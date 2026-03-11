@@ -10,21 +10,22 @@ import (
 // ------------------------------------------------------------------------------
 
 func Run(
-	localOrders chan<- LocalOrderTable,
-	localStateCh chan<- LocalSystemState,
-	hallLights chan<- HallOrderTable,
-	elevEvents <-chan ElevatorEvents,
-	convergedSystem <-chan ConvergedSystemState,
-	elevatorID int,
+	localOrders 			chan<- LocalOrderTable,
+	localStateCh 			chan<- LocalSystemState,
+	hallLights 				chan<- HallOrderTable,
+	elevEvents 				<-chan ElevatorEvents,
+	convergedSystem 		<-chan ConvergedSystemState,
+	elevatorID 				int,
 ) {
 	var (
 		localState     LocalSystemState
 		previousOrders LocalOrderTable
-		cabsRestored   bool
+		cabsRestored   bool 
 	)
 
 	localState = initLocalSystemState(<-elevEvents, elevatorID)
 	localStateCh <- localState
+	
 
 	for {
 		select {
@@ -38,10 +39,16 @@ func Run(
 
 		case globalState := <-convergedSystem:
 
-			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
 			if !cabsRestored {
-				localState, cabsRestored = restoreOwnCabsFromNetwork(localState, globalState, localState.ElevatorID)
+				var restored bool
+				localState, restored = restoreOwnCabsFromNetwork(localState, globalState)
+				cabsRestored = restored
+				if restored {
+					localStateCh <- localState
+				}
 			}
+
+			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
 			assignedOrders, lightUpdate := prepareAssignment(localState, globalState)
 
 			if assignedOrders != previousOrders {

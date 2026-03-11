@@ -21,7 +21,6 @@ func getHallRequestAssignerPath() string {
 		return filepath.Join(dir, "hall_request_assigner")
 	}
 }
-
 //
 
 func prepareAssignment(
@@ -69,11 +68,11 @@ func computeAssignedOrders(
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
 		return localFallbackOrders(localState)
 	}
-	// gjorde bare sånn at jeg kan kjøre simulator på mac
-	//
+// gjorde bare sånn at jeg kan kjøre simulator på mac
+//
 	hraPath := getHallRequestAssignerPath()
 	raw, err := exec.Command(hraPath, "-i", string(jsonBytes)).CombinedOutput()
-	//
+//
 	if err != nil {
 		fmt.Println("computeAssignedOrders: exec:", err, string(raw))
 		return localFallbackOrders(localState)
@@ -104,7 +103,18 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			elevState.CabRequests = localState.ElevatorState.CabRequests
+			merged := make([]bool, NFloors)
+			for floor := range NFloors {
+				var localCall, networkCall bool
+				if floor < len(localState.ElevatorState.CabRequests) {
+					localCall = localState.ElevatorState.CabRequests[floor]
+				}
+				if floor < len(elevState.CabRequests) {
+					networkCall = elevState.CabRequests[floor]
+				}
+				merged[floor] = localCall || networkCall
+			}
+			elevState.CabRequests = merged
 		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue
@@ -147,9 +157,7 @@ func computeLightUpdate(convergedState ConvergedSystemState, elevatorID int) Hal
 	return convergedState.HallOrderTable[elevatorID]
 }
 
-func localFallbackOrders(
-	localState LocalSystemState,
-) LocalOrderTable {
+func localFallbackOrders(localState LocalSystemState) LocalOrderTable {
 	var result LocalOrderTable
 	for floor := range NFloors {
 		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
