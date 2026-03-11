@@ -60,7 +60,6 @@ func chooseDirection(elevator types.Elevator) types.MotorDirection {
 	return types.Stop
 }
 
-
 func shouldStopAtCurrentFloor(elevator types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
 		return true
@@ -78,8 +77,6 @@ func shouldStopAtCurrentFloor(elevator types.Elevator, floor int) bool {
 		return hallUp || hallDown
 	}
 }
-
-// tror det er en bedre måte å gjøre det her på
 
 func clearCabOrder(elevator *types.Elevator, floor int) bool {
 	if elevator.LocalOrders[floor][int(types.BtnCab)] {
@@ -183,4 +180,3 @@ func clearOppositeHallOrder(
 	return completed
 }
 
-// Jeg tror det skal være en bedre måte å gjøre det her på

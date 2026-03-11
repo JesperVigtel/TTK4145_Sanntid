@@ -125,7 +125,7 @@ func Run(
 				directionChange = false
 				completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				elevator.CurrentTravelDirection = -elevator.CurrentTravelDirection
-				fmt.Printf("Be advised, the elevator will now change traveldirection")
+				fmt.Printf("Be advised, the elevator will now change travel direction\n")
 				doorOpenChan <- true
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
@@ -146,9 +146,4 @@ func Run(
 		}
 	}
 }
-
-// gå over kodekvalitet, fokus på lite side affects, encapsulation og i henhold til code complete
-// høy cohesion og lav coupling
-
-
-// er Send... et godt start på navn? den sender over channels, men 
+ 

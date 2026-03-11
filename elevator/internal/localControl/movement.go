@@ -1,21 +1,9 @@
 package localControl
 
 import (
-	"elevator/internal/config"
 	"elevator/internal/localControl/hardware"
 	"elevator/internal/types"
 )
-
-func newElevator() types.Elevator {
-	return types.Elevator{
-		CurrentFloor:           -1,
-		CurrentTravelDirection: types.Down,
-		PhysicalMotorDirection: types.Down,
-		LocalOrders:            [config.NFloors][config.NButtons]bool{},
-		Behaviour:              types.ElevatorMoving,
-		ActiveStatus:           true,
-	}
-}
 
 func handleFloorArrival(
 	elevator *types.Elevator,
@@ -56,13 +44,12 @@ func startNextMovement(
 	}
 }
 
-// Denne er good
-
 func resumeMovement(elevator *types.Elevator) {
-
 	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 		newDir := chooseDirection(*elevator)
 		if newDir == types.Stop {
+			// No orders exist, but the elevator may be stuck between floors.
+			// Resume movement in the last known direction to reach a floor sensor.
 			elevator.Behaviour = types.ElevatorMoving
 			elevator.PhysicalMotorDirection = elevator.CurrentTravelDirection
 			hardware.SetMotorDirection(elevator.CurrentTravelDirection)
@@ -82,48 +69,4 @@ func stopOnMotorTimeout(elevator *types.Elevator) {
 		elevator.PhysicalMotorDirection = types.Stop
 		hardware.SetMotorDirection(types.Stop)
 	}
-
-}
-func updateActiveStatus(elevator *types.Elevator, obstruction bool) {
-
-	if elevator.Behaviour == types.ElevatorDoorOpen && obstruction {
-		elevator.ActiveStatus = false
-	} else {
-		elevator.ActiveStatus = true
-	}
-}
-
-func sendElevatorUpdate(
-	channel chan<- types.ElevatorEvents,
-	elevator types.Elevator,
-	obstructed bool,
-	completed types.CompletedOrderTable,
-	btn *types.ButtonEvent,
-) {
-
-	channel <- types.ElevatorEvents{
-		Elevator:       elevator,
-		CompletedOrder: completed,
-		NewButtonPress: btn,
-		Obstructed:     obstructed,
-	}
-}
-
-func sendLightUpdate(channel chan<- types.LocalLightUpdate, elevator types.Elevator, doorOpen bool) {
-
-	var cabLights [config.NFloors]bool
-	for floor := range config.NFloors {
-		cabLights[floor] = elevator.LocalOrders[floor][int(types.BtnCab)]
-	}
-
-	channel <- types.LocalLightUpdate{
-		CabLights:    cabLights,
-		DoorOpen:     doorOpen,
-		CurrentFloor: elevator.CurrentFloor,
-	}
-}
-
-func updateFloorIndicator(channel chan<- types.LocalLightUpdate, elevator types.Elevator) {
-
-	sendLightUpdate(channel, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 }
