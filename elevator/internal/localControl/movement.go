@@ -5,22 +5,24 @@ import (
 	"elevator/internal/types"
 )
 
-func stopAndServeFloor(
+func stopElevator(
 	elevator *types.Elevator,
 	doorOpenChan chan<- bool,
 	motorActiveChan chan<- bool,
-	localLightsChan chan<- types.LocalLightUpdate,
-	arrivalDir types.MotorDirection,
-) (types.CompletedOrderTable, bool) {
-
+) {
 	hardware.SetMotorDirection(types.Stop)
 	elevator.PhysicalMotorDirection = types.Stop
 	elevator.Behaviour = types.ElevatorDoorOpen
 	doorOpenChan <- true
 	motorActiveChan <- false
+}
 
+func serveFloorOrders(
+	elevator *types.Elevator,
+	localLightsChan chan<- types.LocalLightUpdate,
+	arrivalDir types.MotorDirection,
+) (types.CompletedOrderTable, bool) {
 	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, arrivalDir)
-
 	sendLightUpdate(localLightsChan, *elevator, true)
 	return completed, needsExtraDoorTime
 }
