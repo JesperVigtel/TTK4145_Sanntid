@@ -61,6 +61,9 @@ func adoptPeerElevatorStates(
 		if selfCabsRestored {
 			continue
 		}
+		if len(systemStates[selfID].CabRequests) != NFloors {
+			systemStates[selfID].CabRequests = make([]bool, NFloors)
+		}
 		systemStates[selfID] = mergeCabsOnRecovery(systemStates[selfID], msg[peerID])
 		selfCabsRestored = true
 	}

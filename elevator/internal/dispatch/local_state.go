@@ -47,12 +47,14 @@ func restoreOwnCabsFromNetwork(
 	if len(networkCabs) != NFloors {
 		return localState, false
 	}
+	restoredAny := false
 	for floor := range len(networkCabs) {
 		if networkCabs[floor] {
 			localState.ElevatorState.CabRequests[floor] = true
+			restoredAny = true
 		}
 	}
-	return localState, true
+	return localState, restoredAny
 }
 
 func applyHardwareUpdate(

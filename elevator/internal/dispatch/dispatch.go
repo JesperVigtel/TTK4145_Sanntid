@@ -43,6 +43,9 @@ func Run(
 				var restored bool
 				localState, restored = restoreOwnCabsFromNetwork(localState, globalState)
 				cabsRestored = restored
+				if restored {
+					localStateCh <- localState
+				}
 			}
 
 			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
