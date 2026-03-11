@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	. "elevator/internal/types"
+	"fmt"
 )
 
 // ------------------------------------------------------------------------------
@@ -45,6 +46,7 @@ func Run(
 				cabsRestored = restored
 				if restored {
 					localStateCh <- localState
+					fmt.Println("[dispatch] Cabs restored")
 				}
 			}
 
