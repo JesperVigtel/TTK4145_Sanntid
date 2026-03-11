@@ -159,7 +159,7 @@ func NewHRAElevState(elev Elevator) HRAElevState {
 	return HRAElevState{
 		Behavior:    elevBehaviorToString(elev.Behaviour),
 		Floor:       elev.CurrentFloor,
-		Direction:   elevDirectionToString(elev.CurrentTravelDirection),
+		Direction:   elevDirectionToString(elev.PhysicalMotorDirection),
 		CabRequests: make([]bool, NFloors),
 	}
 }

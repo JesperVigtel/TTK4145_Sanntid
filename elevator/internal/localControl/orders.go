@@ -144,7 +144,7 @@ func clearOrdersAtFloor(
 
 	oppositeDir := -travelDir
 
-	// More orders ahead — no direction change needed
+	// More orders in travel direction — no direction change needed
 	if hasOrdersInDirection(*elevator, travelDir) {
 		return
 	}
