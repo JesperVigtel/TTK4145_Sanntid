@@ -17,7 +17,7 @@ func newElevator() types.Elevator {
 	}
 }
 
-func handleFloorArrival(
+func stopAndServeFloor(
 	elevator *types.Elevator,
 	doorOpenChan chan<- bool,
 	motorActiveChan chan<- bool,
