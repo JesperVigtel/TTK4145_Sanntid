@@ -20,7 +20,7 @@ func Run(
 	var (
 		localState     LocalSystemState
 		previousOrders LocalOrderTable
-		cabsRestored   bool // one-shot: restore cabs from network once per session
+		cabsRestored   bool 
 	)
 
 	localState = initLocalSystemState(<-elevEvents, elevatorID)
