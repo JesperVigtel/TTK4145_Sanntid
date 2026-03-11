@@ -61,13 +61,13 @@ func computeAssignedOrders(
 	if len(input.States) == 0 {
 		// External HRA asserts on empty state sets.
 		fmt.Println("computeAssignedOrders: no alive elevator states, using local fallback assignment")
-		return localFallbackOrders(convergedState, localState, elevatorID)
+		return localFallbackOrders(localState)
 	}
 
 	jsonBytes, err := json.Marshal(input)
 	if err != nil {
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
-		return localFallbackOrders(convergedState, localState, elevatorID)
+		return localFallbackOrders(localState)
 	}
 	// gjorde bare sånn at jeg kan kjøre simulator på mac
 	//
@@ -76,16 +76,16 @@ func computeAssignedOrders(
 	//
 	if err != nil {
 		fmt.Println("computeAssignedOrders: exec:", err, string(raw))
-		return localFallbackOrders(convergedState, localState, elevatorID)
+		return localFallbackOrders(localState)
 	}
 
 	output := make(map[string][][2]bool)
 	if err := json.Unmarshal(raw, &output); err != nil {
 		fmt.Println("computeAssignedOrders: json.Unmarshal:", err)
-		return localFallbackOrders(convergedState, localState, elevatorID)
+		return localFallbackOrders(localState)
 	}
 
-	return buildLocalOrderTable(output, convergedState, localState, elevatorID)
+	return buildLocalOrderTable(output, localState, elevatorID)
 }
 
 func buildHallAssignerInput(
@@ -122,7 +122,6 @@ func buildHallAssignerInput(
 
 func buildLocalOrderTable(
 	output map[string][][2]bool,
-	convergedState ConvergedSystemState,
 	localState LocalSystemState,
 	elevatorID int,
 ) LocalOrderTable {
@@ -149,9 +148,7 @@ func computeLightUpdate(convergedState ConvergedSystemState, elevatorID int) Hal
 }
 
 func localFallbackOrders(
-	convergedState ConvergedSystemState,
 	localState LocalSystemState,
-	elevatorID int,
 ) LocalOrderTable {
 	var result LocalOrderTable
 	for floor := range NFloors {
