@@ -141,3 +141,24 @@ func elevStateEqual(a, b HRAElevState) bool {
 	}
 	return true
 }
+func adoptPeerStates(
+	peerStates [NElevators]HRAElevState,
+	systemStates [NElevators]HRAElevState,
+	selfID int,
+	recoveryMode bool,
+) [NElevators]HRAElevState {
+	for peerID := 0; peerID < NElevators; peerID++ {
+		if peerID == selfID {
+			if recoveryMode {
+				systemStates[selfID] = mergeCabs(systemStates[selfID], peerStates[selfID])
+			} else {
+				systemStates[selfID] = peerStates[selfID]
+			}
+			continue
+		}
+		if len(peerStates[peerID].CabRequests) == NFloors {
+			systemStates[peerID] = peerStates[peerID]
+		}
+	}
+	return systemStates
+}

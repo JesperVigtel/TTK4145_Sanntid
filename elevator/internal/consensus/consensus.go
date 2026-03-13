@@ -39,13 +39,7 @@ func Run(
 		case msg := <-peerMsg:
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {continue}
 
-			if recoveryMode {
-				systemElevStates[selfID] = mergeCabs(systemElevStates[selfID], msg.ElevatorList[selfID])
-			} else {
-				systemElevStates[selfID] = msg.ElevatorList[selfID]
-			}
-
-		
+			systemElevStates = adoptPeerStates(msg.ElevatorList, systemElevStates, selfID, recoveryMode)
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
