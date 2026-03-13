@@ -101,6 +101,11 @@ func Run(
 				continue
 			}
 
+			// Don't start new movement when stuck between floors — recovery handles that
+			if !elevator.ActiveStatus {
+				continue
+			}
+
 			if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
