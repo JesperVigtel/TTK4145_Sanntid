@@ -1,4 +1,3 @@
-
 package dispatch
 
 import (
@@ -7,8 +6,8 @@ import (
 )
 
 func initLocalSystemState(
-	event		ElevatorEvents,
-	elevatorID 	int,
+	event ElevatorEvents,
+	elevatorID int,
 ) LocalSystemState {
 	return LocalSystemState{
 		ElevatorID:    elevatorID,
@@ -18,55 +17,33 @@ func initLocalSystemState(
 	}
 }
 
-
 func applyButtonPress(
 	state LocalSystemState,
-	btn   ButtonEvent,
+	btn ButtonEvent,
 ) LocalSystemState {
 
 	switch btn.Button {
 
-		case BtnHallUp, BtnHallDown:
-			if state.HallRequests[btn.Floor][btn.Button] == OrderStandby {
-				state.HallRequests[btn.Floor][btn.Button] = OrderPending
-			}
-
-		case BtnCab:
-			state.ElevatorState.CabRequests[btn.Floor] = true
+	case BtnHallUp, BtnHallDown:
+		if state.HallRequests[btn.Floor][btn.Button] == OrderStandby {
+			state.HallRequests[btn.Floor][btn.Button] = OrderPending
 		}
+
+	case BtnCab:
+		state.ElevatorState.CabRequests[btn.Floor] = true
+	}
 
 	return state
 }
 
-
-
-func restoreOwnCabsFromNetwork(
-	localState     LocalSystemState,
-	convergedState ConvergedSystemState,
-) (LocalSystemState, bool) {
-	localElevator := convergedState.ElevatorList[localState.ElevatorID]
-	localCabs := localElevator.CabRequests
-	if len(localCabs) != NFloors {
-		return localState, false
-	}
-	restoredAny := false
-	for floor := range len(localCabs) {
-		if localCabs[floor] {
-			localState.ElevatorState.CabRequests[floor] = true
-			restoredAny = true
-		}
-	}
-	return localState, restoredAny
-}
-
 func applyHardwareUpdate(
-	state 	LocalSystemState,
-	event   ElevatorEvents,
+	state LocalSystemState,
+	event ElevatorEvents,
 ) LocalSystemState {
-	updatedElevState             := NewHRAElevState(event.Elevator)
-	updatedElevState.CabRequests  = state.ElevatorState.CabRequests
-	state.ElevatorState           = updatedElevState
-	state.AliveStatus             = event.Elevator.ActiveStatus
+	updatedElevState := NewHRAElevState(event.Elevator)
+	updatedElevState.CabRequests = state.ElevatorState.CabRequests
+	state.ElevatorState = updatedElevState
+	state.AliveStatus = event.Elevator.ActiveStatus
 
 	for floor := range NFloors {
 		for btn := BtnHallUp; btn <= BtnCab; btn++ {
@@ -74,15 +51,15 @@ func applyHardwareUpdate(
 				continue
 			}
 			switch ButtonType(btn) {
-				
-				case BtnHallUp:
-					state.HallRequests[floor][BtnHallUp] = OrderComplete
 
-				case BtnHallDown:
-					state.HallRequests[floor][BtnHallDown] = OrderComplete
+			case BtnHallUp:
+				state.HallRequests[floor][BtnHallUp] = OrderComplete
 
-				case BtnCab:
-					state.ElevatorState.CabRequests[floor] = false
+			case BtnHallDown:
+				state.HallRequests[floor][BtnHallDown] = OrderComplete
+
+			case BtnCab:
+				state.ElevatorState.CabRequests[floor] = false
 			}
 		}
 	}
@@ -91,18 +68,18 @@ func applyHardwareUpdate(
 
 func computeLightUpdate(
 	convergedState ConvergedSystemState,
-	 //assignedOrders LocalOrderTable,
+	//assignedOrders LocalOrderTable,
 	elevatorID int,
-	) ButtonLightUpdate {
-	var cabLights [NFloors]bool	
+) ButtonLightUpdate {
+	var cabLights [NFloors]bool
 	for floor := range NFloors {
 		//cabLights[floor] = assignedOrders[floor][BtnCab]
-		cabLights[floor] = convergedState.ElevatorList[elevatorID].CabRequests[floor]	//Possibly simplidy
+		cabLights[floor] = convergedState.ElevatorList[elevatorID].CabRequests[floor] //Possibly simplidy
 	}
-	hallLightUpdate := convergedState.HallOrderTable[elevatorID]	//Should this possibly just use assignedOrder info?
+	hallLightUpdate := convergedState.HallOrderTable[elevatorID] //Should this possibly just use assignedOrder info?
 
 	return ButtonLightUpdate{
-				HallLights: hallLightUpdate,
-				CabLights:  cabLights,
-			}
+		HallLights: hallLightUpdate,
+		CabLights:  cabLights,
+	}
 }
