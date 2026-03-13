@@ -44,40 +44,7 @@ func peerStateMatchesRecorded(
 }
 
 
-func adoptPeerElevatorStates(
-	msg 				[NElevators]HRAElevState,
-	systemStates 		[NElevators]HRAElevState,
-	selfID 				int,
-	//selfCabsRestored 	bool,
-) ([NElevators]HRAElevState) {	// return bool
-	for peerID := range NElevators {
-		if len(msg[peerID].CabRequests) != NFloors {
-			continue
-		}
-		if peerID != selfID {
-			systemStates[peerID] = msg[peerID]
-			continue
-		}
-		// if selfCabsRestored {
-		// 	continue
-		// }
-		if len(systemStates[selfID].CabRequests) != NFloors {
-			systemStates[selfID].CabRequests = make([]bool, NFloors)
-		}
-		systemStates[selfID] = mergeCabs(systemStates[selfID], msg[peerID])
-		//selfCabsRestored = true
-	}
-	return systemStates//, selfCabsRestored
-}
-
-
 func mergeCabs(self, peer HRAElevState) HRAElevState {
-	if len(self.CabRequests) != NFloors {
-		return self
-	}
-	if len(peer.CabRequests) != NFloors {
-		return self
-	}
 	for floor := range NFloors {
 		if peer.CabRequests[floor] == true {
 			self.CabRequests[floor] = true
@@ -85,7 +52,6 @@ func mergeCabs(self, peer HRAElevState) HRAElevState {
 	}
 	return self
 }
-
 
 
 func allAlivePeersConsistent(
