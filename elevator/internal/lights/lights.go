@@ -8,7 +8,7 @@ import (
 )
 
 func Run(
-	localLights <-chan types.LocalLightUpdate, // from localControl
+	//localLights <-chan types.LocalLightUpdate, // from localControl
 	buttonLights <-chan types.ButtonLightUpdate, // from dispatch
 ) {
 	for {
