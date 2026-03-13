@@ -53,7 +53,7 @@ func main() {
 		localLightUpdate,
 	)
 
-	go lights.Run(	//Potentially just add to hardware, and lihtupdate inn ?
+	go lights.Run(	//Potentially just add to localcontrol, and lihtupdate inn ?
 		//localLightUpdate,
 		lightUpdate)
 
@@ -75,13 +75,13 @@ func main() {
 		selfID,
 	)
 
-	go utilitynetwork.InitNetwork(	//Why utilitynetwrok ant not just network?
+	go utilitynetwork.InitNetwork(	//Init funcitons should live inside their module
 		strconv.Itoa(selfID),
 		msgTx,
 		msgRx,
 		peerUpdateCh)
 
-	go networkmanager.Run(
+	go networkmanager.Run(		//Naming could be just network or continuity?
 		selfID,
 		msgTx,
 		msgRx,

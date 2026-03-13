@@ -8,11 +8,11 @@ import (
 )
 
 func Run(
-	//localLights <-chan types.LocalLightUpdate, // from localControl
+	localLights <-chan types.LocalLightUpdate, // from localControl
 	buttonLights <-chan types.ButtonLightUpdate, // from dispatch
 ) {
 	for {
-		select {
+		// select {
 
 		// case local := <-localLights:
 		// 	for floor := range config.NFloors {
@@ -32,15 +32,13 @@ func Run(
 		// 		hardware.SetButtonLamp(types.BtnHallDown, floor, hall[floor][types.BtnHallDown] == types.OrderAssigned)
 		// 	}
 		// 	//fmt.Println("[lights] Sucsessfully updated hall lights")
-
-		case btn := <-buttonLights:
-			for floor := range config.NFloors {
-				hardware.SetButtonLamp(types.BtnHallUp, floor, btn.HallLights[floor][types.BtnHallUp] == types.OrderAssigned)
-				hardware.SetButtonLamp(types.BtnHallDown, floor, btn.HallLights[floor][types.BtnHallDown] == types.OrderAssigned)
-				hardware.SetButtonLamp(types.BtnCab, floor, btn.CabLights[floor])
-			}
 		
-			default:
+		// }
+		btn := <- buttonLights
+		for floor := range config.NFloors{
+			hardware.SetButtonLamp(types.BtnHallUp, floor, btn.HallLights[floor][types.BtnHallUp] == types.OrderAssigned)
+            hardware.SetButtonLamp(types.BtnHallDown, floor, btn.HallLights[floor][types.BtnHallDown] == types.OrderAssigned)
+            hardware.SetButtonLamp(types.BtnCab, floor, btn.CabLights[floor])
 		}
 	}
 }

@@ -10,7 +10,7 @@ import (
 	"elevator/internal/types"
 )
 
-func InitNetwork(id string, msgTx chan types.Message, msgRx chan types.Message, peerUpdate chan peers.PeerUpdate) {
+func InitNetwork(id string, msgTx chan types.Message, msgRx chan types.Message, peerUpdate chan peers.PeerUpdate) {		//Is this init?
 	fmt.Println("[DEBUG] InitNetwork called sucsessfy")
 	go broadcast.Transmitter(BroadcastPort, msgTx)
 	go broadcast.Receiver(BroadcastPort, msgRx)
