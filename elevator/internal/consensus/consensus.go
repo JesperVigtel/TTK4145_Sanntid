@@ -40,12 +40,17 @@ func Run(
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {continue}	//Is this possibly surpulus?
 
 			peerIsConsistent[msg.SenderID] 		= peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			systemElevStates 	= adoptPeerElevatorStates(msg.ElevatorList, systemElevStates, selfID) //return selfCabsRestored
+			systemElevStates 					= adoptPeerElevatorStates(msg.ElevatorList, systemElevStates, selfID) //return selfCabsRestored
 			systemHallOrders[msg.SenderID] 		= msg.HallOrderTable
 			peerIsAlive[msg.SenderID] 			= msg.AliveStatus
 
-			systemHallOrders, peerIsConsistent = advanceAndBroadcast(broadcast, converged, selfID, peerIsAlive, peerIsConsistent, systemElevStates, systemHallOrders)
+			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
 
+			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
+				peerIsConsistent = [NElevators]bool{}
+				publishConsistentState(converged, peerIsAlive, systemElevStates, systemHallOrders)
+			}
 		case state := <-localState:
 			systemHallOrders[selfID] 	= state.HallRequests
 			//systemElevStates[selfID] 	= state.ElevatorState

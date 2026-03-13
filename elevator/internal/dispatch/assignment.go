@@ -153,22 +153,6 @@ func buildLocalOrderTable(
 	return result
 }
 
-func computeLightUpdate(
-	convergedState ConvergedSystemState,
-	 assignedOrders LocalOrderTable,
-	elevatorID int,
-	) ButtonLightUpdate {
-	var cabLights [NFloors]bool	
-	for floor := range NFloors {
-		cabLights[floor] = assignedOrders[floor][BtnCab]
-	}
-	hallLightUpdate := convergedState.HallOrderTable[elevatorID]
-
-	return ButtonLightUpdate{
-				HallLights: hallLightUpdate,
-				CabLights:  cabLights,
-			}
-}
 
 func localFallbackOrders(localState LocalSystemState) LocalOrderTable {
 	var result LocalOrderTable

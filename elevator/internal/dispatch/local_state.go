@@ -88,3 +88,21 @@ func applyHardwareUpdate(
 	}
 	return state
 }
+
+func computeLightUpdate(
+	convergedState ConvergedSystemState,
+	 //assignedOrders LocalOrderTable,
+	elevatorID int,
+	) ButtonLightUpdate {
+	var cabLights [NFloors]bool	
+	for floor := range NFloors {
+		//cabLights[floor] = assignedOrders[floor][BtnCab]
+		cabLights[floor] = convergedState.ElevatorList[elevatorID].CabRequests[floor]	//Possibly simplidy
+	}
+	hallLightUpdate := convergedState.HallOrderTable[elevatorID]	//Should this possibly just use assignedOrder info?
+
+	return ButtonLightUpdate{
+				HallLights: hallLightUpdate,
+				CabLights:  cabLights,
+			}
+}
