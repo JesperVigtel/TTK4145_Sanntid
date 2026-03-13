@@ -29,7 +29,7 @@ func main() {
 	// -- Channels for LocalControl --
 	localOrders := make(chan types.LocalOrderTable, config.ChannelBufferSize)
 	elevatorEvents := make(chan types.ElevatorEvents, config.ChannelBufferSize)
-	localLightUpdate := make(chan types.LocalLightUpdate, config.ChannelBufferSize)
+	localLightUpdate := make(chan types.LocalLightUpdate, config.ChannelBufferSize)		//Not in use anymore
 
 	// -- Channels for Decision
 	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
@@ -53,7 +53,7 @@ func main() {
 		localLightUpdate,
 	)
 
-	go lights.Run(	//Potentially just add to localcontrol, and lihtupdate inn ?
+	go lights.Run(	//Potentially just add to localcontrol???
 		//localLightUpdate,
 		lightUpdate)
 

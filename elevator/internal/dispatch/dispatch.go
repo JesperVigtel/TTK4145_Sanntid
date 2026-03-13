@@ -36,13 +36,13 @@ func Run(
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
-			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
+			localState 		= mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
 			assignedOrders := computeAssignedOrders(globalState, localState, elevatorID)
-			lightUpdate := computeLightUpdate(globalState, elevatorID) //ASsigned orders removed assignedOrders
+			lightUpdate 	:= computeLightUpdate(globalState, elevatorID) //ASsigned orders removed assignedOrders
 
-			if assignedOrders != previousOrders {
-				localOrders <- assignedOrders
-				previousOrders = assignedOrders
+			if assignedOrders 	!= previousOrders {
+				localOrders 	<- assignedOrders
+				previousOrders 	= assignedOrders
 			}
 			buttonLights <- lightUpdate
 		}

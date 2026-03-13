@@ -10,7 +10,7 @@ import (
 	"runtime"
 )
 
-func getHallRequestAssignerPath() string {
+func getHallRequestAssignerPath() string {		//Remove??
 	_, currentFile, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(currentFile)
 
