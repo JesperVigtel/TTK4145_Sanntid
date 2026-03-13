@@ -84,9 +84,15 @@ type LocalLightUpdate struct {
 	CurrentFloor int
 }
 
-type HallLightUpdate struct {
+type HallLightUpdate struct {	//Remove
 	HallUp   [NFloors]bool
 	HallDown [NFloors]bool
+}
+
+
+type ButtonLightUpdate struct {
+	HallLights HallOrderTable
+	CabLights  [NFloors]bool
 }
 
 //Elevator types stop

@@ -34,7 +34,7 @@ func main() {
 	// -- Channels for Decision
 	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
 	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
-	hallLightUpdates := make(chan types.HallOrderTable, config.ChannelBufferSize)
+	lightUpdate := make(chan types.ButtonLightUpdate, config.ChannelBufferSize)
 
 	// -- Channels for network
 	peerMsg := make(chan types.Message, config.ChannelBufferSize)
@@ -53,14 +53,14 @@ func main() {
 		localLightUpdate,
 	)
 
-	go lights.Run(
-		localLightUpdate,
-		hallLightUpdates)
+	go lights.Run(	//Potentially just add to hardware, and lihtupdate inn ?
+		//localLightUpdate,
+		lightUpdate)
 
 	go dispatch.Run(
 		localOrders,
 		localSystemState,
-		hallLightUpdates,
+		lightUpdate,
 		elevatorEvents,
 		convergedSystemState,
 		selfID,
@@ -75,7 +75,7 @@ func main() {
 		selfID,
 	)
 
-	go utilitynetwork.InitNetwork(
+	go utilitynetwork.InitNetwork(	//Why utilitynetwrok ant not just network?
 		strconv.Itoa(selfID),
 		msgTx,
 		msgRx,
