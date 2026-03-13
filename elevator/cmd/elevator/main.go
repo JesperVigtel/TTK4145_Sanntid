@@ -1,7 +1,5 @@
 package main
 
-//https://prod.liveshare.vsengsaas.visualstudio.com/join?653BD7ECD9B27DA732A843D4219CA6EA2563
-
 import (
 	"elevator/internal/config"
 	"elevator/internal/consensus"
@@ -24,7 +22,6 @@ func main() {
 	// selfID := parseArgs()
 	// elevAddr := "localhost:15657"
 
-	// -- Channels --
 
 	// -- Channels for LocalControl --
 	localOrders := make(chan types.LocalOrderTable, config.ChannelBufferSize)
@@ -53,7 +50,7 @@ func main() {
 		localLightUpdate,
 	)
 
-	go lights.Run(	//Potentially just add to localcontrol???
+	go lights.Run(				//Potentially just add to localcontrol???
 		//localLightUpdate,
 		lightUpdate)
 

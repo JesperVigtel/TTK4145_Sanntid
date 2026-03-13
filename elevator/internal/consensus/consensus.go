@@ -25,7 +25,6 @@ func Run(
 		systemElevStates  [NElevators]HRAElevState
 		peerIsAlive       [NElevators]bool
 		peerIsConsistent  [NElevators]bool
-		//selfCabsRestored  bool 
 	)
 
 	systemHallOrders = newSystemHallOrders()
