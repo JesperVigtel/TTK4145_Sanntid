@@ -22,18 +22,6 @@ func getHallRequestAssignerPath() string {
 	}
 }
 
-//
-
-// func prepareAssignment(
-// 	localState LocalSystemState,
-// 	convergedState ConvergedSystemState,
-// ) (LocalOrderTable, HallOrderTable) {
-// 	elevatorID := localState.ElevatorID
-// 	assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
-// 	lightUpdate := computeLightUpdate(convergedState, elevatorID)
-// 	return assignedOrders, lightUpdate
-// }
-
 func mergeConvergedHallOrders(
 	localState LocalSystemState,
 	convergedState ConvergedSystemState,
