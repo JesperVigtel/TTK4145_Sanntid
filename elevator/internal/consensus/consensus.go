@@ -37,10 +37,8 @@ func Run(
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
 		
 		case msg := <-peerMsg:
-			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {continue}
-
-			systemElevStates = adoptPeerStates(msg.ElevatorList, systemElevStates, selfID, recoveryMode)
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
+			systemElevStates = adoptPeerStates(msg.ElevatorList, systemElevStates, selfID, recoveryMode)
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 		

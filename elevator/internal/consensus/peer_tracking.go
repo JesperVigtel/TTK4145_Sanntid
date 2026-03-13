@@ -14,20 +14,14 @@ func updatePeerAvailability(
 	selfID int,
 ) ([NElevators]bool, [NElevators]HallOrderTable) {
 
-	for _, peerID := range nodeRegistry.Lost {
-		if peerID == selfID || peerID < 0 || peerID >= NElevators {
-			continue
-		} //Spør studass, possibly surpplus and can be removed
-		peerIsAlive[peerID] = false
-		systemHallOrders[peerID] = newStandbyHallOrders()
+	for _, lostPeerID := range nodeRegistry.Lost {
+		peerIsAlive[lostPeerID] = false
+		systemHallOrders[lostPeerID] = newStandbyHallOrders()
 	}
 
-	for _, peerID := range nodeRegistry.New {
-		if peerID == selfID || peerID < 0 || peerID >= NElevators {
-			continue
-		} //Spør studass
-		peerIsAlive[peerID] = true
-		systemHallOrders[peerID] = newStandbyHallOrders() //Possibly removem, test. Can improve contnuity
+	for _, newPeerID := range nodeRegistry.New {
+		peerIsAlive[newPeerID] = true
+		systemHallOrders[newPeerID] = newStandbyHallOrders() //Possibly removem, test. Can improve contnuity
 	}
 	return peerIsAlive, systemHallOrders
 }
