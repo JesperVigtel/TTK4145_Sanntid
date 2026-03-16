@@ -162,8 +162,6 @@ func adoptPeerStates(
 					systemStates[selfID].CabRequests = make([]bool, NFloors)
 				}
 				systemStates[selfID] = mergeCabs(systemStates[selfID], peerStates[selfID])
-			} else {
-				systemStates[selfID] = peerStates[selfID]
 			}
 			continue
 		}
