@@ -26,9 +26,6 @@ type Message struct {
 	ElevatorList   [NElevators]HRAElevState
 	HallOrderTable HallOrderTable
 	AliveStatus    bool
-	AliveList      [NElevators]bool
-	// Recovering is true while the sender is rebuilding its own cab-call state
-	// from peer backups. Recovering senders must not be treated as consistent yet.
 	Recovering bool
 }
 
@@ -169,6 +166,19 @@ func NewHRAElevState(elev Elevator) HRAElevState {
 		Direction:   elevDirectionToString(elev.PhysicalMotorDirection),
 		CabRequests: make([]bool, NFloors),
 	}
+}
+
+func MergeCabRequests(base, incoming []bool) []bool {
+	merged := make([]bool, NFloors)
+	for floor := range NFloors {
+		if floor < len(base) && base[floor] {
+			merged[floor] = true
+		}
+		if floor < len(incoming) && incoming[floor] {
+			merged[floor] = true
+		}
+	}
+	return merged
 }
 
 func elevBehaviorToString(b ElevatorBehaviour) string {

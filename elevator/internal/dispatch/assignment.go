@@ -92,7 +92,7 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			elevState.CabRequests = mergedCabRequests(localState.ElevatorState.CabRequests, elevState.CabRequests)
+			elevState.CabRequests = MergeCabRequests(localState.ElevatorState.CabRequests, elevState.CabRequests)
 		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue

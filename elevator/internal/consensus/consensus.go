@@ -25,23 +25,29 @@ func Run(
 		systemElevStates [NElevators]HRAElevState
 		peerIsAlive      [NElevators]bool
 		peerIsConsistent [NElevators]bool
+		recoveryActive   = true
+		peerSnapshotSeen bool
 	)
 
 	systemHallOrders = newSystemHallOrders()
-	recovery := recoveryState{active: true}
 
 	for {
 		select {
 
 		case registry := <-peerEvents:
-			recovery.peerSnapshotSeen = true
+			peerSnapshotSeen = true
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
 			peerIsConsistent = [NElevators]bool{}
-			recovery.maybePublish(
+			currentState := ConvergedSystemState{
+				AliveList:      peerIsAlive,
+				ElevatorList:   systemElevStates,
+				HallOrderTable: systemHallOrders,
+			}
+			tryPublishConvergedState(
+				&recoveryActive,
+				peerSnapshotSeen,
 				&peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
+				currentState,
 				selfID,
 				broadcast,
 				converged,
@@ -52,41 +58,53 @@ func Run(
 				continue
 			}
 
-			recovery.peerSnapshotSeen = true
+			peerSnapshotSeen = true
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			systemElevStates = adoptPeerStates(msg, systemElevStates, selfID, recovery.active)
+			systemElevStates = mergePeerElevatorStates(msg, systemElevStates, selfID, recoveryActive)
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recovery.active)
-			recovery.maybePublish(
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryActive)
+			currentState := ConvergedSystemState{
+				AliveList:      peerIsAlive,
+				ElevatorList:   systemElevStates,
+				HallOrderTable: systemHallOrders,
+			}
+			tryPublishConvergedState(
+				&recoveryActive,
+				peerSnapshotSeen,
 				&peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
+				currentState,
 				selfID,
 				broadcast,
 				converged,
 			)
 
 		case state := <-localState:
-			if recovery.active {
-				systemElevStates[selfID] = mergeCabRequestsIntoState(state.ElevatorState, systemElevStates[selfID])
-			} else {
-				systemElevStates[selfID] = state.ElevatorState
+			if recoveryActive {
+				state.ElevatorState.CabRequests = MergeCabRequests(
+					state.ElevatorState.CabRequests,
+					systemElevStates[selfID].CabRequests,
+				)
 			}
+			systemElevStates[selfID] = state.ElevatorState
 
 			systemHallOrders[selfID] = state.HallRequests
 			peerIsAlive[selfID] = state.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recovery.active)
-			recovery.maybePublish(
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryActive)
+			currentState := ConvergedSystemState{
+				AliveList:      peerIsAlive,
+				ElevatorList:   systemElevStates,
+				HallOrderTable: systemHallOrders,
+			}
+			tryPublishConvergedState(
+				&recoveryActive,
+				peerSnapshotSeen,
 				&peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
+				currentState,
 				selfID,
 				broadcast,
 				converged,

@@ -71,7 +71,6 @@ func sendStateUpdate(
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders[selfID],
 		AliveStatus:    peerIsAlive[selfID],
-		AliveList:      peerIsAlive,
 		Recovering:     recoveryMode,
 	}:
 	default:
@@ -80,18 +79,64 @@ func sendStateUpdate(
 
 func publishConsistentState(
 	convergedSystemState chan<- ConvergedSystemState,
-	peerIsAlive [NElevators]bool,
-	systemElevStates [NElevators]HRAElevState,
-	systemHallOrders [NElevators]HallOrderTable,
+	state ConvergedSystemState,
 ) {
 	select {
-	case convergedSystemState <- ConvergedSystemState{
-		AliveList:      peerIsAlive,
-		ElevatorList:   systemElevStates,
-		HallOrderTable: systemHallOrders,
-	}:
+	case convergedSystemState <- state:
 	default:
 	}
+}
+
+func tryPublishConvergedState(
+	recoveryActive *bool,
+	peerSnapshotSeen bool,
+	peerIsConsistent *[NElevators]bool,
+	state ConvergedSystemState,
+	selfID int,
+	broadcast chan<- Message,
+	converged chan<- ConvergedSystemState,
+) {
+	if !peerSnapshotSeen || !allAlivePeersConsistent(*peerIsConsistent, state.AliveList, selfID) {
+		return
+	}
+
+	*peerIsConsistent = [NElevators]bool{}
+	if *recoveryActive {
+		*recoveryActive = false
+		sendStateUpdate(
+			broadcast,
+			selfID,
+			state.AliveList,
+			state.ElevatorList,
+			state.HallOrderTable,
+			false,
+		)
+	}
+	publishConsistentState(converged, state)
+}
+
+func mergePeerElevatorStates(
+	msg Message,
+	systemStates [NElevators]HRAElevState,
+	selfID int,
+	recoveryActive bool,
+) [NElevators]HRAElevState {
+	if recoveryActive {
+		systemStates[selfID].CabRequests = MergeCabRequests(
+			systemStates[selfID].CabRequests,
+			msg.ElevatorList[selfID].CabRequests,
+		)
+	}
+
+	senderState := msg.ElevatorList[msg.SenderID]
+	if len(senderState.CabRequests) != NFloors {
+		return systemStates
+	}
+	if msg.Recovering {
+		senderState.CabRequests = MergeCabRequests(senderState.CabRequests, systemStates[msg.SenderID].CabRequests)
+	}
+	systemStates[msg.SenderID] = senderState
+	return systemStates
 }
 
 func newSystemHallOrders() [NElevators]HallOrderTable {

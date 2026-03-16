@@ -18,9 +18,9 @@ func Run(
 	elevatorID int,
 ) {
 	var (
-		localState     LocalSystemState
-		previousOrders LocalOrderTable
-		cabsRestored   bool
+		localState      LocalSystemState
+		previousOrders  LocalOrderTable
+		cabRecoveryDone bool
 	)
 
 	localState = initLocalSystemState(<-elevEvents, elevatorID)
@@ -37,10 +37,10 @@ func Run(
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
-			if !cabsRestored {
+			if !cabRecoveryDone {
 				var restored bool
 				localState, restored = restoreOwnCabsFromNetwork(localState, globalState)
-				cabsRestored = restored
+				cabRecoveryDone = true
 				if restored {
 					localStateCh <- localState
 				}
@@ -57,4 +57,24 @@ func Run(
 			buttonLights <- lightUpdate
 		}
 	}
+}
+
+func restoreOwnCabsFromNetwork(
+	localState LocalSystemState,
+	convergedState ConvergedSystemState,
+) (LocalSystemState, bool) {
+	mergedCabs := MergeCabRequests(
+		localState.ElevatorState.CabRequests,
+		convergedState.ElevatorList[localState.ElevatorID].CabRequests,
+	)
+
+	for floor, active := range mergedCabs {
+		if !localState.ElevatorState.CabRequests[floor] && active {
+			localState.ElevatorState.CabRequests = mergedCabs
+			return localState, true
+		}
+	}
+
+	localState.ElevatorState.CabRequests = mergedCabs
+	return localState, false
 }
