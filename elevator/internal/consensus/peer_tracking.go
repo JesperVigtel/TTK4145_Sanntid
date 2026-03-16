@@ -39,6 +39,9 @@ func peerStateMatchesRecorded(
 	systemHallOrders [NElevators]HallOrderTable,
 	systemElevStates [NElevators]HRAElevState,
 ) bool {
+	if msg.Recovering {
+		return false
+	}
 	return systemHallOrders[msg.SenderID] == msg.HallOrderTable &&
 		elevStateEqual(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
@@ -80,6 +83,7 @@ func sendStateUpdate(
 	peerIsAlive [NElevators]bool,
 	systemElevStates [NElevators]HRAElevState,
 	systemHallOrders [NElevators]HallOrderTable,
+	recoveryMode bool,
 ) {
 	select {
 	case broadcast <- Message{
@@ -88,6 +92,7 @@ func sendStateUpdate(
 		HallOrderTable: systemHallOrders[selfID],
 		AliveStatus:    peerIsAlive[selfID],
 		AliveList:      peerIsAlive,
+		Recovering:     recoveryMode,
 	}:
 	default:
 	}
@@ -145,27 +150,42 @@ func elevStateEqual(a, b HRAElevState) bool {
 	}
 	return true
 }
+
+func mergeCabKnowledge(base, incoming HRAElevState) HRAElevState {
+	if len(incoming.CabRequests) != NFloors {
+		return base
+	}
+	if len(base.CabRequests) != NFloors {
+		base.CabRequests = make([]bool, NFloors)
+	}
+	return mergeCabs(base, incoming)
+}
+
 func adoptPeerStates(
-	peerStates [NElevators]HRAElevState,
+	msg Message,
 	systemStates [NElevators]HRAElevState,
 	selfID int,
 	recoveryMode bool,
 ) [NElevators]HRAElevState {
-	for peerID := 0; peerID < NElevators; peerID++ {
-		if len(peerStates[peerID].CabRequests) != NFloors {
-			continue
-		}
-
-		if peerID == selfID {
-			if recoveryMode {
-				if len(systemStates[selfID].CabRequests) != NFloors {
-					systemStates[selfID].CabRequests = make([]bool, NFloors)
-				}
-				systemStates[selfID] = mergeCabs(systemStates[selfID], peerStates[selfID])
-			}
-			continue
-		}
-		systemStates[peerID] = peerStates[peerID]
+	senderID := msg.SenderID
+	if senderID < 0 || senderID >= NElevators {
+		return systemStates
 	}
+
+	if recoveryMode {
+		systemStates[selfID] = mergeCabKnowledge(systemStates[selfID], msg.ElevatorList[selfID])
+	}
+
+	senderState := msg.ElevatorList[senderID]
+	if len(senderState.CabRequests) != NFloors {
+		return systemStates
+	}
+
+	if msg.Recovering {
+		systemStates[senderID] = mergeCabKnowledge(senderState, systemStates[senderID])
+		return systemStates
+	}
+
+	systemStates[senderID] = senderState
 	return systemStates
 }

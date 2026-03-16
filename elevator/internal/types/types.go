@@ -27,6 +27,7 @@ type Message struct {
 	HallOrderTable HallOrderTable
 	AliveStatus    bool
 	AliveList      [NElevators]bool
+	Recovering     bool
 }
 
 //Elevator types START:
@@ -84,11 +85,10 @@ type LocalLightUpdate struct {
 	CurrentFloor int
 }
 
-type HallLightUpdate struct {	//Remove
+type HallLightUpdate struct { //Remove
 	HallUp   [NFloors]bool
 	HallDown [NFloors]bool
 }
-
 
 type ButtonLightUpdate struct {
 	HallLights HallOrderTable
@@ -159,7 +159,6 @@ type HRAElevState struct {
 	Direction   string `json:"direction"`
 	CabRequests []bool `json:"cabRequests"`
 }
-
 
 func NewHRAElevState(elev Elevator) HRAElevState {
 	return HRAElevState{

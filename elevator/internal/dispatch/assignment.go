@@ -10,7 +10,7 @@ import (
 	"runtime"
 )
 
-func getHallRequestAssignerPath() string {		//Remove??
+func getHallRequestAssignerPath() string { //Remove??
 	_, currentFile, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(currentFile)
 
@@ -45,7 +45,7 @@ func computeAssignedOrders(
 	localState LocalSystemState,
 	elevatorID int,
 ) LocalOrderTable {
-	input := buildHallAssignerInput(convergedState, elevatorID)
+	input := buildHallAssignerInput(convergedState, localState, elevatorID)
 	if len(input.States) == 0 {
 		// External HRA asserts on empty state sets.
 		fmt.Println("computeAssignedOrders: no alive elevator states, using local fallback assignment")
@@ -73,11 +73,12 @@ func computeAssignedOrders(
 		return localFallbackOrders(localState)
 	}
 
-	return buildLocalOrderTable(output, convergedState.ElevatorList[elevatorID].CabRequests, elevatorID)
+	return buildLocalOrderTable(output, localState, elevatorID)
 }
 
 func buildHallAssignerInput(
 	convergedState ConvergedSystemState,
+	localState LocalSystemState,
 	elevatorID int,
 ) HRAInput {
 	input := HRAInput{
@@ -90,6 +91,20 @@ func buildHallAssignerInput(
 			continue
 		}
 		elevState := convergedState.ElevatorList[id]
+		if id == elevatorID {
+			merged := make([]bool, NFloors)
+			for floor := range NFloors {
+				var localCall, networkCall bool
+				if floor < len(localState.ElevatorState.CabRequests) {
+					localCall = localState.ElevatorState.CabRequests[floor]
+				}
+				if floor < len(elevState.CabRequests) {
+					networkCall = elevState.CabRequests[floor]
+				}
+				merged[floor] = localCall || networkCall
+			}
+			elevState.CabRequests = merged
+		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue
 		}
@@ -106,7 +121,7 @@ func buildHallAssignerInput(
 
 func buildLocalOrderTable(
 	output map[string][][2]bool,
-	convergedCabs []bool,
+	localState LocalSystemState,
 	elevatorID int,
 ) LocalOrderTable {
 	var result LocalOrderTable
@@ -121,9 +136,7 @@ func buildLocalOrderTable(
 	}
 
 	for floor := range NFloors {
-		if floor < len(convergedCabs) {
-			result[floor][BtnCab] = convergedCabs[floor]
-		}
+		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
 	}
 
 	return result

@@ -66,13 +66,33 @@ func applyHardwareUpdate(
 	return state
 }
 
+func restoreOwnCabsFromNetwork(
+	localState LocalSystemState,
+	convergedState ConvergedSystemState,
+) (LocalSystemState, bool) {
+	localElevator := convergedState.ElevatorList[localState.ElevatorID]
+	localCabs := localElevator.CabRequests
+	if len(localCabs) != NFloors {
+		return localState, false
+	}
+
+	restoredAny := false
+	for floor := range len(localCabs) {
+		if localCabs[floor] {
+			localState.ElevatorState.CabRequests[floor] = true
+			restoredAny = true
+		}
+	}
+	return localState, restoredAny
+}
+
 func makeLightUpdate(
 	convergedState ConvergedSystemState,
 	elevatorID int,
 ) ButtonLightUpdate {
 	var cabLights [NFloors]bool
 	for floor := range NFloors {
-		cabLights[floor] = convergedState.ElevatorList[elevatorID].CabRequests[floor] 
+		cabLights[floor] = convergedState.ElevatorList[elevatorID].CabRequests[floor]
 	}
 	hallLightUpdate := convergedState.HallOrderTable[elevatorID]
 

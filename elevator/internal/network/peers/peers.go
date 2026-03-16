@@ -7,7 +7,7 @@ import (
 	"net"
 	"sort"
 	"time"
-)   
+)
 
 type PeerUpdate struct {
 	Peers []string
@@ -22,7 +22,6 @@ const timeout = config.HeartbeatTimeout
 
 //Hvor lenge vil vi vente før vi markerer noe som lost?
 //Hvor ofte vil vi sende ut?
-
 
 func Transmitter(port int, id string, transmitEnable <-chan bool) {
 
@@ -46,6 +45,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 	var buf [1024]byte
 	var p PeerUpdate
 	lastSeen := make(map[string]time.Time)
+	sentInitialSnapshot := false
 
 	conn := conn.DialBroadcastUDP(port)
 
@@ -79,7 +79,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		}
 
 		// Sending update
-		if updated {
+		if updated || !sentInitialSnapshot {
 			p.Peers = make([]string, 0, len(lastSeen))
 
 			for k := range lastSeen { //for k, _ := range lastSeen
@@ -89,6 +89,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 			sort.Strings(p.Peers)
 			sort.Strings(p.Lost)
 			peerUpdateCh <- p
+			sentInitialSnapshot = true
 		}
 	}
 }
