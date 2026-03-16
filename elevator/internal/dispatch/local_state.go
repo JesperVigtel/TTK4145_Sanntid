@@ -21,18 +21,14 @@ func applyButtonPress(
 	state LocalSystemState,
 	btn ButtonEvent,
 ) LocalSystemState {
-
 	switch btn.Button {
-
 	case BtnHallUp, BtnHallDown:
 		if state.HallRequests[btn.Floor][btn.Button] == OrderStandby {
 			state.HallRequests[btn.Floor][btn.Button] = OrderPending
 		}
-
 	case BtnCab:
 		state.ElevatorState.CabRequests[btn.Floor] = true
 	}
-
 	return state
 }
 
@@ -51,39 +47,16 @@ func applyHardwareUpdate(
 				continue
 			}
 			switch ButtonType(btn) {
-
 			case BtnHallUp:
 				state.HallRequests[floor][BtnHallUp] = OrderComplete
-
 			case BtnHallDown:
 				state.HallRequests[floor][BtnHallDown] = OrderComplete
-
 			case BtnCab:
 				state.ElevatorState.CabRequests[floor] = false
 			}
 		}
 	}
 	return state
-}
-
-func restoreOwnCabsFromNetwork(
-	localState LocalSystemState,
-	convergedState ConvergedSystemState,
-) (LocalSystemState, bool) {
-	localElevator := convergedState.ElevatorList[localState.ElevatorID]
-	localCabs := localElevator.CabRequests
-	if len(localCabs) != NFloors {
-		return localState, false
-	}
-
-	restoredAny := false
-	for floor := range len(localCabs) {
-		if localCabs[floor] {
-			localState.ElevatorState.CabRequests[floor] = true
-			restoredAny = true
-		}
-	}
-	return localState, restoredAny
 }
 
 func makeLightUpdate(

@@ -25,50 +25,54 @@ func Run(
 		systemElevStates [NElevators]HRAElevState
 		peerIsAlive      [NElevators]bool
 		peerIsConsistent [NElevators]bool
-		peerSnapshotSeen bool
 	)
 
 	systemHallOrders = newSystemHallOrders()
-	recoveryMode := true
-	publishIfReady := func() {
-		if !peerSnapshotSeen || !allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
-			return
-		}
-		peerIsConsistent = [NElevators]bool{}
-		if recoveryMode {
-			recoveryMode = false
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryMode)
-		}
-		publishConsistentState(converged, peerIsAlive, systemElevStates, systemHallOrders)
-	}
+	recovery := recoveryState{active: true}
 
 	for {
 		select {
 
 		case registry := <-peerEvents:
-			peerSnapshotSeen = true
+			recovery.peerSnapshotSeen = true
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
 			peerIsConsistent = [NElevators]bool{}
-			publishIfReady()
+			recovery.maybePublish(
+				&peerIsConsistent,
+				peerIsAlive,
+				systemElevStates,
+				systemHallOrders,
+				selfID,
+				broadcast,
+				converged,
+			)
 
 		case msg := <-peerMsg:
 			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
 				continue
 			}
 
-			peerSnapshotSeen = true
+			recovery.peerSnapshotSeen = true
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
-			systemElevStates = adoptPeerStates(msg, systemElevStates, selfID, recoveryMode)
+			systemElevStates = adoptPeerStates(msg, systemElevStates, selfID, recovery.active)
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryMode)
-			publishIfReady()
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recovery.active)
+			recovery.maybePublish(
+				&peerIsConsistent,
+				peerIsAlive,
+				systemElevStates,
+				systemHallOrders,
+				selfID,
+				broadcast,
+				converged,
+			)
 
 		case state := <-localState:
-			if recoveryMode {
-				systemElevStates[selfID] = mergeCabKnowledge(state.ElevatorState, systemElevStates[selfID])
+			if recovery.active {
+				systemElevStates[selfID] = mergeCabRequestsIntoState(state.ElevatorState, systemElevStates[selfID])
 			} else {
 				systemElevStates[selfID] = state.ElevatorState
 			}
@@ -77,8 +81,16 @@ func Run(
 			peerIsAlive[selfID] = state.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryMode)
-			publishIfReady()
+			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recovery.active)
+			recovery.maybePublish(
+				&peerIsConsistent,
+				peerIsAlive,
+				systemElevStates,
+				systemHallOrders,
+				selfID,
+				broadcast,
+				converged,
+			)
 		}
 	}
 }

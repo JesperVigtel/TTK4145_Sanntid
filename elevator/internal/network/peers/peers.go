@@ -45,6 +45,8 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 	var buf [1024]byte
 	var p PeerUpdate
 	lastSeen := make(map[string]time.Time)
+	// Emit one snapshot even when no peers are present so consensus can
+	// distinguish "no peers detected" from "peer discovery has not run yet".
 	sentInitialSnapshot := false
 
 	conn := conn.DialBroadcastUDP(port)

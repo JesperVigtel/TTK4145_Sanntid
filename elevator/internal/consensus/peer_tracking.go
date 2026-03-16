@@ -5,15 +5,12 @@ import (
 	. "elevator/internal/types"
 )
 
-//Peer event
-
 func updatePeerAvailability(
 	nodeRegistry GlobalNodeRegistry,
 	peerIsAlive [NElevators]bool,
 	systemHallOrders [NElevators]HallOrderTable,
 	selfID int,
 ) ([NElevators]bool, [NElevators]HallOrderTable) {
-
 	for _, lostPeerID := range nodeRegistry.Lost {
 		if lostPeerID == selfID || lostPeerID < 0 || lostPeerID >= NElevators {
 			continue
@@ -27,12 +24,10 @@ func updatePeerAvailability(
 			continue
 		}
 		peerIsAlive[newPeerID] = true
-		systemHallOrders[newPeerID] = newStandbyHallOrders() //Possibly removem, test. Can improve contnuity
+		systemHallOrders[newPeerID] = newStandbyHallOrders()
 	}
 	return peerIsAlive, systemHallOrders
 }
-
-//Peer messages
 
 func peerStateMatchesRecorded(
 	msg Message,
@@ -44,21 +39,6 @@ func peerStateMatchesRecorded(
 	}
 	return systemHallOrders[msg.SenderID] == msg.HallOrderTable &&
 		elevStateEqual(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
-}
-
-func mergeCabs(self, peer HRAElevState) HRAElevState {
-	if len(self.CabRequests) != NFloors {
-		return self
-	}
-	if len(peer.CabRequests) != NFloors {
-		return self
-	}
-	for floor := range NFloors {
-		if peer.CabRequests[floor] == true {
-			self.CabRequests[floor] = true
-		}
-	}
-	return self
 }
 
 func allAlivePeersConsistent(
@@ -104,7 +84,6 @@ func publishConsistentState(
 	systemElevStates [NElevators]HRAElevState,
 	systemHallOrders [NElevators]HallOrderTable,
 ) {
-
 	select {
 	case convergedSystemState <- ConvergedSystemState{
 		AliveList:      peerIsAlive,
@@ -149,43 +128,4 @@ func elevStateEqual(a, b HRAElevState) bool {
 		}
 	}
 	return true
-}
-
-func mergeCabKnowledge(base, incoming HRAElevState) HRAElevState {
-	if len(incoming.CabRequests) != NFloors {
-		return base
-	}
-	if len(base.CabRequests) != NFloors {
-		base.CabRequests = make([]bool, NFloors)
-	}
-	return mergeCabs(base, incoming)
-}
-
-func adoptPeerStates(
-	msg Message,
-	systemStates [NElevators]HRAElevState,
-	selfID int,
-	recoveryMode bool,
-) [NElevators]HRAElevState {
-	senderID := msg.SenderID
-	if senderID < 0 || senderID >= NElevators {
-		return systemStates
-	}
-
-	if recoveryMode {
-		systemStates[selfID] = mergeCabKnowledge(systemStates[selfID], msg.ElevatorList[selfID])
-	}
-
-	senderState := msg.ElevatorList[senderID]
-	if len(senderState.CabRequests) != NFloors {
-		return systemStates
-	}
-
-	if msg.Recovering {
-		systemStates[senderID] = mergeCabKnowledge(senderState, systemStates[senderID])
-		return systemStates
-	}
-
-	systemStates[senderID] = senderState
-	return systemStates
 }

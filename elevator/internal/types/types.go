@@ -27,7 +27,9 @@ type Message struct {
 	HallOrderTable HallOrderTable
 	AliveStatus    bool
 	AliveList      [NElevators]bool
-	Recovering     bool
+	// Recovering is true while the sender is rebuilding its own cab-call state
+	// from peer backups. Recovering senders must not be treated as consistent yet.
+	Recovering bool
 }
 
 //Elevator types START:
