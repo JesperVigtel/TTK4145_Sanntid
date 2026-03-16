@@ -15,11 +15,17 @@ func updatePeerAvailability(
 ) ([NElevators]bool, [NElevators]HallOrderTable) {
 
 	for _, lostPeerID := range nodeRegistry.Lost {
+		if lostPeerID == selfID || lostPeerID < 0 || lostPeerID >= NElevators {
+			continue
+		}
 		peerIsAlive[lostPeerID] = false
 		systemHallOrders[lostPeerID] = newStandbyHallOrders()
 	}
 
 	for _, newPeerID := range nodeRegistry.New {
+		if newPeerID == selfID || newPeerID < 0 || newPeerID >= NElevators {
+			continue
+		}
 		peerIsAlive[newPeerID] = true
 		systemHallOrders[newPeerID] = newStandbyHallOrders() //Possibly removem, test. Can improve contnuity
 	}
@@ -32,13 +38,18 @@ func peerStateMatchesRecorded(
 	msg Message,
 	systemHallOrders [NElevators]HallOrderTable,
 	systemElevStates [NElevators]HRAElevState,
-) bool { 
+) bool {
 	return systemHallOrders[msg.SenderID] == msg.HallOrderTable &&
 		elevStateEqual(systemElevStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
 
-
 func mergeCabs(self, peer HRAElevState) HRAElevState {
+	if len(self.CabRequests) != NFloors {
+		return self
+	}
+	if len(peer.CabRequests) != NFloors {
+		return self
+	}
 	for floor := range NFloors {
 		if peer.CabRequests[floor] == true {
 			self.CabRequests[floor] = true
@@ -47,11 +58,10 @@ func mergeCabs(self, peer HRAElevState) HRAElevState {
 	return self
 }
 
-
 func allAlivePeersConsistent(
-	peerIsConsistent 	[NElevators]bool,
-	peerIsAlive 		[NElevators]bool,
-	selfID 				int,
+	peerIsConsistent [NElevators]bool,
+	peerIsAlive [NElevators]bool,
+	selfID int,
 ) bool {
 	for peerID := range NElevators {
 		if peerID == selfID {
@@ -65,9 +75,9 @@ func allAlivePeersConsistent(
 }
 
 func sendStateUpdate(
-	broadcast 		chan<- Message,
-	selfID 			int,
-	peerIsAlive 	[NElevators]bool,
+	broadcast chan<- Message,
+	selfID int,
+	peerIsAlive [NElevators]bool,
 	systemElevStates [NElevators]HRAElevState,
 	systemHallOrders [NElevators]HallOrderTable,
 ) {
@@ -89,7 +99,7 @@ func publishConsistentState(
 	systemElevStates [NElevators]HRAElevState,
 	systemHallOrders [NElevators]HallOrderTable,
 ) {
-	
+
 	select {
 	case convergedSystemState <- ConvergedSystemState{
 		AliveList:      peerIsAlive,
@@ -142,17 +152,22 @@ func adoptPeerStates(
 	recoveryMode bool,
 ) [NElevators]HRAElevState {
 	for peerID := 0; peerID < NElevators; peerID++ {
+		if len(peerStates[peerID].CabRequests) != NFloors {
+			continue
+		}
+
 		if peerID == selfID {
 			if recoveryMode {
+				if len(systemStates[selfID].CabRequests) != NFloors {
+					systemStates[selfID].CabRequests = make([]bool, NFloors)
+				}
 				systemStates[selfID] = mergeCabs(systemStates[selfID], peerStates[selfID])
 			} else {
 				systemStates[selfID] = peerStates[selfID]
 			}
 			continue
 		}
-		if len(peerStates[peerID].CabRequests) == NFloors {
-			systemStates[peerID] = peerStates[peerID]
-		}
+		systemStates[peerID] = peerStates[peerID]
 	}
 	return systemStates
 }
