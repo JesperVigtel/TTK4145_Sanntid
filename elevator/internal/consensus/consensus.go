@@ -26,7 +26,7 @@ func Run(
 		peerIsAlive      [config.NElevators]bool
 		peerIsConsistent [config.NElevators]bool
 		recoveryActive   = true
-		peerSnapshotSeen bool
+		peerDiscoveryReady bool
 	)
 
 	systemHallOrders = newSystemHallOrders()
@@ -35,14 +35,16 @@ func Run(
 		select {
 
 		case registry := <-peerEvents:
-			peerSnapshotSeen = true
+			peerDiscoveryReady = true
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
 			peerIsConsistent = [config.NElevators]bool{}
-			publishIfConsistent(
-				&recoveryActive,
-				peerSnapshotSeen,
-				&peerIsConsistent,
-				currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders),
+			recoveryActive, peerIsConsistent = publishIfConsistent(
+				recoveryActive,
+				peerDiscoveryReady,
+				peerIsConsistent,
+				peerIsAlive, 
+				systemElevStates, 
+				systemHallOrders,
 				selfID,
 				broadcast,
 				converged,
@@ -53,19 +55,20 @@ func Run(
 				continue
 			}
 
-			peerSnapshotSeen = true
+			peerDiscoveryReady = true
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, systemElevStates)
 			systemElevStates = mergePeerElevatorStates(msg, systemElevStates, selfID, recoveryActive)
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryActive)
-			publishIfConsistent(
-				&recoveryActive,
-				peerSnapshotSeen,
-				&peerIsConsistent,
-				currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders),
+			recoveryActive, peerIsConsistent = publishIfConsistent(
+				recoveryActive,
+				peerDiscoveryReady,
+				peerIsConsistent,
+				peerIsAlive, 
+				systemElevStates, 
+				systemHallOrders,
 				selfID,
 				broadcast,
 				converged,
@@ -85,11 +88,13 @@ func Run(
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryActive)
-			publishIfConsistent(
-				&recoveryActive,
-				peerSnapshotSeen,
-				&peerIsConsistent,
-				currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders),
+			recoveryActive, peerIsConsistent = publishIfConsistent(
+				recoveryActive,
+				peerDiscoveryReady,
+				peerIsConsistent,
+				peerIsAlive, 
+				systemElevStates, 
+				systemHallOrders,
 				selfID,
 				broadcast,
 				converged,

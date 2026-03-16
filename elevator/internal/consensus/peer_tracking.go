@@ -76,25 +76,30 @@ func sendStateUpdate(
 	default:
 	}
 }
+
 func publishIfConsistent(
-	recoveryActive *bool,
+	recoveryActive bool,
 	peerDiscoveryReady bool,
-	peerIsConsistent *[config.NElevators]bool,
-	snapshot types.ConvergedSystemState,
+	peerIsConsistent [config.NElevators]bool,
+	peerIsAlive [config.NElevators]bool,
+	systemElevStates [config.NElevators]types.HRAElevState,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
 	selfID int,
 	broadcast chan<- types.Message,
 	converged chan<- types.ConvergedSystemState,
-) {
+) (bool, [config.NElevators]bool) {
+	snapshot := currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders)
+	
 	readyToPublish := peerDiscoveryReady &&
-		allAlivePeersConsistent(*peerIsConsistent, snapshot.AliveList, selfID)
+		allAlivePeersConsistent(peerIsConsistent, snapshot.AliveList, selfID)
 	if !readyToPublish {
-		return
+		return recoveryActive, peerIsConsistent
 	}
 
-	*peerIsConsistent = [config.NElevators]bool{}
+	peerIsConsistent = [config.NElevators]bool{}
 
-	if *recoveryActive {
-		*recoveryActive = false
+	if recoveryActive {
+		recoveryActive = false
 		sendStateUpdate(
 			broadcast,
 			selfID,
@@ -104,12 +109,14 @@ func publishIfConsistent(
 			false,
 		)
 	}
-
 	select {
 	case converged <- snapshot:
 	default:
 	}
+
+	return recoveryActive, peerIsConsistent
 }
+
 
 
 func currentConvergedState(

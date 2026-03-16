@@ -10,23 +10,21 @@ import (
 	"runtime"
 )
 
-func getHallRequestAssignerPath() string { //Remove??
-	_, currentFile, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(currentFile)
-
-	switch runtime.GOOS {
-	case "darwin":
-		return filepath.Join(dir, "hall_request_assigner_mac")
-	default: // linux and others
-		return filepath.Join(dir, "hall_request_assigner")
-	}
-}
-
-func mergeConvergedHallOrders(
+func mergeConvergedOrders(
 	localState LocalSystemState,
 	convergedState ConvergedSystemState,
+	cabRecoveryDone bool,
 	elevatorID int,
-) LocalSystemState {
+) (LocalSystemState, bool) {
+	if !cabRecoveryDone {
+				localState.ElevatorState.CabRequests = MergeCabRequests(
+					localState.ElevatorState.CabRequests,
+					convergedState.ElevatorList[localState.ElevatorID].CabRequests,
+					)
+				cabRecoveryDone = true
+			}
+
+
 	for floor := range NFloors {
 		for btn := range NButtons {
 			convergedOrder := convergedState.HallOrderTable[elevatorID][floor][btn]
@@ -37,8 +35,10 @@ func mergeConvergedHallOrders(
 			localState.HallRequests[floor][btn] = convergedOrder
 		}
 	}
-	return localState
+	return localState, cabRecoveryDone
 }
+
+
 
 func computeAssignedOrders(
 	convergedState ConvergedSystemState,
@@ -107,6 +107,20 @@ func buildHallAssignerInput(
 	}
 	return input
 }
+
+func getHallRequestAssignerPath() string { //Remove??
+	_, currentFile, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(currentFile)
+
+	switch runtime.GOOS {
+	case "darwin":
+		return filepath.Join(dir, "hall_request_assigner_mac")
+	default: // linux and others
+		return filepath.Join(dir, "hall_request_assigner")
+	}
+}
+
+
 
 func buildLocalOrderTable(
 	output map[string][][2]bool,

@@ -28,7 +28,6 @@ func Run(
 
 	for {
 		select {
-
 		case event := <-elevEvents:
 			if event.NewButtonPress != nil {
 				localState = applyButtonPress(localState, *event.NewButtonPress)
@@ -37,16 +36,8 @@ func Run(
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
-			if !cabRecoveryDone {
-				var restored bool
-				localState, restored = restoreOwnCabsFromNetwork(localState, globalState)
-				cabRecoveryDone = true
-				if restored {
-					localStateCh <- localState
-				}
-			}
+			localState, cabRecoveryDone = mergeConvergedOrders(localState, globalState, cabRecoveryDone, localState.ElevatorID)
 
-			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
 			assignedOrders := computeAssignedOrders(globalState, localState, elevatorID)
 			lightUpdate := makeLightUpdate(globalState, elevatorID) 
 
@@ -57,24 +48,4 @@ func Run(
 			buttonLights <- lightUpdate
 		}
 	}
-}
-
-func restoreOwnCabsFromNetwork(
-	localState LocalSystemState,
-	convergedState ConvergedSystemState,
-) (LocalSystemState, bool) {
-	mergedCabs := MergeCabRequests(
-		localState.ElevatorState.CabRequests,
-		convergedState.ElevatorList[localState.ElevatorID].CabRequests,
-	)
-
-	for floor, active := range mergedCabs {
-		if !localState.ElevatorState.CabRequests[floor] && active {
-			localState.ElevatorState.CabRequests = mergedCabs
-			return localState, true
-		}
-	}
-
-	localState.ElevatorState.CabRequests = mergedCabs
-	return localState, false
 }
