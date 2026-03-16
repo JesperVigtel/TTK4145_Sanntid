@@ -1,8 +1,8 @@
 package consensus
 
 import (
-	. "elevator/internal/config"
-	. "elevator/internal/types"
+	"elevator/internal/config"
+	"elevator/internal/types"
 	"slices"
 )
 
@@ -13,12 +13,12 @@ import (
 // -----------------------------------------------------------------------------
 
 func advanceLocalOrderStates(
-	systemHallOrders [NElevators]HallOrderTable,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
 	selfID int,
-	peerIsAlive [NElevators]bool,
-) [NElevators]HallOrderTable {
-	for floor := range NFloors {
-		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
+	peerIsAlive [config.NElevators]bool,
+) [config.NElevators]types.HallOrderTable {
+	for floor := range config.NFloors {
+		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
 			systemHallOrders[selfID][floor][btn] = computeNextOrderState(
 				systemHallOrders, floor, int(btn), selfID, peerIsAlive,
 			)
@@ -28,12 +28,12 @@ func advanceLocalOrderStates(
 }
 
 func computeNextOrderState(
-	systemHallOrders [NElevators]HallOrderTable,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
 	floor int,
 	btn int,
 	selfID int,
-	peerIsAlive [NElevators]bool,
-) OrderState {
+	peerIsAlive [config.NElevators]bool,
+) types.OrderState {
 	selfState := systemHallOrders[selfID][floor][btn]
 	peerStates := alivePeerOrderStates(systemHallOrders, floor, btn, selfID, peerIsAlive)
 
@@ -42,69 +42,67 @@ func computeNextOrderState(
 		return nextState
 	}
 	if peerStatesHaveDiverged(selfState, peerStates) {
-		return OrderStandby
+		return types.OrderStandby
 	}
 	return selfState
 }
 
-
-func tryCyclicAdvance(currentState OrderState, peerStates []OrderState) (OrderState, bool) {
+func tryCyclicAdvance(currentState types.OrderState, peerStates []types.OrderState) (types.OrderState, bool) {
 	alone := len(peerStates) == 0
 
 	switch currentState {
-	case OrderStandby:
-		if allAreEither(peerStates, OrderStandby, OrderPending) && slices.Contains(peerStates, OrderPending) {
-			return OrderPending, true
+	case types.OrderStandby:
+		if allAreEither(peerStates, types.OrderStandby, types.OrderPending) && slices.Contains(peerStates, types.OrderPending) {
+			return types.OrderPending, true
 		}
-		if slices.Contains(peerStates, OrderAssigned) {
-			return OrderPending, true
+		if slices.Contains(peerStates, types.OrderAssigned) {
+			return types.OrderPending, true
 		}
-	case OrderPending:
-		if alone || allAreEither(peerStates, OrderPending, OrderAssigned) {
-			return OrderAssigned, true
+	case types.OrderPending:
+		if alone || allAreEither(peerStates, types.OrderPending, types.OrderAssigned) {
+			return types.OrderAssigned, true
 		}
-	case OrderAssigned:
-		if allAreEither(peerStates, OrderAssigned, OrderComplete) &&
-		 slices.Contains(peerStates, OrderComplete) {
-			return OrderComplete, true
+	case types.OrderAssigned:
+		if allAreEither(peerStates, types.OrderAssigned, types.OrderComplete) &&
+			slices.Contains(peerStates, types.OrderComplete) {
+			return types.OrderComplete, true
 		}
-	case OrderComplete:
-		if alone || allAreEither(peerStates, OrderComplete, OrderStandby) {
-			return OrderStandby, true
+	case types.OrderComplete:
+		if alone || allAreEither(peerStates, types.OrderComplete, types.OrderStandby) {
+			return types.OrderStandby, true
 		}
 	}
 	return currentState, false
 }
 
-
-func peerStatesHaveDiverged(selfState OrderState, peerStates []OrderState) bool {
+func peerStatesHaveDiverged(selfState types.OrderState, peerStates []types.OrderState) bool {
 	switch selfState {
-	case OrderStandby:
-		return !allAreEither(peerStates, OrderStandby, OrderPending) &&
-			!allAreEither(peerStates, OrderStandby, OrderComplete)
-	case OrderPending:
-		return !allAreEither(peerStates, OrderPending, OrderAssigned) &&
-			!allAreEither(peerStates, OrderStandby, OrderPending)
-	case OrderAssigned:
-		return !allAreEither(peerStates, OrderAssigned, OrderComplete) &&
-			!allAreEither(peerStates, OrderAssigned, OrderPending) &&
-			!allAreEither(peerStates, OrderAssigned, OrderStandby)
-	case OrderComplete:
-		return !allAreEither(peerStates, OrderComplete, OrderStandby) &&
-			!allAreEither(peerStates, OrderAssigned, OrderComplete)
+	case types.OrderStandby:
+		return !allAreEither(peerStates, types.OrderStandby, types.OrderPending) &&
+			!allAreEither(peerStates, types.OrderStandby, types.OrderComplete)
+	case types.OrderPending:
+		return !allAreEither(peerStates, types.OrderPending, types.OrderAssigned) &&
+			!allAreEither(peerStates, types.OrderStandby, types.OrderPending)
+	case types.OrderAssigned:
+		return !allAreEither(peerStates, types.OrderAssigned, types.OrderComplete) &&
+			!allAreEither(peerStates, types.OrderAssigned, types.OrderPending) &&
+			!allAreEither(peerStates, types.OrderAssigned, types.OrderStandby)
+	case types.OrderComplete:
+		return !allAreEither(peerStates, types.OrderComplete, types.OrderStandby) &&
+			!allAreEither(peerStates, types.OrderAssigned, types.OrderComplete)
 	}
 	return false
 }
 
 func alivePeerOrderStates(
-	systemHallOrders [NElevators]HallOrderTable,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
 	floor int,
 	btn int,
 	selfID int,
-	peerIsAlive [NElevators]bool,
-) []OrderState {
-	var peerStates []OrderState
-	for peerID := range NElevators {
+	peerIsAlive [config.NElevators]bool,
+) []types.OrderState {
+	var peerStates []types.OrderState
+	for peerID := range config.NElevators {
 		if peerID != selfID && peerIsAlive[peerID] {
 			peerStates = append(peerStates, systemHallOrders[peerID][floor][btn])
 		}
@@ -112,8 +110,7 @@ func alivePeerOrderStates(
 	return peerStates
 }
 
-
-func allAreEither(peerStates []OrderState, stateA, stateB OrderState) bool {
+func allAreEither(peerStates []types.OrderState, stateA, stateB types.OrderState) bool {
 	for _, state := range peerStates {
 		if state != stateA && state != stateB {
 			return false
@@ -121,5 +118,3 @@ func allAreEither(peerStates []OrderState, stateA, stateB OrderState) bool {
 	}
 	return true
 }
-
-

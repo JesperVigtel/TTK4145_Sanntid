@@ -1,8 +1,8 @@
 package consensus
 
 import (
-	. "elevator/internal/config"
-	. "elevator/internal/types"
+	"elevator/internal/config"
+	"elevator/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -13,18 +13,18 @@ import (
 // -----------------------------------------------------------------------------
 
 func Run(
-	peerMsg <-chan Message,
-	broadcast chan<- Message,
-	peerEvents <-chan GlobalNodeRegistry,
-	localState <-chan LocalSystemState,
-	converged chan<- ConvergedSystemState,
+	peerMsg <-chan types.Message,
+	broadcast chan<- types.Message,
+	peerEvents <-chan types.GlobalNodeRegistry,
+	localState <-chan types.LocalSystemState,
+	converged chan<- types.ConvergedSystemState,
 	selfID int,
 ) {
 	var (
-		systemHallOrders [NElevators]HallOrderTable
-		systemElevStates [NElevators]HRAElevState
-		peerIsAlive      [NElevators]bool
-		peerIsConsistent [NElevators]bool
+		systemHallOrders [config.NElevators]types.HallOrderTable
+		systemElevStates [config.NElevators]types.HRAElevState
+		peerIsAlive      [config.NElevators]bool
+		peerIsConsistent [config.NElevators]bool
 		recoveryActive   = true
 		peerSnapshotSeen bool
 	)
@@ -37,24 +37,19 @@ func Run(
 		case registry := <-peerEvents:
 			peerSnapshotSeen = true
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
-			peerIsConsistent = [NElevators]bool{}
-			currentState := ConvergedSystemState{
-				AliveList:      peerIsAlive,
-				ElevatorList:   systemElevStates,
-				HallOrderTable: systemHallOrders,
-			}
-			tryPublishConvergedState(
+			peerIsConsistent = [config.NElevators]bool{}
+			publishIfConsistent(
 				&recoveryActive,
 				peerSnapshotSeen,
 				&peerIsConsistent,
-				currentState,
+				currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders),
 				selfID,
 				broadcast,
 				converged,
 			)
 
 		case msg := <-peerMsg:
-			if msg.SenderID < 0 || msg.SenderID >= NElevators || msg.SenderID == selfID {
+			if msg.SenderID < 0 || msg.SenderID >= config.NElevators || msg.SenderID == selfID {
 				continue
 			}
 
@@ -66,16 +61,11 @@ func Run(
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryActive)
-			currentState := ConvergedSystemState{
-				AliveList:      peerIsAlive,
-				ElevatorList:   systemElevStates,
-				HallOrderTable: systemHallOrders,
-			}
-			tryPublishConvergedState(
+			publishIfConsistent(
 				&recoveryActive,
 				peerSnapshotSeen,
 				&peerIsConsistent,
-				currentState,
+				currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders),
 				selfID,
 				broadcast,
 				converged,
@@ -83,7 +73,7 @@ func Run(
 
 		case state := <-localState:
 			if recoveryActive {
-				state.ElevatorState.CabRequests = MergeCabRequests(
+				state.ElevatorState.CabRequests = types.MergeCabRequests(
 					state.ElevatorState.CabRequests,
 					systemElevStates[selfID].CabRequests,
 				)
@@ -95,16 +85,11 @@ func Run(
 
 			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
 			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders, recoveryActive)
-			currentState := ConvergedSystemState{
-				AliveList:      peerIsAlive,
-				ElevatorList:   systemElevStates,
-				HallOrderTable: systemHallOrders,
-			}
-			tryPublishConvergedState(
+			publishIfConsistent(
 				&recoveryActive,
 				peerSnapshotSeen,
 				&peerIsConsistent,
-				currentState,
+				currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders),
 				selfID,
 				broadcast,
 				converged,

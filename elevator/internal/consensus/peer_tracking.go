@@ -1,18 +1,18 @@
 package consensus
 
 import (
-	. "elevator/internal/config"
-	. "elevator/internal/types"
+	"elevator/internal/config"
+	"elevator/internal/types"
 )
 
 func updatePeerAvailability(
-	nodeRegistry GlobalNodeRegistry,
-	peerIsAlive [NElevators]bool,
-	systemHallOrders [NElevators]HallOrderTable,
+	nodeRegistry types.GlobalNodeRegistry,
+	peerIsAlive [config.NElevators]bool,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
 	selfID int,
-) ([NElevators]bool, [NElevators]HallOrderTable) {
+) ([config.NElevators]bool, [config.NElevators]types.HallOrderTable) {
 	for _, lostPeerID := range nodeRegistry.Lost {
-		if lostPeerID == selfID || lostPeerID < 0 || lostPeerID >= NElevators {
+		if lostPeerID == selfID || lostPeerID < 0 || lostPeerID >= config.NElevators {
 			continue
 		}
 		peerIsAlive[lostPeerID] = false
@@ -20,7 +20,7 @@ func updatePeerAvailability(
 	}
 
 	for _, newPeerID := range nodeRegistry.New {
-		if newPeerID == selfID || newPeerID < 0 || newPeerID >= NElevators {
+		if newPeerID == selfID || newPeerID < 0 || newPeerID >= config.NElevators {
 			continue
 		}
 		peerIsAlive[newPeerID] = true
@@ -30,9 +30,9 @@ func updatePeerAvailability(
 }
 
 func peerStateMatchesRecorded(
-	msg Message,
-	systemHallOrders [NElevators]HallOrderTable,
-	systemElevStates [NElevators]HRAElevState,
+	msg types.Message,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
+	systemElevStates [config.NElevators]types.HRAElevState,
 ) bool {
 	if msg.Recovering {
 		return false
@@ -42,11 +42,11 @@ func peerStateMatchesRecorded(
 }
 
 func allAlivePeersConsistent(
-	peerIsConsistent [NElevators]bool,
-	peerIsAlive [NElevators]bool,
+	peerIsConsistent [config.NElevators]bool,
+	peerIsAlive [config.NElevators]bool,
 	selfID int,
 ) bool {
-	for peerID := range NElevators {
+	for peerID := range config.NElevators {
 		if peerID == selfID {
 			continue
 		}
@@ -58,15 +58,15 @@ func allAlivePeersConsistent(
 }
 
 func sendStateUpdate(
-	broadcast chan<- Message,
+	broadcast chan<- types.Message,
 	selfID int,
-	peerIsAlive [NElevators]bool,
-	systemElevStates [NElevators]HRAElevState,
-	systemHallOrders [NElevators]HallOrderTable,
+	peerIsAlive [config.NElevators]bool,
+	systemElevStates [config.NElevators]types.HRAElevState,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
 	recoveryMode bool,
 ) {
 	select {
-	case broadcast <- Message{
+	case broadcast <- types.Message{
 		SenderID:       selfID,
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders[selfID],
@@ -76,88 +76,97 @@ func sendStateUpdate(
 	default:
 	}
 }
-
-func publishConsistentState(
-	convergedSystemState chan<- ConvergedSystemState,
-	state ConvergedSystemState,
-) {
-	select {
-	case convergedSystemState <- state:
-	default:
-	}
-}
-
-func tryPublishConvergedState(
+func publishIfConsistent(
 	recoveryActive *bool,
-	peerSnapshotSeen bool,
-	peerIsConsistent *[NElevators]bool,
-	state ConvergedSystemState,
+	peerDiscoveryReady bool,
+	peerIsConsistent *[config.NElevators]bool,
+	snapshot types.ConvergedSystemState,
 	selfID int,
-	broadcast chan<- Message,
-	converged chan<- ConvergedSystemState,
+	broadcast chan<- types.Message,
+	converged chan<- types.ConvergedSystemState,
 ) {
-	if !peerSnapshotSeen || !allAlivePeersConsistent(*peerIsConsistent, state.AliveList, selfID) {
+	readyToPublish := peerDiscoveryReady &&
+		allAlivePeersConsistent(*peerIsConsistent, snapshot.AliveList, selfID)
+	if !readyToPublish {
 		return
 	}
 
-	*peerIsConsistent = [NElevators]bool{}
+	*peerIsConsistent = [config.NElevators]bool{}
+
 	if *recoveryActive {
 		*recoveryActive = false
 		sendStateUpdate(
 			broadcast,
 			selfID,
-			state.AliveList,
-			state.ElevatorList,
-			state.HallOrderTable,
+			snapshot.AliveList,
+			snapshot.ElevatorList,
+			snapshot.HallOrderTable,
 			false,
 		)
 	}
-	publishConsistentState(converged, state)
+
+	select {
+	case converged <- snapshot:
+	default:
+	}
+}
+
+
+func currentConvergedState(
+	peerIsAlive [config.NElevators]bool,
+	systemElevStates [config.NElevators]types.HRAElevState,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
+) types.ConvergedSystemState {
+	return types.ConvergedSystemState{
+		AliveList:      peerIsAlive,
+		ElevatorList:   systemElevStates,
+		HallOrderTable: systemHallOrders,
+	}
 }
 
 func mergePeerElevatorStates(
-	msg Message,
-	systemStates [NElevators]HRAElevState,
+	msg types.Message,
+	systemStates [config.NElevators]types.HRAElevState,
 	selfID int,
 	recoveryActive bool,
-) [NElevators]HRAElevState {
+) [config.NElevators]types.HRAElevState {
 	if recoveryActive {
-		systemStates[selfID].CabRequests = MergeCabRequests(
+		systemStates[selfID].CabRequests = types.MergeCabRequests(
 			systemStates[selfID].CabRequests,
 			msg.ElevatorList[selfID].CabRequests,
 		)
 	}
 
 	senderState := msg.ElevatorList[msg.SenderID]
-	if len(senderState.CabRequests) != NFloors {
+	if len(senderState.CabRequests) != config.NFloors {
 		return systemStates
 	}
 	if msg.Recovering {
-		senderState.CabRequests = MergeCabRequests(senderState.CabRequests, systemStates[msg.SenderID].CabRequests)
+		senderState.CabRequests = types.MergeCabRequests(senderState.CabRequests, systemStates[msg.SenderID].CabRequests)
 	}
 	systemStates[msg.SenderID] = senderState
 	return systemStates
 }
 
-func newSystemHallOrders() [NElevators]HallOrderTable {
-	var table [NElevators]HallOrderTable
-	for peerID := range NElevators {
+func newSystemHallOrders() [config.NElevators]types.HallOrderTable {
+	var table [config.NElevators]types.HallOrderTable
+	for peerID := range config.NElevators {
 		table[peerID] = newStandbyHallOrders()
 	}
 	return table
 }
 
-func newStandbyHallOrders() HallOrderTable {
-	var table HallOrderTable
-	for floor := range NFloors {
-		for btn := range NButtons {
-			table[floor][btn] = OrderStandby
+func newStandbyHallOrders() types.HallOrderTable {
+	var table types.HallOrderTable
+	for floor := range config.NFloors {
+		for btn := range config.NButtons {
+			table[floor][btn] = types.OrderStandby
 		}
 	}
 	return table
 }
 
-func elevStateEqual(a, b HRAElevState) bool {
+func elevStateEqual(a, b types.HRAElevState) bool {
 	if a.Behavior != b.Behavior || a.Floor != b.Floor || a.Direction != b.Direction {
 		return false
 	}
