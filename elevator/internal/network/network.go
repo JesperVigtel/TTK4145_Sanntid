@@ -17,6 +17,7 @@ func Run(
 ) {
 	ticker := time.NewTicker(config.BroadcastRate)
 	defer ticker.Stop()
+
 	var lastLocalState types.Message
 	hasState := false
 
@@ -29,7 +30,6 @@ func Run(
 	go broadcast.Receiver(config.BroadcastPort, msgRx)
 	go peers.Transmitter(config.PeersPort, strconv.Itoa(selfID), peerTxEnable)
 	go peers.Receiver(config.PeersPort, peerUpdateCh)
-
 	peerTxEnable <- true
 
 	for {
