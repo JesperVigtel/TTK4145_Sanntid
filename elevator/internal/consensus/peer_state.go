@@ -60,6 +60,22 @@ func peerSelfStateMatchesRecorded(
 		elevatorStatesEqual(peerReportedSelfStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
 
+func elevatorStatesEqual(a, b types.HRAElevState) bool {
+	if a.Behavior != b.Behavior ||
+		a.Floor != b.Floor ||
+		a.Direction != b.Direction ||
+		a.Assignable != b.Assignable {
+		return false
+	}
+	for floor := range config.NFloors {
+		if a.CabOrders[floor] != b.CabOrders[floor] {
+			return false
+		}
+	}
+	return true
+}
+
+
 func allAlivePeersConsistent(
 	peerIsConsistent [config.NElevators]bool,
 	peerIsAlive [config.NElevators]bool,
@@ -140,19 +156,4 @@ func applyPeerReportedElevatorState(
 	systemStates[msg.SenderID].Direction = senderState.Direction
 	systemStates[msg.SenderID].Assignable = senderState.Assignable
 	return systemStates
-}
-
-func elevatorStatesEqual(a, b types.HRAElevState) bool {
-	if a.Behavior != b.Behavior ||
-		a.Floor != b.Floor ||
-		a.Direction != b.Direction ||
-		a.Assignable != b.Assignable {
-		return false
-	}
-	for floor := range config.NFloors {
-		if a.CabOrders[floor] != b.CabOrders[floor] {
-			return false
-		}
-	}
-	return true
 }
