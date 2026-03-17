@@ -27,11 +27,8 @@ func computeAssignedOrders(
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
 		return localFallbackOrders(localState)
 	}
-	// gjorde bare sånn at jeg kan kjøre simulator på mac
-	//
 	hraPath := getHallRequestAssignerPath()
 	raw, err := exec.Command(hraPath, "-i", string(jsonBytes)).CombinedOutput()
-	//
 	if err != nil {
 		fmt.Println("computeAssignedOrders: exec:", err, string(raw))
 		return localFallbackOrders(localState)
@@ -81,7 +78,7 @@ func buildHallAssignerInput(
 	return input
 }
 
-func getHallRequestAssignerPath() string { //Remove??
+func getHallRequestAssignerPath() string {
 	_, currentFile, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(currentFile)
 

@@ -28,23 +28,19 @@ func Run(
 	for {
 		select {
 		case event := <-elevEvents:
-			if event.NewButtonPress != nil {
-				localState = applyButtonPress(localState, *event.NewButtonPress)
-			}
-			localState = applyHardwareUpdate(localState, event)
+			localState = applyElevatorEvent(localState, event)
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
 			localState = mergeConvergedOrders(localState, globalState)
 
 			assignedOrders := computeAssignedOrders(globalState, localState, elevatorID)
-			hallLightUpdate := globalState.HallOrderTable[elevatorID]
 
 			if assignedOrders != previousOrders {
 				localOrders <- assignedOrders
 				previousOrders = assignedOrders
 			}
-			hallLights <- hallLightUpdate
+			hallLights <- globalState.HallOrderTable[elevatorID]
 		}
 	}
 }

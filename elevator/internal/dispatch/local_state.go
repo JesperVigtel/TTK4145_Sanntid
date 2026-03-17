@@ -36,6 +36,16 @@ func applyButtonPress(
 	return state
 }
 
+func applyElevatorEvent(
+	state LocalSystemState,
+	event ElevatorEvents,
+) LocalSystemState {
+	if event.NewButtonPress != nil {
+		state = applyButtonPress(state, *event.NewButtonPress)
+	}
+	return applyHardwareUpdate(state, event)
+}
+
 func applyHardwareUpdate(
 	state LocalSystemState,
 	event ElevatorEvents,
@@ -43,7 +53,6 @@ func applyHardwareUpdate(
 	updatedElevState := newReplicatedElevatorState(event)
 	updatedElevState.CabOrders = state.ElevatorState.CabOrders
 	state.ElevatorState = updatedElevState
-	state.AliveStatus = true
 
 	for floor := range NFloors {
 		for btn := BtnHallUp; btn <= BtnCab; btn++ {
