@@ -7,7 +7,7 @@ import (
 	"elevator/internal/localControl"
 	"elevator/internal/network/network_manager"
 	"elevator/internal/network/peers"
-	"elevator/internal/network/utility_network"
+	// "elevator/internal/network/utility_network"
 	"elevator/internal/types"
 	"flag"
 	"fmt"
@@ -65,11 +65,11 @@ func main() {
 		selfID,
 	)
 
-	go utilitynetwork.InitNetwork( //Init funcitons should live inside their module
-		strconv.Itoa(selfID),
-		msgTx,
-		msgRx,
-		peerUpdateCh)
+	// go utilitynetwork.InitNetwork( //Init funcitons should live inside their module
+	// 	strconv.Itoa(selfID),
+	// 	msgTx,
+	// 	msgRx,
+	// 	peerUpdateCh)
 
 	go networkmanager.Run( //Naming could be just network or continuity?
 		selfID,

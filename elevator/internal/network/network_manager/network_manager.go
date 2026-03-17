@@ -4,6 +4,7 @@ import (
 	//"fmt"
 	"elevator/internal/config"
 	"elevator/internal/network/peers"
+	"elevator/internal/network/broadcast"
 	"elevator/internal/types"
 	"strconv"
 	"time"
@@ -50,9 +51,9 @@ func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
 // localState
 func Run(
 	selfID 				int,
-	msgTx 				chan<- types.Message,
-	msgRx 				<-chan types.Message,
-	peerUpdateCh 		<-chan peers.PeerUpdate,
+	msgTx 				chan types.Message,
+	msgRx 				chan types.Message,
+	peerUpdateCh 		chan peers.PeerUpdate,
 	localState 			<-chan types.Message, // fra consensus
 	incomingMessages 	chan<- types.Message, // til consensus
 	nodeRegistry 		chan<- types.GlobalNodeRegistry, // til consensus
@@ -61,6 +62,12 @@ func Run(
 	ticker := time.NewTicker(config.BroadcastRate)
 	var lastLocalState types.Message
 	hasState := false
+
+	peerTxEnable := make(chan bool)
+	go broadcast.Transmitter(config.BroadcastPort, msgTx)
+	go broadcast.Receiver(config.BroadcastPort, msgRx)
+	go peers.Transmitter(config.PeersPort, strconv.Itoa(selfID), peerTxEnable)
+	go peers.Receiver(config.PeersPort, peerUpdateCh)
 
 	for {
 		select {
