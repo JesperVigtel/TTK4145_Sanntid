@@ -90,52 +90,44 @@ func sendStateUpdate(
 	}
 }
 
+func advanceAndBroadcast(
+	broadcast chan<- types.Message,
+	selfID int,
+	peerIsAlive [config.NElevators]bool,
+	systemElevStates [config.NElevators]types.HRAElevState,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
+	peerCabOrderViews [config.NElevators][config.NElevators]types.CabOrderTable,
+) ([config.NElevators]types.HRAElevState, [config.NElevators]types.HallOrderTable) {
+	systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
+	systemElevStates = advanceCabOrderStates(systemElevStates, peerCabOrderViews, selfID, peerIsAlive)
+	sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+	return systemElevStates, systemHallOrders
+}
+
 func publishIfConsistent(
-	peerDiscoveryReady bool,
 	peerIsConsistent [config.NElevators]bool,
 	peerIsAlive [config.NElevators]bool,
 	systemElevStates [config.NElevators]types.HRAElevState,
 	systemHallOrders [config.NElevators]types.HallOrderTable,
 	selfID int,
-	broadcast chan<- types.Message,
 	converged chan<- types.ConvergedSystemState,
 ) [config.NElevators]bool {
-	snapshot := currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders)
-
-	readyToPublish := peerDiscoveryReady &&
-		allAlivePeersConsistent(peerIsConsistent, snapshot.AliveList, selfID)
-	if !readyToPublish {
+	if !allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
 		return peerIsConsistent
 	}
 
 	peerIsConsistent = [config.NElevators]bool{}
 
 	select {
-	case converged <- snapshot:
-	default:
-	}
-
-	sendStateUpdate(
-		broadcast,
-		selfID,
-		snapshot.AliveList,
-		snapshot.ElevatorList,
-		snapshot.HallOrderTable,
-	)
-
-	return peerIsConsistent
-}
-
-func currentConvergedState(
-	peerIsAlive [config.NElevators]bool,
-	systemElevStates [config.NElevators]types.HRAElevState,
-	systemHallOrders [config.NElevators]types.HallOrderTable,
-) types.ConvergedSystemState {
-	return types.ConvergedSystemState{
+	case converged <- types.ConvergedSystemState{
 		AliveList:      peerIsAlive,
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders,
+	}:
+	default:
 	}
+
+	return peerIsConsistent
 }
 
 func recordPeerCabOrderViews(

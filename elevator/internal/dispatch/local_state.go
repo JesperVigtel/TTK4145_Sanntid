@@ -61,31 +61,21 @@ func applyHardwareUpdate(
 	return state
 }
 
-func mergeConvergedCabOrders(
+func mergeConvergedOrders(
 	state LocalSystemState,
 	convergedState ConvergedSystemState,
 ) LocalSystemState {
 	for floor := range NFloors {
+		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
+			state.HallRequests[floor][btn] = mergeConvergedOrderState(
+				state.HallRequests[floor][btn],
+				convergedState.HallOrderTable[state.ElevatorID][floor][btn],
+			)
+		}
 		state.ElevatorState.CabOrders[floor] = mergeConvergedOrderState(
 			state.ElevatorState.CabOrders[floor],
 			convergedState.ElevatorList[state.ElevatorID].CabOrders[floor],
 		)
-	}
-	return state
-}
-
-func mergeConvergedHallOrders(
-	state LocalSystemState,
-	convergedState ConvergedSystemState,
-	elevatorID int,
-) LocalSystemState {
-	for floor := range NFloors {
-		for btn := range NButtons {
-			state.HallRequests[floor][btn] = mergeConvergedOrderState(
-				state.HallRequests[floor][btn],
-				convergedState.HallOrderTable[elevatorID][floor][btn],
-			)
-		}
 	}
 	return state
 }

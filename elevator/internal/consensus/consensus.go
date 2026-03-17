@@ -27,7 +27,6 @@ func Run(
 		peerCabOrderViews  [config.NElevators][config.NElevators]types.CabOrderTable
 		peerIsAlive        [config.NElevators]bool
 		peerIsConsistent   [config.NElevators]bool
-		peerDiscoveryReady bool
 	)
 
 	systemHallOrders = newSystemHallOrders()
@@ -36,7 +35,6 @@ func Run(
 		select {
 
 		case registry := <-peerEvents:
-			peerDiscoveryReady = true
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
 			peerReportedStates, peerCabOrderViews = resetPeerObservations(
 				registry,
@@ -45,14 +43,20 @@ func Run(
 				selfID,
 			)
 			peerIsConsistent = [config.NElevators]bool{}
+			systemElevStates, systemHallOrders = advanceAndBroadcast(
+				broadcast,
+				selfID,
+				peerIsAlive,
+				systemElevStates,
+				systemHallOrders,
+				peerCabOrderViews,
+			)
 			peerIsConsistent = publishIfConsistent(
-				peerDiscoveryReady,
 				peerIsConsistent,
 				peerIsAlive,
 				systemElevStates,
 				systemHallOrders,
 				selfID,
-				broadcast,
 				converged,
 			)
 
@@ -61,7 +65,6 @@ func Run(
 				continue
 			}
 
-			peerDiscoveryReady = true
 			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, peerReportedStates)
 			peerReportedStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
 			peerCabOrderViews = recordPeerCabOrderViews(msg, peerCabOrderViews)
@@ -69,36 +72,42 @@ func Run(
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
-			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			systemElevStates = advanceCabOrderStates(systemElevStates, peerCabOrderViews, selfID, peerIsAlive)
+			systemElevStates, systemHallOrders = advanceAndBroadcast(
+				broadcast,
+				selfID,
+				peerIsAlive,
+				systemElevStates,
+				systemHallOrders,
+				peerCabOrderViews,
+			)
 			peerIsConsistent = publishIfConsistent(
-				peerDiscoveryReady,
 				peerIsConsistent,
 				peerIsAlive,
 				systemElevStates,
 				systemHallOrders,
 				selfID,
-				broadcast,
 				converged,
 			)
 
 		case state := <-localState:
 			systemElevStates[selfID] = state.ElevatorState
-
 			systemHallOrders[selfID] = state.HallRequests
 			peerIsAlive[selfID] = state.AliveStatus
 
-			systemHallOrders = advanceLocalOrderStates(systemHallOrders, selfID, peerIsAlive)
-			systemElevStates = advanceCabOrderStates(systemElevStates, peerCabOrderViews, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			systemElevStates, systemHallOrders = advanceAndBroadcast(
+				broadcast,
+				selfID,
+				peerIsAlive,
+				systemElevStates,
+				systemHallOrders,
+				peerCabOrderViews,
+			)
 			peerIsConsistent = publishIfConsistent(
-				peerDiscoveryReady,
 				peerIsConsistent,
 				peerIsAlive,
 				systemElevStates,
 				systemHallOrders,
 				selfID,
-				broadcast,
 				converged,
 			)
 		}

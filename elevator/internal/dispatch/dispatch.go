@@ -35,8 +35,7 @@ func Run(
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
-			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
-			localState = mergeConvergedCabOrders(localState, globalState)
+			localState = mergeConvergedOrders(localState, globalState)
 
 			assignedOrders := computeAssignedOrders(globalState, localState, elevatorID)
 			lightUpdate := makeLightUpdate(localState, globalState, elevatorID)
