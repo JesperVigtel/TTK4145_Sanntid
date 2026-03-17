@@ -75,7 +75,6 @@ func elevatorStatesEqual(a, b types.HRAElevState) bool {
 	return true
 }
 
-
 func allAlivePeersConsistent(
 	peerIsConsistent [config.NElevators]bool,
 	peerIsAlive [config.NElevators]bool,
@@ -92,48 +91,37 @@ func allAlivePeersConsistent(
 	return true
 }
 
-func broadcastStateUpdate(
-	broadcast chan<- types.Message,
+func buildBroadcastStateUpdate(
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
 	systemElevStates [config.NElevators]types.HRAElevState,
 	systemHallOrders [config.NElevators]types.HallOrderTable,
-) {
-	select {
-	case broadcast <- types.Message{
+) types.Message {
+	return types.Message{
 		SenderID:       selfID,
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders[selfID],
 		AliveStatus:    peerIsAlive[selfID],
-	}:
-	default:
 	}
 }
 
-func publishConvergedStateIfConsistent(
-	peerIsConsistent [config.NElevators]bool,
+func buildConvergedSystemState(
 	peerIsAlive [config.NElevators]bool,
 	systemElevStates [config.NElevators]types.HRAElevState,
 	systemHallOrders [config.NElevators]types.HallOrderTable,
-	selfID int,
-	converged chan<- types.ConvergedSystemState,
-) [config.NElevators]bool {
-	if !allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
-		return peerIsConsistent
-	}
-
-	peerIsConsistent = [config.NElevators]bool{}
-
-	select {
-	case converged <- types.ConvergedSystemState{
+) types.ConvergedSystemState {
+	return types.ConvergedSystemState{
 		AliveList:      peerIsAlive,
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders,
-	}:
+	}
+}
+
+func trySend[T any](ch chan<- T, value T) {
+	select {
+	case ch <- value:
 	default:
 	}
-
-	return peerIsConsistent
 }
 
 func recordPeerObservedCabOrders(

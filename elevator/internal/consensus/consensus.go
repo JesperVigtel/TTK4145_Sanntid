@@ -38,15 +38,11 @@ func Run(
 
 			systemHallOrders = advanceHallOrderStates(systemHallOrders, selfID, peerIsAlive)
 			systemElevStates = advanceCabOrderStates(systemElevStates, peerObservedCabOrders, selfID, peerIsAlive)
-			broadcastStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-			peerIsConsistent = publishConvergedStateIfConsistent(
-				peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				selfID,
-				converged,
-			)
+			broadcast <- buildBroadcastStateUpdate(selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
+				peerIsConsistent = [config.NElevators]bool{}
+				trySend(converged, buildConvergedSystemState(peerIsAlive, systemElevStates, systemHallOrders))
+			}
 
 		case msg := <-peerMsg:
 			if !isRemotePeerID(msg.SenderID, selfID) {
@@ -62,15 +58,11 @@ func Run(
 
 			systemHallOrders = advanceHallOrderStates(systemHallOrders, selfID, peerIsAlive)
 			systemElevStates = advanceCabOrderStates(systemElevStates, peerObservedCabOrders, selfID, peerIsAlive)
-			broadcastStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-			peerIsConsistent = publishConvergedStateIfConsistent(
-				peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				selfID,
-				converged,
-			)
+			broadcast <- buildBroadcastStateUpdate(selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
+				peerIsConsistent = [config.NElevators]bool{}
+				trySend(converged, buildConvergedSystemState(peerIsAlive, systemElevStates, systemHallOrders))
+			}
 
 		case state := <-localState:
 			systemElevStates[selfID] = state.ElevatorState
@@ -79,15 +71,11 @@ func Run(
 
 			systemHallOrders = advanceHallOrderStates(systemHallOrders, selfID, peerIsAlive)
 			systemElevStates = advanceCabOrderStates(systemElevStates, peerObservedCabOrders, selfID, peerIsAlive)
-			broadcastStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-			peerIsConsistent = publishConvergedStateIfConsistent(
-				peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				selfID,
-				converged,
-			)
+			broadcast <- buildBroadcastStateUpdate(selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
+				peerIsConsistent = [config.NElevators]bool{}
+				trySend(converged, buildConvergedSystemState(peerIsAlive, systemElevStates, systemHallOrders))
+			}
 		}
 	}
 }
