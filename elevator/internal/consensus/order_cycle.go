@@ -7,10 +7,11 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Advances each hall order through the cyclic state machine based on peer agreement.
-// Standby -> Pending -> Assigned -> Complete -> Standby
-// States that have diverged beyond adjacent steps are reset to Standby.
+// Advances hall and cab orders through the shared cyclic state machine based on
+// peer agreement: Standby -> Pending -> Assigned -> Complete -> Standby.
+// States that diverge beyond adjacent steps are reset to Standby.
 // -----------------------------------------------------------------------------
+
 
 func advanceHallOrderStates(
 	systemHallOrders [config.NElevators]types.HallOrderTable,
@@ -19,12 +20,8 @@ func advanceHallOrderStates(
 ) [config.NElevators]types.HallOrderTable {
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
-			systemHallOrders[selfID][floor][btn] = nextOrderState(
-				systemHallOrders[selfID][floor][btn],
-				alivePeerOrderStates(selfID, peerIsAlive, func(peerID int) types.OrderState {
-					return systemHallOrders[peerID][floor][btn]
-				}),
-			)
+			peerStates := alivePeerHallOrderStates(selfID, peerIsAlive, systemHallOrders, floor, btn)
+			systemHallOrders[selfID][floor][btn] = nextOrderState(systemHallOrders[selfID][floor][btn],peerStates)
 		}
 	}
 	return systemHallOrders
@@ -38,12 +35,8 @@ func advanceCabOrderStates(
 ) [config.NElevators]types.HRAElevState {
 	for ownerID := range config.NElevators {
 		for floor := range config.NFloors {
-			systemElevStates[ownerID].CabOrders[floor] = nextOrderState(
-				systemElevStates[ownerID].CabOrders[floor],
-				alivePeerOrderStates(selfID, peerIsAlive, func(peerID int) types.OrderState {
-					return peerObservedCabOrders[peerID][ownerID][floor]
-				}),
-			)
+			peerStates := alivePeerCabOrderStates(selfID, peerIsAlive, peerObservedCabOrders, ownerID, floor)
+			systemElevStates[ownerID].CabOrders[floor] = nextOrderState(systemElevStates[ownerID].CabOrders[floor], peerStates)
 		}
 	}
 	return systemElevStates
@@ -110,15 +103,33 @@ func peerStatesHaveDiverged(selfState types.OrderState, peerStates []types.Order
 	return false
 }
 
-func alivePeerOrderStates(
+func alivePeerHallOrderStates(
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
-	peerStateAt func(peerID int) types.OrderState,
+	systemHallOrders [config.NElevators]types.HallOrderTable,
+	floor int,
+	btn types.ButtonType,
 ) []types.OrderState {
 	var peerStates []types.OrderState
 	for peerID := range config.NElevators {
 		if peerID != selfID && peerIsAlive[peerID] {
-			peerStates = append(peerStates, peerStateAt(peerID))
+			peerStates = append(peerStates, systemHallOrders[peerID][floor][btn])
+		}
+	}
+	return peerStates
+}
+
+func alivePeerCabOrderStates(
+	selfID int,
+	peerIsAlive [config.NElevators]bool,
+	peerObservedCabOrders [config.NElevators][config.NElevators]types.CabOrderTable,
+	ownerID int,
+	floor int,
+) []types.OrderState {
+	var peerStates []types.OrderState
+	for peerID := range config.NElevators {
+		if peerID != selfID && peerIsAlive[peerID] {
+			peerStates = append(peerStates, peerObservedCabOrders[peerID][ownerID][floor])
 		}
 	}
 	return peerStates

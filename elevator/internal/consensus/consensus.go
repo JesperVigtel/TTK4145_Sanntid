@@ -35,11 +35,11 @@ func Run(
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
 			peerReportedSelfStates, peerObservedCabOrders = resetPeerSnapshots(registry, peerReportedSelfStates, peerObservedCabOrders, selfID)
 			peerIsConsistent = [config.NElevators]bool{}
-			
+
 			systemHallOrders = advanceHallOrderStates(systemHallOrders, selfID, peerIsAlive)
 			systemElevStates = advanceCabOrderStates(systemElevStates, peerObservedCabOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-			peerIsConsistent = publishIfConsistent(
+			broadcastStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			peerIsConsistent = publishConvergedStateIfConsistent(
 				peerIsConsistent,
 				peerIsAlive,
 				systemElevStates,
@@ -53,17 +53,17 @@ func Run(
 				continue
 			}
 
-			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, peerReportedSelfStates)
+			peerIsConsistent[msg.SenderID] = peerSelfStateMatchesRecorded(msg, systemHallOrders, peerReportedSelfStates)
 			peerReportedSelfStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
 			peerObservedCabOrders = recordPeerObservedCabOrders(msg, peerObservedCabOrders)
-			systemElevStates = adoptPeerElevatorStatus(msg, systemElevStates)
+			systemElevStates = applyPeerReportedElevatorState(msg, systemElevStates)
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 			systemHallOrders = advanceHallOrderStates(systemHallOrders, selfID, peerIsAlive)
 			systemElevStates = advanceCabOrderStates(systemElevStates, peerObservedCabOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-			peerIsConsistent = publishIfConsistent(
+			broadcastStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			peerIsConsistent = publishConvergedStateIfConsistent(
 				peerIsConsistent,
 				peerIsAlive,
 				systemElevStates,
@@ -79,8 +79,8 @@ func Run(
 
 			systemHallOrders = advanceHallOrderStates(systemHallOrders, selfID, peerIsAlive)
 			systemElevStates = advanceCabOrderStates(systemElevStates, peerObservedCabOrders, selfID, peerIsAlive)
-			sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-			peerIsConsistent = publishIfConsistent(
+			broadcastStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
+			peerIsConsistent = publishConvergedStateIfConsistent(
 				peerIsConsistent,
 				peerIsAlive,
 				systemElevStates,

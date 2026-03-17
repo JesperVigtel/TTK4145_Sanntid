@@ -51,7 +51,7 @@ func resetPeerSnapshots(
 	return peerReportedSelfStates, peerObservedCabOrders
 }
 
-func peerStateMatchesRecorded(
+func peerSelfStateMatchesRecorded(
 	msg types.Message,
 	systemHallOrders [config.NElevators]types.HallOrderTable,
 	peerReportedSelfStates [config.NElevators]types.HRAElevState,
@@ -76,7 +76,7 @@ func allAlivePeersConsistent(
 	return true
 }
 
-func sendStateUpdate(
+func broadcastStateUpdate(
 	broadcast chan<- types.Message,
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
@@ -94,7 +94,7 @@ func sendStateUpdate(
 	}
 }
 
-func publishIfConsistent(
+func publishConvergedStateIfConsistent(
 	peerIsConsistent [config.NElevators]bool,
 	peerIsAlive [config.NElevators]bool,
 	systemElevStates [config.NElevators]types.HRAElevState,
@@ -130,7 +130,7 @@ func recordPeerObservedCabOrders(
 	return peerObservedCabOrders
 }
 
-func adoptPeerElevatorStatus(
+func applyPeerReportedElevatorState(
 	msg types.Message,
 	systemStates [config.NElevators]types.HRAElevState,
 ) [config.NElevators]types.HRAElevState {
