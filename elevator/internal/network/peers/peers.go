@@ -17,13 +17,9 @@ type PeerUpdate struct {
 	Lost  []string
 }
 
-// const interval = 15 * time.Millisecond
-// const timeout = 500 * time.Millisecond
 const interval = config.HeartbeatInterval
 const timeout = config.HeartbeatTimeout
 
-//Hvor lenge vil vi vente før vi markerer noe som lost?
-//Hvor ofte vil vi sende ut?
 
 func Transmitter(port int, id string, transmitEnable <-chan bool) {
 
@@ -75,7 +71,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		// Removing dead connection
 		p.Lost = make([]string, 0)
 		for k, v := range lastSeen {
-			if time.Since(v) > timeout { //if time.Now().Sub(v) > timeout
+			if time.Since(v) > timeout {
 				updated = true
 				p.Lost = append(p.Lost, k)
 				delete(lastSeen, k)
@@ -86,7 +82,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		if updated || !sentInitialSnapshot {
 			p.Peers = make([]string, 0, len(lastSeen))
 
-			for k := range lastSeen { //for k, _ := range lastSeen
+			for k := range lastSeen {
 				p.Peers = append(p.Peers, k)
 			}
 
@@ -105,7 +101,6 @@ func ConvertPeerUpdate(update PeerUpdate) types.GlobalNodeRegistry {
 	for _, peer := range update.Peers {
 		id, err := strconv.Atoi(peer)
 		if err != nil || id < 0 || id >= config.NElevators {
-			//fmt.Printf("[NETWORK] Ugyldig peer-ID ignorert: %q\n", peer)
 			continue
 		}
 		registry.Nodes = append(registry.Nodes, id)
@@ -115,7 +110,6 @@ func ConvertPeerUpdate(update PeerUpdate) types.GlobalNodeRegistry {
 	if update.New != "" {
 		id, err := strconv.Atoi(update.New)
 		if err == nil && id >= 0 && id < config.NElevators {
-			//fmt.Printf("[NETWORK] Ny heis oppdaget: ID=%d\n", id)
 			registry.New = append(registry.New, id)
 		}
 	}
@@ -126,7 +120,6 @@ func ConvertPeerUpdate(update PeerUpdate) types.GlobalNodeRegistry {
 		if err != nil || id < 0 || id >= config.NElevators {
 			continue
 		}
-		//fmt.Printf("[NETWORK] Heis mistet: ID=%d\n", id)
 		registry.Lost = append(registry.Lost, id)
 	}
 
