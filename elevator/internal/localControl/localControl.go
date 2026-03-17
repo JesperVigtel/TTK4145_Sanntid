@@ -40,8 +40,7 @@ func Run(
 
 	elevator := newElevator()
 	obstruction = false
-	// localControl now owns all hardware lamp writes:
-	// cab/floor/door from local state, hall lamps from distributed state.
+	//Added light logic to localControl
 	applyLocalLights(elevator, false)
 
 	// Initialize by driving down until a floor sensor is reached
@@ -55,7 +54,7 @@ func Run(
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
-			applyLocalLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen)
+			applyLocalLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen)	//Added light logic
 
 			if elevator.Behaviour == types.ElevatorMoving {
 				motorActiveChan <- true
@@ -80,10 +79,19 @@ func Run(
 
 			// Passing floor without order, checking if direction should change
 			newDir := chooseDirection(elevator)
-			if newDir != types.Stop && newDir != elevator.CurrentTravelDirection {
+			// if newDir != types.Stop && newDir != elevator.CurrentTravelDirection {
+			// 	elevator.CurrentTravelDirection = newDir
+			// 	elevator.PhysicalMotorDirection = newDir
+			// 	hardware.SetMotorDirection(newDir)
+			// }
+			if newDir != types.Stop {
 				elevator.CurrentTravelDirection = newDir
-				elevator.PhysicalMotorDirection = newDir
-				hardware.SetMotorDirection(newDir)
+				// Restart the motor if the desired direction changed or the motor is stopped.
+				if elevator.PhysicalMotorDirection != newDir || elevator.Behaviour != types.ElevatorMoving {
+					elevator.PhysicalMotorDirection = newDir
+					elevator.Behaviour = types.ElevatorMoving
+					hardware.SetMotorDirection(newDir)
+				}
 			}
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
