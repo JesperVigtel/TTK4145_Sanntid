@@ -19,24 +19,36 @@ func advanceLocalOrderStates(
 ) [config.NElevators]types.HallOrderTable {
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
-			systemHallOrders[selfID][floor][btn] = computeNextOrderState(
-				systemHallOrders, floor, int(btn), selfID, peerIsAlive,
+			systemHallOrders[selfID][floor][btn] = nextOrderState(
+				systemHallOrders[selfID][floor][btn],
+				alivePeerOrderStates(systemHallOrders, floor, int(btn), selfID, peerIsAlive),
 			)
 		}
 	}
 	return systemHallOrders
 }
 
-func computeNextOrderState(
-	systemHallOrders [config.NElevators]types.HallOrderTable,
-	floor int,
-	btn int,
+func advanceCabOrderStates(
+	systemElevStates [config.NElevators]types.HRAElevState,
+	peerCabOrderViews [config.NElevators][config.NElevators]types.CabOrderTable,
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
-) types.OrderState {
-	selfState := systemHallOrders[selfID][floor][btn]
-	peerStates := alivePeerOrderStates(systemHallOrders, floor, btn, selfID, peerIsAlive)
+) [config.NElevators]types.HRAElevState {
+	for ownerID := range config.NElevators {
+		for floor := range config.NFloors {
+			systemElevStates[ownerID].CabOrders[floor] = nextOrderState(
+				systemElevStates[ownerID].CabOrders[floor],
+				alivePeerCabOrderStates(peerCabOrderViews, ownerID, floor, selfID, peerIsAlive),
+			)
+		}
+	}
+	return systemElevStates
+}
 
+func nextOrderState(
+	selfState types.OrderState,
+	peerStates []types.OrderState,
+) types.OrderState {
 	nextState, advanced := tryCyclicAdvance(selfState, peerStates)
 	if advanced {
 		return nextState
@@ -105,6 +117,22 @@ func alivePeerOrderStates(
 	for peerID := range config.NElevators {
 		if peerID != selfID && peerIsAlive[peerID] {
 			peerStates = append(peerStates, systemHallOrders[peerID][floor][btn])
+		}
+	}
+	return peerStates
+}
+
+func alivePeerCabOrderStates(
+	peerCabOrderViews [config.NElevators][config.NElevators]types.CabOrderTable,
+	ownerID int,
+	floor int,
+	selfID int,
+	peerIsAlive [config.NElevators]bool,
+) []types.OrderState {
+	var peerStates []types.OrderState
+	for peerID := range config.NElevators {
+		if peerID != selfID && peerIsAlive[peerID] {
+			peerStates = append(peerStates, peerCabOrderViews[peerID][ownerID][floor])
 		}
 	}
 	return peerStates

@@ -35,12 +35,8 @@ func Run(
 			localStateCh <- localState
 
 		case globalState := <-convergedSystem:
-			var recoveredCabRequests bool
 			localState = mergeConvergedHallOrders(localState, globalState, localState.ElevatorID)
-			localState, recoveredCabRequests = mergeRecoveredCabRequests(localState, globalState)
-			if recoveredCabRequests {
-				localStateCh <- localState
-			}
+			localState = mergeConvergedCabOrders(localState, globalState)
 
 			assignedOrders := computeAssignedOrders(globalState, localState, elevatorID)
 			lightUpdate := makeLightUpdate(localState, globalState, elevatorID)

@@ -53,7 +53,7 @@ func buildHallAssignerInput(
 ) HRAInput {
 	input := HRAInput{
 		HallRequests: [NFloors][2]bool{},
-		States:       make(map[string]HRAElevState),
+		States:       make(map[string]HRAAssignerState),
 	}
 
 	for id, alive := range convergedState.AliveList {
@@ -62,12 +62,12 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			elevState.CabRequests = append([]bool(nil), localState.ElevatorState.CabRequests...)
+			elevState.CabOrders = localState.ElevatorState.CabOrders
 		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue
 		}
-		input.States[fmt.Sprintf("elevator_%d", id)] = elevState
+		input.States[fmt.Sprintf("elevator_%d", id)] = NewHRAAssignerState(elevState)
 	}
 
 	for floor := range NFloors {
@@ -107,7 +107,7 @@ func buildLocalOrderTable(
 	}
 
 	for floor := range NFloors {
-		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
+		result[floor][BtnCab] = IsActiveOrder(localState.ElevatorState.CabOrders[floor])
 	}
 
 	return result
@@ -116,7 +116,7 @@ func buildLocalOrderTable(
 func localFallbackOrders(localState LocalSystemState) LocalOrderTable {
 	var result LocalOrderTable
 	for floor := range NFloors {
-		result[floor][BtnCab] = localState.ElevatorState.CabRequests[floor]
+		result[floor][BtnCab] = IsActiveOrder(localState.ElevatorState.CabOrders[floor])
 		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
 			state := localState.HallRequests[floor][btn]
 			result[floor][btn] = state == OrderPending || state == OrderAssigned

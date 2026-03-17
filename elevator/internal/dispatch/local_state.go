@@ -27,7 +27,9 @@ func applyButtonPress(
 			state.HallRequests[btn.Floor][btn.Button] = OrderPending
 		}
 	case BtnCab:
-		state.ElevatorState.CabRequests[btn.Floor] = true
+		if state.ElevatorState.CabOrders[btn.Floor] == OrderStandby {
+			state.ElevatorState.CabOrders[btn.Floor] = OrderPending
+		}
 	}
 	return state
 }
@@ -37,7 +39,7 @@ func applyHardwareUpdate(
 	event ElevatorEvents,
 ) LocalSystemState {
 	updatedElevState := NewHRAElevState(event.Elevator)
-	updatedElevState.CabRequests = state.ElevatorState.CabRequests
+	updatedElevState.CabOrders = state.ElevatorState.CabOrders
 	state.ElevatorState = updatedElevState
 	state.AliveStatus = event.Elevator.ActiveStatus
 
@@ -52,31 +54,24 @@ func applyHardwareUpdate(
 			case BtnHallDown:
 				state.HallRequests[floor][BtnHallDown] = OrderComplete
 			case BtnCab:
-				state.ElevatorState.CabRequests[floor] = false
+				state.ElevatorState.CabOrders[floor] = OrderComplete
 			}
 		}
 	}
 	return state
 }
 
-func mergeRecoveredCabRequests(
+func mergeConvergedCabOrders(
 	state LocalSystemState,
 	convergedState ConvergedSystemState,
-) (LocalSystemState, bool) {
-	if !convergedState.Recovering {
-		return state, false
+) LocalSystemState {
+	for floor := range NFloors {
+		state.ElevatorState.CabOrders[floor] = mergeConvergedOrderState(
+			state.ElevatorState.CabOrders[floor],
+			convergedState.ElevatorList[state.ElevatorID].CabOrders[floor],
+		)
 	}
-
-	recoveredCabRequests := MergeCabRequests(
-		state.ElevatorState.CabRequests,
-		convergedState.ElevatorList[state.ElevatorID].CabRequests,
-	)
-	if cabRequestsEqual(state.ElevatorState.CabRequests, recoveredCabRequests) {
-		return state, false
-	}
-
-	state.ElevatorState.CabRequests = recoveredCabRequests
-	return state, true
+	return state
 }
 
 func mergeConvergedHallOrders(
@@ -86,15 +81,25 @@ func mergeConvergedHallOrders(
 ) LocalSystemState {
 	for floor := range NFloors {
 		for btn := range NButtons {
-			convergedOrder := convergedState.HallOrderTable[elevatorID][floor][btn]
-			localOrder := state.HallRequests[floor][btn]
-			if localOrder == OrderComplete && convergedOrder == OrderAssigned {
-				continue
-			}
-			state.HallRequests[floor][btn] = convergedOrder
+			state.HallRequests[floor][btn] = mergeConvergedOrderState(
+				state.HallRequests[floor][btn],
+				convergedState.HallOrderTable[elevatorID][floor][btn],
+			)
 		}
 	}
 	return state
+}
+
+func mergeConvergedOrderState(localOrder, convergedOrder OrderState) OrderState {
+	switch {
+	case localOrder == OrderPending && convergedOrder == OrderStandby:
+		return localOrder
+	case localOrder == OrderComplete &&
+		(convergedOrder == OrderPending || convergedOrder == OrderAssigned):
+		return localOrder
+	default:
+		return convergedOrder
+	}
 }
 
 func makeLightUpdate(
@@ -104,7 +109,7 @@ func makeLightUpdate(
 ) ButtonLightUpdate {
 	var cabLights [NFloors]bool
 	for floor := range NFloors {
-		cabLights[floor] = localState.ElevatorState.CabRequests[floor]
+		cabLights[floor] = IsActiveOrder(localState.ElevatorState.CabOrders[floor])
 	}
 	hallLightUpdate := convergedState.HallOrderTable[elevatorID]
 
@@ -112,16 +117,4 @@ func makeLightUpdate(
 		HallLights: hallLightUpdate,
 		CabLights:  cabLights,
 	}
-}
-
-func cabRequestsEqual(a, b []bool) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

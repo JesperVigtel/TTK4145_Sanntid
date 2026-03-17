@@ -12,7 +12,6 @@ type ConvergedSystemState struct {
 	AliveList      [NElevators]bool
 	ElevatorList   [NElevators]HRAElevState
 	HallOrderTable [NElevators]HallOrderTable
-	Recovering     bool
 }
 
 type LocalSystemState struct {
@@ -27,7 +26,6 @@ type Message struct {
 	ElevatorList   [NElevators]HRAElevState
 	HallOrderTable HallOrderTable
 	AliveStatus    bool
-	Recovering     bool
 }
 
 //Elevator types START:
@@ -144,6 +142,7 @@ const (
 )
 
 type HallOrderTable [NFloors][NButtons]OrderState
+type CabOrderTable [NFloors]OrderState
 type LocalOrderTable [NFloors][NButtons]bool
 
 // er det en ide å lage en completedorders matrise som man kan bruke?? bruk dette til å fjerne matrisehelvete fra
@@ -154,32 +153,46 @@ type LocalOrderTable [NFloors][NButtons]bool
 // ------------------------------------------------------------------------------------
 
 type HRAElevState struct {
+	Behavior  string        `json:"behaviour"`
+	Floor     int           `json:"floor"`
+	Direction string        `json:"direction"`
+	CabOrders CabOrderTable `json:"cabOrders"`
+}
+
+func NewHRAElevState(elev Elevator) HRAElevState {
+	return HRAElevState{
+		Behavior:  elevBehaviorToString(elev.Behaviour),
+		Floor:     elev.CurrentFloor,
+		Direction: elevDirectionToString(elev.PhysicalMotorDirection),
+	}
+}
+
+type HRAAssignerState struct {
 	Behavior    string `json:"behaviour"`
 	Floor       int    `json:"floor"`
 	Direction   string `json:"direction"`
 	CabRequests []bool `json:"cabRequests"`
 }
 
-func NewHRAElevState(elev Elevator) HRAElevState {
-	return HRAElevState{
-		Behavior:    elevBehaviorToString(elev.Behaviour),
-		Floor:       elev.CurrentFloor,
-		Direction:   elevDirectionToString(elev.PhysicalMotorDirection),
-		CabRequests: make([]bool, NFloors),
+func NewHRAAssignerState(elevState HRAElevState) HRAAssignerState {
+	return HRAAssignerState{
+		Behavior:    elevState.Behavior,
+		Floor:       elevState.Floor,
+		Direction:   elevState.Direction,
+		CabRequests: CabRequestsFromOrders(elevState.CabOrders),
 	}
 }
 
-func MergeCabRequests(base, incoming []bool) []bool {
-	merged := make([]bool, NFloors)
+func CabRequestsFromOrders(cabOrders CabOrderTable) []bool {
+	requests := make([]bool, NFloors)
 	for floor := range NFloors {
-		if floor < len(base) && base[floor] {
-			merged[floor] = true
-		}
-		if floor < len(incoming) && incoming[floor] {
-			merged[floor] = true
-		}
+		requests[floor] = IsActiveOrder(cabOrders[floor])
 	}
-	return merged
+	return requests
+}
+
+func IsActiveOrder(orderState OrderState) bool {
+	return orderState == OrderPending || orderState == OrderAssigned
 }
 
 func elevBehaviorToString(b ElevatorBehaviour) string {
@@ -207,6 +220,6 @@ func elevDirectionToString(d MotorDirection) string {
 }
 
 type HRAInput struct {
-	HallRequests [NFloors][2]bool        `json:"hallRequests"`
-	States       map[string]HRAElevState `json:"states"`
+	HallRequests [NFloors][2]bool            `json:"hallRequests"`
+	States       map[string]HRAAssignerState `json:"states"`
 }
