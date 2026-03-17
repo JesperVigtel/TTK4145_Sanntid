@@ -12,8 +12,8 @@ import (
 func Run(
 	selfID int,
 	localState <-chan types.Message, // fra consensus
-	peerMsg chan<- types.Message, // til consensus
-	peerEvents chan<- types.GlobalNodeRegistry, // til consensus
+	incomingMessages chan<- types.Message, // til consensus
+	nodeRegistry chan<- types.GlobalNodeRegistry, // til consensus
 ) {
 	ticker := time.NewTicker(config.BroadcastRate)
 	defer ticker.Stop()
@@ -48,10 +48,10 @@ func Run(
 			if msg.SenderID == selfID {
 				continue
 			}
-			peerMsg <- msg // videresend til consensus
+			incomingMessages <- msg // videresend til consensus
 
 		case update := <-peerUpdateCh:
-			peerEvents <- peers.ConvertPeerUpdate(update)
+			nodeRegistry <- peers.ConvertPeerUpdate(update)
 		}
 	}
 }
