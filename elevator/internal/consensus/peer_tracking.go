@@ -94,30 +94,6 @@ func sendStateUpdate(
 	}
 }
 
-func reconcileAndPublish(
-	broadcast chan<- types.Message,
-	converged chan<- types.ConvergedSystemState,
-	selfID int,
-	peerIsAlive [config.NElevators]bool,
-	peerIsConsistent [config.NElevators]bool,
-	systemElevStates [config.NElevators]types.HRAElevState,
-	systemHallOrders [config.NElevators]types.HallOrderTable,
-	peerObservedCabOrders [config.NElevators][config.NElevators]types.CabOrderTable,
-) ([config.NElevators]types.HRAElevState, [config.NElevators]types.HallOrderTable, [config.NElevators]bool) {
-	systemHallOrders = advanceHallOrderStates(systemHallOrders, selfID, peerIsAlive)
-	systemElevStates = advanceCabOrderStates(systemElevStates, peerObservedCabOrders, selfID, peerIsAlive)
-	sendStateUpdate(broadcast, selfID, peerIsAlive, systemElevStates, systemHallOrders)
-	peerIsConsistent = publishIfConsistent(
-		peerIsConsistent,
-		peerIsAlive,
-		systemElevStates,
-		systemHallOrders,
-		selfID,
-		converged,
-	)
-	return systemElevStates, systemHallOrders, peerIsConsistent
-}
-
 func publishIfConsistent(
 	peerIsConsistent [config.NElevators]bool,
 	peerIsAlive [config.NElevators]bool,
