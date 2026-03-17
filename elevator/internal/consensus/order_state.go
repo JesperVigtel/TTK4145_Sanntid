@@ -12,7 +12,7 @@ import (
 // States that have diverged beyond adjacent steps are reset to Standby.
 // -----------------------------------------------------------------------------
 
-func advanceLocalOrderStates(
+func advanceHallOrderStates(
 	systemHallOrders [config.NElevators]types.HallOrderTable,
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
@@ -21,7 +21,9 @@ func advanceLocalOrderStates(
 		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
 			systemHallOrders[selfID][floor][btn] = nextOrderState(
 				systemHallOrders[selfID][floor][btn],
-				alivePeerOrderStates(systemHallOrders, floor, int(btn), selfID, peerIsAlive),
+				alivePeerOrderStates(selfID, peerIsAlive, func(peerID int) types.OrderState {
+					return systemHallOrders[peerID][floor][btn]
+				}),
 			)
 		}
 	}
@@ -30,7 +32,7 @@ func advanceLocalOrderStates(
 
 func advanceCabOrderStates(
 	systemElevStates [config.NElevators]types.HRAElevState,
-	peerCabOrderViews [config.NElevators][config.NElevators]types.CabOrderTable,
+	peerObservedCabOrders [config.NElevators][config.NElevators]types.CabOrderTable,
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
 ) [config.NElevators]types.HRAElevState {
@@ -38,7 +40,9 @@ func advanceCabOrderStates(
 		for floor := range config.NFloors {
 			systemElevStates[ownerID].CabOrders[floor] = nextOrderState(
 				systemElevStates[ownerID].CabOrders[floor],
-				alivePeerCabOrderStates(peerCabOrderViews, ownerID, floor, selfID, peerIsAlive),
+				alivePeerOrderStates(selfID, peerIsAlive, func(peerID int) types.OrderState {
+					return peerObservedCabOrders[peerID][ownerID][floor]
+				}),
 			)
 		}
 	}
@@ -64,23 +68,23 @@ func tryCyclicAdvance(currentState types.OrderState, peerStates []types.OrderSta
 
 	switch currentState {
 	case types.OrderStandby:
-		if allAreEither(peerStates, types.OrderStandby, types.OrderPending) && slices.Contains(peerStates, types.OrderPending) {
+		if allPeerStatesAreEither(peerStates, types.OrderStandby, types.OrderPending) && slices.Contains(peerStates, types.OrderPending) {
 			return types.OrderPending, true
 		}
 		if slices.Contains(peerStates, types.OrderAssigned) {
 			return types.OrderPending, true
 		}
 	case types.OrderPending:
-		if alone || allAreEither(peerStates, types.OrderPending, types.OrderAssigned) {
+		if alone || allPeerStatesAreEither(peerStates, types.OrderPending, types.OrderAssigned) {
 			return types.OrderAssigned, true
 		}
 	case types.OrderAssigned:
-		if allAreEither(peerStates, types.OrderAssigned, types.OrderComplete) &&
+		if allPeerStatesAreEither(peerStates, types.OrderAssigned, types.OrderComplete) &&
 			slices.Contains(peerStates, types.OrderComplete) {
 			return types.OrderComplete, true
 		}
 	case types.OrderComplete:
-		if alone || allAreEither(peerStates, types.OrderComplete, types.OrderStandby) {
+		if alone || allPeerStatesAreEither(peerStates, types.OrderComplete, types.OrderStandby) {
 			return types.OrderStandby, true
 		}
 	}
@@ -90,55 +94,37 @@ func tryCyclicAdvance(currentState types.OrderState, peerStates []types.OrderSta
 func peerStatesHaveDiverged(selfState types.OrderState, peerStates []types.OrderState) bool {
 	switch selfState {
 	case types.OrderStandby:
-		return !allAreEither(peerStates, types.OrderStandby, types.OrderPending) &&
-			!allAreEither(peerStates, types.OrderStandby, types.OrderComplete)
+		return !allPeerStatesAreEither(peerStates, types.OrderStandby, types.OrderPending) &&
+			!allPeerStatesAreEither(peerStates, types.OrderStandby, types.OrderComplete)
 	case types.OrderPending:
-		return !allAreEither(peerStates, types.OrderPending, types.OrderAssigned) &&
-			!allAreEither(peerStates, types.OrderStandby, types.OrderPending)
+		return !allPeerStatesAreEither(peerStates, types.OrderPending, types.OrderAssigned) &&
+			!allPeerStatesAreEither(peerStates, types.OrderStandby, types.OrderPending)
 	case types.OrderAssigned:
-		return !allAreEither(peerStates, types.OrderAssigned, types.OrderComplete) &&
-			!allAreEither(peerStates, types.OrderAssigned, types.OrderPending) &&
-			!allAreEither(peerStates, types.OrderAssigned, types.OrderStandby)
+		return !allPeerStatesAreEither(peerStates, types.OrderAssigned, types.OrderComplete) &&
+			!allPeerStatesAreEither(peerStates, types.OrderAssigned, types.OrderPending) &&
+			!allPeerStatesAreEither(peerStates, types.OrderAssigned, types.OrderStandby)
 	case types.OrderComplete:
-		return !allAreEither(peerStates, types.OrderComplete, types.OrderStandby) &&
-			!allAreEither(peerStates, types.OrderAssigned, types.OrderComplete)
+		return !allPeerStatesAreEither(peerStates, types.OrderComplete, types.OrderStandby) &&
+			!allPeerStatesAreEither(peerStates, types.OrderAssigned, types.OrderComplete)
 	}
 	return false
 }
 
 func alivePeerOrderStates(
-	systemHallOrders [config.NElevators]types.HallOrderTable,
-	floor int,
-	btn int,
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
+	peerStateAt func(peerID int) types.OrderState,
 ) []types.OrderState {
 	var peerStates []types.OrderState
 	for peerID := range config.NElevators {
 		if peerID != selfID && peerIsAlive[peerID] {
-			peerStates = append(peerStates, systemHallOrders[peerID][floor][btn])
+			peerStates = append(peerStates, peerStateAt(peerID))
 		}
 	}
 	return peerStates
 }
 
-func alivePeerCabOrderStates(
-	peerCabOrderViews [config.NElevators][config.NElevators]types.CabOrderTable,
-	ownerID int,
-	floor int,
-	selfID int,
-	peerIsAlive [config.NElevators]bool,
-) []types.OrderState {
-	var peerStates []types.OrderState
-	for peerID := range config.NElevators {
-		if peerID != selfID && peerIsAlive[peerID] {
-			peerStates = append(peerStates, peerCabOrderViews[peerID][ownerID][floor])
-		}
-	}
-	return peerStates
-}
-
-func allAreEither(peerStates []types.OrderState, stateA, stateB types.OrderState) bool {
+func allPeerStatesAreEither(peerStates []types.OrderState, stateA, stateB types.OrderState) bool {
 	for _, state := range peerStates {
 		if state != stateA && state != stateB {
 			return false

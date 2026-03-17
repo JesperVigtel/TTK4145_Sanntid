@@ -21,72 +21,61 @@ func Run(
 	selfID int,
 ) {
 	var (
-		systemHallOrders   [config.NElevators]types.HallOrderTable
-		systemElevStates   [config.NElevators]types.HRAElevState
-		peerReportedStates [config.NElevators]types.HRAElevState
-		peerCabOrderViews  [config.NElevators][config.NElevators]types.CabOrderTable
-		peerIsAlive        [config.NElevators]bool
-		peerIsConsistent   [config.NElevators]bool
+		systemHallOrders [config.NElevators]types.HallOrderTable
+		systemElevStates [config.NElevators]types.HRAElevState
+		// [peer] last self-reported row from that peer, used for consistency checks.
+		peerReportedSelfStates [config.NElevators]types.HRAElevState
+		// [observer][owner] cab-order row that one peer reports for another.
+		peerObservedCabOrders [config.NElevators][config.NElevators]types.CabOrderTable
+		peerIsAlive           [config.NElevators]bool
+		peerIsConsistent      [config.NElevators]bool
 	)
 
 	systemHallOrders = newSystemHallOrders()
 
 	for {
 		select {
-
 		case registry := <-peerEvents:
 			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
-			peerReportedStates, peerCabOrderViews = resetPeerObservations(
+			peerReportedSelfStates, peerObservedCabOrders = resetPeerSnapshots(
 				registry,
-				peerReportedStates,
-				peerCabOrderViews,
+				peerReportedSelfStates,
+				peerObservedCabOrders,
 				selfID,
 			)
 			peerIsConsistent = [config.NElevators]bool{}
-			systemElevStates, systemHallOrders = advanceAndBroadcast(
+			systemElevStates, systemHallOrders, peerIsConsistent = reconcileAndPublish(
 				broadcast,
-				selfID,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				peerCabOrderViews,
-			)
-			peerIsConsistent = publishIfConsistent(
-				peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				selfID,
 				converged,
+				selfID,
+				peerIsAlive,
+				peerIsConsistent,
+				systemElevStates,
+				systemHallOrders,
+				peerObservedCabOrders,
 			)
 
 		case msg := <-peerMsg:
-			if msg.SenderID < 0 || msg.SenderID >= config.NElevators || msg.SenderID == selfID {
+			if !isRemotePeerID(msg.SenderID, selfID) {
 				continue
 			}
 
-			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, peerReportedStates)
-			peerReportedStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
-			peerCabOrderViews = recordPeerCabOrderViews(msg, peerCabOrderViews)
-			systemElevStates = adoptPeerElevatorState(msg, systemElevStates)
+			peerIsConsistent[msg.SenderID] = peerStateMatchesRecorded(msg, systemHallOrders, peerReportedSelfStates)
+			peerReportedSelfStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
+			peerObservedCabOrders = recordPeerObservedCabOrders(msg, peerObservedCabOrders)
+			systemElevStates = adoptPeerElevatorStatus(msg, systemElevStates)
 			systemHallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
-			systemElevStates, systemHallOrders = advanceAndBroadcast(
+			systemElevStates, systemHallOrders, peerIsConsistent = reconcileAndPublish(
 				broadcast,
-				selfID,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				peerCabOrderViews,
-			)
-			peerIsConsistent = publishIfConsistent(
-				peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				selfID,
 				converged,
+				selfID,
+				peerIsAlive,
+				peerIsConsistent,
+				systemElevStates,
+				systemHallOrders,
+				peerObservedCabOrders,
 			)
 
 		case state := <-localState:
@@ -94,21 +83,15 @@ func Run(
 			systemHallOrders[selfID] = state.HallRequests
 			peerIsAlive[selfID] = state.AliveStatus
 
-			systemElevStates, systemHallOrders = advanceAndBroadcast(
+			systemElevStates, systemHallOrders, peerIsConsistent = reconcileAndPublish(
 				broadcast,
-				selfID,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				peerCabOrderViews,
-			)
-			peerIsConsistent = publishIfConsistent(
-				peerIsConsistent,
-				peerIsAlive,
-				systemElevStates,
-				systemHallOrders,
-				selfID,
 				converged,
+				selfID,
+				peerIsAlive,
+				peerIsConsistent,
+				systemElevStates,
+				systemHallOrders,
+				peerObservedCabOrders,
 			)
 		}
 	}
