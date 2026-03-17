@@ -76,13 +76,16 @@ but it is less likely to keep a wrong distributed order state.
 ## Repository Layout
 
 ```text
-cmd/elevator/                 Program entry point
-internal/config/              Constants and timing
-internal/consensus/           Peer state and order convergence
-internal/dispatch/            Local state handling and hall assignment
-internal/localControl/        Elevator FSM and hardware control
-internal/network/             UDP broadcast, peers, packet loss tools
-internal/types/               Shared types
+cmd/
+  elevator/              entry point
+
+internal/
+  config/                constants and timing
+  consensus/             peer state and order convergence
+  dispatch/              local state handling and hall assignment
+  localControl/          elevator FSM and hardware control
+  network/               UDP broadcast, peers, packet loss tools
+  types/                 shared types
 ```
 
 ## Running
@@ -118,4 +121,3 @@ This is useful for testing:
 - restart recovery
 - repeated messages
 - disagreement between peers
-
