@@ -3,6 +3,8 @@ package peers
 import (
 	"elevator/internal/config"
 	"elevator/internal/network/conn"
+	"elevator/internal/types"
+	"strconv"
 	"fmt"
 	"net"
 	"sort"
@@ -94,4 +96,39 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 			sentInitialSnapshot = true
 		}
 	}
+}
+
+
+func ConvertPeerUpdate(update PeerUpdate) types.GlobalNodeRegistry {
+	registry := types.GlobalNodeRegistry{}
+
+	for _, peer := range update.Peers {
+		id, err := strconv.Atoi(peer)
+		if err != nil || id < 0 || id >= config.NElevators {
+			//fmt.Printf("[NETWORK] Ugyldig peer-ID ignorert: %q\n", peer)
+			continue
+		}
+		registry.Nodes = append(registry.Nodes, id)
+	}
+
+	// Ny heis
+	if update.New != "" {
+		id, err := strconv.Atoi(update.New)
+		if err == nil && id >= 0 && id < config.NElevators {
+			//fmt.Printf("[NETWORK] Ny heis oppdaget: ID=%d\n", id)
+			registry.New = append(registry.New, id)
+		}
+	}
+
+	// Heiser som har falt ut
+	for _, lost := range update.Lost {
+		id, err := strconv.Atoi(lost)
+		if err != nil || id < 0 || id >= config.NElevators {
+			continue
+		}
+		//fmt.Printf("[NETWORK] Heis mistet: ID=%d\n", id)
+		registry.Lost = append(registry.Lost, id)
+	}
+
+	return registry
 }

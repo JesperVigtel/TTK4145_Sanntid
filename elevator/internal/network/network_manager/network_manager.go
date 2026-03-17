@@ -12,39 +12,39 @@ import (
 
 // mulig jeg bør legge inn funksjonalitet for error, feks om det ikke kommer inn en ren int og kanskje
 // "elev-1", men skal ikke være noe problem om riktig melding kommer.
-func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
-	registry := types.GlobalNodeRegistry{}
+// func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
+// 	registry := types.GlobalNodeRegistry{}
 
-	for _, peer := range update.Peers {
-		id, err := strconv.Atoi(peer)
-		if err != nil || id < 0 || id >= config.NElevators {
-			//fmt.Printf("[NETWORK] Ugyldig peer-ID ignorert: %q\n", peer)
-			continue
-		}
-		registry.Nodes = append(registry.Nodes, id)
-	}
+// 	for _, peer := range update.Peers {
+// 		id, err := strconv.Atoi(peer)
+// 		if err != nil || id < 0 || id >= config.NElevators {
+// 			//fmt.Printf("[NETWORK] Ugyldig peer-ID ignorert: %q\n", peer)
+// 			continue
+// 		}
+// 		registry.Nodes = append(registry.Nodes, id)
+// 	}
 
-	// Ny heis
-	if update.New != "" {
-		id, err := strconv.Atoi(update.New)
-		if err == nil && id >= 0 && id < config.NElevators {
-			//fmt.Printf("[NETWORK] Ny heis oppdaget: ID=%d\n", id)
-			registry.New = append(registry.New, id)
-		}
-	}
+// 	// Ny heis
+// 	if update.New != "" {
+// 		id, err := strconv.Atoi(update.New)
+// 		if err == nil && id >= 0 && id < config.NElevators {
+// 			//fmt.Printf("[NETWORK] Ny heis oppdaget: ID=%d\n", id)
+// 			registry.New = append(registry.New, id)
+// 		}
+// 	}
 
-	// Heiser som har falt ut
-	for _, lost := range update.Lost {
-		id, err := strconv.Atoi(lost)
-		if err != nil || id < 0 || id >= config.NElevators {
-			continue
-		}
-		//fmt.Printf("[NETWORK] Heis mistet: ID=%d\n", id)
-		registry.Lost = append(registry.Lost, id)
-	}
+// 	// Heiser som har falt ut
+// 	for _, lost := range update.Lost {
+// 		id, err := strconv.Atoi(lost)
+// 		if err != nil || id < 0 || id >= config.NElevators {
+// 			continue
+// 		}
+// 		//fmt.Printf("[NETWORK] Heis mistet: ID=%d\n", id)
+// 		registry.Lost = append(registry.Lost, id)
+// 	}
 
-	return registry
-}
+// 	return registry
+// }
 
 // Skal man initialisere lastLocalState som noe her frem til første localState kommer?
 // Kan vel evnetuelt sette lastLocalState.SenderID = selfID slik at den ignorerer frem til den får
@@ -97,7 +97,7 @@ func Run(
 		case update := <-peerUpdateCh:
 			//fmt.Printf("[NETWORK] PeerUpdate – Aktive: %v | Ny: %q | Mistet: %v\n",
 			//update.Peers, update.New, update.Lost)
-			nodeRegistry <- convertPeerUpdate(update)
+			nodeRegistry <- peers.ConvertPeerUpdate(update)
 		}
 	}
 }
