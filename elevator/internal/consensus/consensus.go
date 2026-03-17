@@ -21,17 +21,13 @@ func Run(
 	selfID int,
 ) {
 	var (
-		systemHallOrders [config.NElevators]types.HallOrderTable
-		systemElevStates [config.NElevators]types.HRAElevState
-		// [peer] last self-reported row from that peer, used for consistency checks.
+		systemHallOrders       [config.NElevators]types.HallOrderTable
+		systemElevStates       [config.NElevators]types.HRAElevState
 		peerReportedSelfStates [config.NElevators]types.HRAElevState
-		// [observer][owner] cab-order row that one peer reports for another.
-		peerObservedCabOrders [config.NElevators][config.NElevators]types.CabOrderTable
-		peerIsAlive           [config.NElevators]bool
-		peerIsConsistent      [config.NElevators]bool
+		peerObservedCabOrders  [config.NElevators][config.NElevators]types.CabOrderTable
+		peerIsAlive            [config.NElevators]bool
+		peerIsConsistent       [config.NElevators]bool
 	)
-
-	systemHallOrders = newSystemHallOrders()
 
 	for {
 		select {

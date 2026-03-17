@@ -20,7 +20,7 @@ func updatePeerAvailability(
 			continue
 		}
 		peerIsAlive[lostPeerID] = false
-		systemHallOrders[lostPeerID] = newStandbyHallOrders()
+		systemHallOrders[lostPeerID] = types.HallOrderTable{}
 	}
 
 	for _, newPeerID := range nodeRegistry.New {
@@ -28,7 +28,7 @@ func updatePeerAvailability(
 			continue
 		}
 		peerIsAlive[newPeerID] = true
-		systemHallOrders[newPeerID] = newStandbyHallOrders()
+		systemHallOrders[newPeerID] = types.HallOrderTable{}
 	}
 	return peerIsAlive, systemHallOrders
 }
@@ -45,7 +45,7 @@ func resetPeerSnapshots(
 				continue
 			}
 			peerReportedSelfStates[peerID] = types.HRAElevState{}
-			peerObservedCabOrders[peerID] = newPeerObservedCabOrders()
+			peerObservedCabOrders[peerID] = [config.NElevators]types.CabOrderTable{}
 		}
 	}
 	return peerReportedSelfStates, peerObservedCabOrders
@@ -164,40 +164,6 @@ func adoptPeerElevatorStatus(
 	systemStates[msg.SenderID].Direction = senderState.Direction
 	systemStates[msg.SenderID].Assignable = senderState.Assignable
 	return systemStates
-}
-
-func newSystemHallOrders() [config.NElevators]types.HallOrderTable {
-	var table [config.NElevators]types.HallOrderTable
-	for peerID := range config.NElevators {
-		table[peerID] = newStandbyHallOrders()
-	}
-	return table
-}
-
-func newStandbyHallOrders() types.HallOrderTable {
-	var table types.HallOrderTable
-	for floor := range config.NFloors {
-		for btn := range config.NButtons {
-			table[floor][btn] = types.OrderStandby
-		}
-	}
-	return table
-}
-
-func newPeerObservedCabOrders() [config.NElevators]types.CabOrderTable {
-	var table [config.NElevators]types.CabOrderTable
-	for ownerID := range config.NElevators {
-		table[ownerID] = newStandbyCabOrders()
-	}
-	return table
-}
-
-func newStandbyCabOrders() types.CabOrderTable {
-	var table types.CabOrderTable
-	for floor := range config.NFloors {
-		table[floor] = types.OrderStandby
-	}
-	return table
 }
 
 func elevatorStatesEqual(a, b types.HRAElevState) bool {
