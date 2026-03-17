@@ -3,8 +3,8 @@ package networkmanager
 import (
 	//"fmt"
 	"elevator/internal/config"
-	"elevator/internal/network/peers"
 	"elevator/internal/network/broadcast"
+	"elevator/internal/network/peers"
 	"elevator/internal/types"
 	"strconv"
 	"time"
@@ -50,24 +50,28 @@ func convertPeerUpdate(update peers.PeerUpdate) types.GlobalNodeRegistry {
 // Kan vel evnetuelt sette lastLocalState.SenderID = selfID slik at den ignorerer frem til den får
 // localState
 func Run(
-	selfID 				int,
-	msgTx 				chan types.Message,
-	msgRx 				chan types.Message,
-	peerUpdateCh 		chan peers.PeerUpdate,
-	localState 			<-chan types.Message, // fra consensus
-	incomingMessages 	chan<- types.Message, // til consensus
-	nodeRegistry 		chan<- types.GlobalNodeRegistry, // til consensus
+	selfID int,
+	localState <-chan types.Message, // fra consensus
+	incomingMessages chan<- types.Message, // til consensus
+	nodeRegistry chan<- types.GlobalNodeRegistry, // til consensus
 ) {
 	//fmt.Println("[NETWORK] Networkmanager called")
 	ticker := time.NewTicker(config.BroadcastRate)
+	defer ticker.Stop()
 	var lastLocalState types.Message
 	hasState := false
+	msgTx := make(chan types.Message, config.BroadcastBufferSize)
+	msgRx := make(chan types.Message, config.BroadcastBufferSize)
+	peerUpdateCh := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
 
 	peerTxEnable := make(chan bool)
+
 	go broadcast.Transmitter(config.BroadcastPort, msgTx)
 	go broadcast.Receiver(config.BroadcastPort, msgRx)
 	go peers.Transmitter(config.PeersPort, strconv.Itoa(selfID), peerTxEnable)
 	go peers.Receiver(config.PeersPort, peerUpdateCh)
+
+	peerTxEnable <- true
 
 	for {
 		select {
@@ -92,7 +96,7 @@ func Run(
 
 		case update := <-peerUpdateCh:
 			//fmt.Printf("[NETWORK] PeerUpdate – Aktive: %v | Ny: %q | Mistet: %v\n",
-        		//update.Peers, update.New, update.Lost)
+			//update.Peers, update.New, update.Lost)
 			nodeRegistry <- convertPeerUpdate(update)
 		}
 	}

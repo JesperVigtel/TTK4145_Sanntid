@@ -5,8 +5,8 @@ import (
 	"elevator/internal/consensus"
 	"elevator/internal/dispatch"
 	"elevator/internal/localControl"
-	"elevator/internal/network/network_manager"
-	"elevator/internal/network/peers"
+	networkmanager "elevator/internal/network/network_manager"
+
 	// "elevator/internal/network/utility_network"
 	"elevator/internal/types"
 	"flag"
@@ -34,9 +34,6 @@ func main() {
 	peerMsg := make(chan types.Message, config.ChannelBufferSize)
 	broadcast := make(chan types.Message, config.ChannelBufferSize)
 	peerEvents := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
-	msgTx := make(chan types.Message, config.BroadcastBufferSize)
-	msgRx := make(chan types.Message, config.BroadcastBufferSize)
-	peerUpdateCh := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
 
 	// -- Goroutines --
 
@@ -73,9 +70,6 @@ func main() {
 
 	go networkmanager.Run( //Naming could be just network or continuity?
 		selfID,
-		msgTx,
-		msgRx,
-		peerUpdateCh,
 		broadcast,
 		peerMsg,
 		peerEvents,
