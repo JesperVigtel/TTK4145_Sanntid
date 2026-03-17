@@ -64,6 +64,9 @@ func buildHallAssignerInput(
 		if id == elevatorID {
 			elevState.CabOrders = localState.ElevatorState.CabOrders
 		}
+		if !elevState.Assignable {
+			continue
+		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue
 		}
@@ -117,6 +120,9 @@ func localFallbackOrders(localState LocalSystemState) LocalOrderTable {
 	var result LocalOrderTable
 	for floor := range NFloors {
 		result[floor][BtnCab] = IsActiveOrder(localState.ElevatorState.CabOrders[floor])
+		if !localState.ElevatorState.Assignable {
+			continue
+		}
 		for btn := BtnHallUp; btn <= BtnHallDown; btn++ {
 			state := localState.HallRequests[floor][btn]
 			result[floor][btn] = state == OrderPending || state == OrderAssigned

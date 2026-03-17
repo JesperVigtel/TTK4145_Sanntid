@@ -137,17 +137,19 @@ type LocalOrderTable [NFloors][NButtons]bool
 // ------------------------------------------------------------------------------------
 
 type HRAElevState struct {
-	Behavior  string        `json:"behaviour"`
-	Floor     int           `json:"floor"`
-	Direction string        `json:"direction"`
-	CabOrders CabOrderTable `json:"cabOrders"`
+	Behavior   string        `json:"behaviour"`
+	Floor      int           `json:"floor"`
+	Direction  string        `json:"direction"`
+	Assignable bool          `json:"assignable"`
+	CabOrders  CabOrderTable `json:"cabOrders"`
 }
 
-func NewHRAElevState(elev Elevator) HRAElevState {
+func NewHRAElevState(elev Elevator, assignable bool) HRAElevState {
 	return HRAElevState{
-		Behavior:  elevBehaviorToString(elev.Behaviour),
-		Floor:     elev.CurrentFloor,
-		Direction: elevDirectionToString(elev.PhysicalMotorDirection),
+		Behavior:   elevBehaviorToString(elev.Behaviour),
+		Floor:      elev.CurrentFloor,
+		Direction:  elevDirectionToString(elev.PhysicalMotorDirection),
+		Assignable: assignable,
 	}
 }
 

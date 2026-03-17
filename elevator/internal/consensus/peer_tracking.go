@@ -162,6 +162,7 @@ func adoptPeerElevatorStatus(
 	systemStates[msg.SenderID].Behavior = senderState.Behavior
 	systemStates[msg.SenderID].Floor = senderState.Floor
 	systemStates[msg.SenderID].Direction = senderState.Direction
+	systemStates[msg.SenderID].Assignable = senderState.Assignable
 	return systemStates
 }
 
@@ -200,7 +201,10 @@ func newStandbyCabOrders() types.CabOrderTable {
 }
 
 func elevatorStatesEqual(a, b types.HRAElevState) bool {
-	if a.Behavior != b.Behavior || a.Floor != b.Floor || a.Direction != b.Direction {
+	if a.Behavior != b.Behavior ||
+		a.Floor != b.Floor ||
+		a.Direction != b.Direction ||
+		a.Assignable != b.Assignable {
 		return false
 	}
 	for floor := range config.NFloors {

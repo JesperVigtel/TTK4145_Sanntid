@@ -10,9 +10,11 @@ func initLocalSystemState(
 	elevatorID int,
 ) LocalSystemState {
 	return LocalSystemState{
-		ElevatorID:    elevatorID,
-		AliveStatus:   event.Elevator.ActiveStatus,
-		ElevatorState: NewHRAElevState(event.Elevator),
+		ElevatorID: elevatorID,
+		// A running node should stay in replication even when it is obstructed
+		// or temporarily unable to take new assignments.
+		AliveStatus:   true,
+		ElevatorState: newReplicatedElevatorState(event),
 		HallRequests:  HallOrderTable{},
 	}
 }
@@ -38,10 +40,10 @@ func applyHardwareUpdate(
 	state LocalSystemState,
 	event ElevatorEvents,
 ) LocalSystemState {
-	updatedElevState := NewHRAElevState(event.Elevator)
+	updatedElevState := newReplicatedElevatorState(event)
 	updatedElevState.CabOrders = state.ElevatorState.CabOrders
 	state.ElevatorState = updatedElevState
-	state.AliveStatus = event.Elevator.ActiveStatus
+	state.AliveStatus = true
 
 	for floor := range NFloors {
 		for btn := BtnHallUp; btn <= BtnCab; btn++ {
@@ -59,6 +61,14 @@ func applyHardwareUpdate(
 		}
 	}
 	return state
+}
+
+func newReplicatedElevatorState(event ElevatorEvents) HRAElevState {
+	return NewHRAElevState(event.Elevator, isAvailableForAssignment(event))
+}
+
+func isAvailableForAssignment(event ElevatorEvents) bool {
+	return event.Elevator.ActiveStatus && !event.Obstructed
 }
 
 func mergeConvergedOrders(
