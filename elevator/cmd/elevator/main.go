@@ -5,7 +5,8 @@ import (
 	"elevator/internal/consensus"
 	"elevator/internal/dispatch"
 	"elevator/internal/localControl"
-	"elevator/internal/network/network_manager"
+	// "elevator/internal/network/network_manager"
+	"elevator/internal/network"
 	"elevator/internal/types"
 	"flag"
 	"fmt"
@@ -61,7 +62,7 @@ func main() {
 	)
 
 
-	go networkmanager.Run( //Naming could be just network or continuity?
+	go network.Run( //Naming could be just network or continuity?
 		selfID,
 		broadcast,
 		peerMsg,
