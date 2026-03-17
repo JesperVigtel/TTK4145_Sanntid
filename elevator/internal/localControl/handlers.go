@@ -23,7 +23,6 @@ func stopAndServeFloor(
 	elevator *types.Elevator,
 	doorOpenChan chan<- bool,
 	motorActiveChan chan<- bool,
-	localLightsChan chan<- types.LocalLightUpdate,
 	travelDir types.MotorDirection,
 ) (types.CompletedOrderTable, bool) {
 
@@ -35,7 +34,7 @@ func stopAndServeFloor(
 
 	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, travelDir)
 
-	sendLightUpdate(localLightsChan, *elevator, true)
+	applyLocalLights(*elevator, true)
 	return completed, needsExtraDoorTime
 }
 
@@ -115,21 +114,25 @@ func sendElevatorUpdate(
 	}
 }
 
-func sendLightUpdate(channel chan<- types.LocalLightUpdate, elevator types.Elevator, doorOpen bool) {
-
-	var cabLights [config.NFloors]bool
+// Applies lamp outputs that are purely local to this elevator.
+// Cab lamps follow the assigned local orders, while floor and door lamps
+// follow the current physical elevator state.
+func applyLocalLights(elevator types.Elevator, doorOpen bool) {
 	for floor := range config.NFloors {
-		cabLights[floor] = elevator.LocalOrders[floor][int(types.BtnCab)]
+		hardware.SetButtonLamp(types.BtnCab, floor, elevator.LocalOrders[floor][types.BtnCab])
 	}
-
-	channel <- types.LocalLightUpdate{
-		CabLights:    cabLights,
-		DoorOpen:     doorOpen,
-		CurrentFloor: elevator.CurrentFloor,
+	if elevator.CurrentFloor >= 0 {
+		hardware.SetFloorIndicator(elevator.CurrentFloor)
 	}
+	hardware.SetDoorOpenLamp(doorOpen)
 }
 
-func updateFloorIndicator(channel chan<- types.LocalLightUpdate, elevator types.Elevator) {
-
-	sendLightUpdate(channel, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
+// Applies hall lamps from the converged distributed hall-order view.
+// This is kept separate from applyLocalLights so hall lamps only reflect
+// consensus state, not transient local assignment state.
+func applyHallLights(hallLights types.HallOrderTable) {
+	for floor := range config.NFloors {
+		hardware.SetButtonLamp(types.BtnHallUp, floor, hallLights[floor][types.BtnHallUp] == types.OrderAssigned)
+		hardware.SetButtonLamp(types.BtnHallDown, floor, hallLights[floor][types.BtnHallDown] == types.OrderAssigned)
+	}
 }

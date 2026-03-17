@@ -4,7 +4,6 @@ import (
 	"elevator/internal/config"
 	"elevator/internal/consensus"
 	"elevator/internal/dispatch"
-	"elevator/internal/lights"
 	"elevator/internal/localControl"
 	"elevator/internal/network/network_manager"
 	"elevator/internal/network/peers"
@@ -22,16 +21,14 @@ func main() {
 	// selfID := parseArgs()
 	// elevAddr := "localhost:15657"
 
-
 	// -- Channels for LocalControl --
 	localOrders := make(chan types.LocalOrderTable, config.ChannelBufferSize)
+	hallLights := make(chan types.HallOrderTable, config.ChannelBufferSize)
 	elevatorEvents := make(chan types.ElevatorEvents, config.ChannelBufferSize)
-	localLightUpdate := make(chan types.LocalLightUpdate, config.ChannelBufferSize)		//Not in use anymore
 
 	// -- Channels for Decision
 	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
 	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
-	lightUpdate := make(chan types.ButtonLightUpdate, config.ChannelBufferSize)
 
 	// -- Channels for network
 	peerMsg := make(chan types.Message, config.ChannelBufferSize)
@@ -46,18 +43,14 @@ func main() {
 	go localControl.Run(
 		elevAddr,
 		localOrders,
+		hallLights,
 		elevatorEvents,
-		localLightUpdate,
 	)
-
-	go lights.Run(				//Potentially just add to localcontrol???
-		//localLightUpdate,
-		lightUpdate)
 
 	go dispatch.Run(
 		localOrders,
 		localSystemState,
-		lightUpdate,
+		hallLights,
 		elevatorEvents,
 		convergedSystemState,
 		selfID,
@@ -72,13 +65,13 @@ func main() {
 		selfID,
 	)
 
-	go utilitynetwork.InitNetwork(	//Init funcitons should live inside their module
+	go utilitynetwork.InitNetwork( //Init funcitons should live inside their module
 		strconv.Itoa(selfID),
 		msgTx,
 		msgRx,
 		peerUpdateCh)
 
-	go networkmanager.Run(		//Naming could be just network or continuity?
+	go networkmanager.Run( //Naming could be just network or continuity?
 		selfID,
 		msgTx,
 		msgRx,
@@ -113,7 +106,6 @@ func parseArgs() (int, string) {
 
 	return *id, elevAddr
 }
-
 
 // func parseArgs() int {
 // 	var nodeID int

@@ -91,20 +91,3 @@ func mergeConvergedOrderState(localOrder, convergedOrder OrderState) OrderState 
 		return convergedOrder
 	}
 }
-
-func makeLightUpdate(
-	localState LocalSystemState,
-	convergedState ConvergedSystemState,
-	elevatorID int,
-) ButtonLightUpdate {
-	var cabLights [NFloors]bool
-	for floor := range NFloors {
-		cabLights[floor] = IsActiveOrder(localState.ElevatorState.CabOrders[floor])
-	}
-	hallLightUpdate := convergedState.HallOrderTable[elevatorID]
-
-	return ButtonLightUpdate{
-		HallLights: hallLightUpdate,
-		CabLights:  cabLights,
-	}
-}

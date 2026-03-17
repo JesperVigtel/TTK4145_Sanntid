@@ -77,22 +77,6 @@ type ElevatorEvents struct {
 	Obstructed     bool
 }
 
-type LocalLightUpdate struct {
-	CabLights    [NFloors]bool
-	DoorOpen     bool
-	CurrentFloor int
-}
-
-type HallLightUpdate struct { //Remove
-	HallUp   [NFloors]bool
-	HallDown [NFloors]bool
-}
-
-type ButtonLightUpdate struct {
-	HallLights HallOrderTable
-	CabLights  [NFloors]bool
-}
-
 //Elevator types stop
 
 //Network types START:

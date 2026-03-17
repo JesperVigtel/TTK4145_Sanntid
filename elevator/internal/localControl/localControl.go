@@ -11,8 +11,9 @@ import (
 func Run(
 	elevAddr string,
 	newOrder <-chan types.LocalOrderTable,
+	// Hall lamps are driven from the converged distributed hall state.
+	hallLights <-chan types.HallOrderTable,
 	elevatorEvents chan<- types.ElevatorEvents,
-	localLightsChan chan<- types.LocalLightUpdate,
 ) {
 	var (
 		floorChan          = make(chan int, config.ChannelBufferSize)
@@ -39,6 +40,9 @@ func Run(
 
 	elevator := newElevator()
 	obstruction = false
+	// localControl now owns all hardware lamp writes:
+	// cab/floor/door from local state, hall lamps from distributed state.
+	applyLocalLights(elevator, false)
 
 	// Initialize by driving down until a floor sensor is reached
 	hardware.SetMotorDirection(types.Down)
@@ -51,7 +55,7 @@ func Run(
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
-			updateFloorIndicator(localLightsChan, elevator)
+			applyLocalLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
 			if elevator.Behaviour == types.ElevatorMoving {
 				motorActiveChan <- true
@@ -67,9 +71,8 @@ func Run(
 				continue
 			}
 
-			
 			if shouldStopAtCurrentFloor(elevator, floor) {
-				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
+				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
@@ -86,13 +89,13 @@ func Run(
 
 		case orders := <-newOrder:
 			elevator.LocalOrders = orders
-			sendLightUpdate(localLightsChan, elevator, elevator.Behaviour == types.ElevatorDoorOpen)
+			applyLocalLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen)
 
 			if elevator.Behaviour == types.ElevatorDoorOpen && hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				doorOpenChan <- true
-				sendLightUpdate(localLightsChan, elevator, true)
+				applyLocalLights(elevator, true)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
 			}
@@ -107,7 +110,7 @@ func Run(
 			}
 
 			if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
-				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, localLightsChan, elevator.CurrentTravelDirection)
+				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
@@ -115,6 +118,11 @@ func Run(
 
 			startNextMovement(&elevator, motorActiveChan)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+
+		// Hall lamps are updated separately so they reflect the converged
+		// distributed hall-order state, not just this elevator's local orders.
+		case hallLightUpdate := <-hallLights:
+			applyHallLights(hallLightUpdate)
 
 		case obstruction = <-obstructionChan:
 			fmt.Printf("[LocalControl] Obstruction changed: %v\n", obstruction)
@@ -140,7 +148,7 @@ func Run(
 				continue
 			}
 			startNextMovement(&elevator, motorActiveChan)
-			sendLightUpdate(localLightsChan, elevator, false)
+			applyLocalLights(elevator, false)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case <-motorInactiveChan:
@@ -155,6 +163,3 @@ func Run(
 		}
 	}
 }
-
-
-// vi har en bug med at 

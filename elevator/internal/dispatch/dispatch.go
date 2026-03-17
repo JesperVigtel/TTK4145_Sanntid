@@ -12,7 +12,7 @@ import (
 func Run(
 	localOrders chan<- LocalOrderTable,
 	localStateCh chan<- LocalSystemState,
-	buttonLights chan<- ButtonLightUpdate,
+	hallLights chan<- HallOrderTable,
 	elevEvents <-chan ElevatorEvents,
 	convergedSystem <-chan ConvergedSystemState,
 	elevatorID int,
@@ -38,13 +38,13 @@ func Run(
 			localState = mergeConvergedOrders(localState, globalState)
 
 			assignedOrders := computeAssignedOrders(globalState, localState, elevatorID)
-			lightUpdate := makeLightUpdate(localState, globalState, elevatorID)
+			hallLightUpdate := globalState.HallOrderTable[elevatorID]
 
 			if assignedOrders != previousOrders {
 				localOrders <- assignedOrders
 				previousOrders = assignedOrders
 			}
-			buttonLights <- lightUpdate
+			hallLights <- hallLightUpdate
 		}
 	}
 }
