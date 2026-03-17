@@ -90,9 +90,9 @@ internal/types/               Shared types
 Run one process per elevator:
 
 ```bash
-go run ./cmd/elevator --id 0 --port 15657
-go run ./cmd/elevator --id 1 --port 15658
-go run ./cmd/elevator --id 2 --port 15659
+go run ./cmd/elevator --id 0 
+go run ./cmd/elevator --id 1
+go run ./cmd/elevator --id 2
 ```
 
 Important defaults in `internal/config/config.go`:
