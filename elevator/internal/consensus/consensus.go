@@ -6,11 +6,11 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Enforces distributed consensus over hall order state by requiring all alive
-// peers to report a consistent view before publishing a converged state.
-// Uses a cyclic order-state counter (Standby→Pending→Assigned→Complete→Standby)
-// so that state transitions are self-synchronising without a central coordinator.
+// Maintains a converged distributed view of elevator, hall, and cab order state.
+// Alive peers continuously exchange snapshots, and order states advance through
+// the shared cyclic state machine until a consistent system view can be published.
 // -----------------------------------------------------------------------------
+
 
 func Run(
 	peerMsg <-chan types.Message,
@@ -21,45 +21,45 @@ func Run(
 	selfID int,
 ) {
 	var (
-		systemHallOrders       [config.NElevators]types.HallOrderTable
-		systemElevStates       [config.NElevators]types.HRAElevState
-		peerReportedSelfStates [config.NElevators]types.HRAElevState
-		peerObservedCabOrders  [config.NElevators][config.NElevators]types.CabOrderTable
-		peerIsAlive            [config.NElevators]bool
-		peerIsConsistent       [config.NElevators]bool
+		hallOrders     [config.NElevators]types.HallOrderTable
+		elevStates     [config.NElevators]types.HRAElevState
+		lastPeerStates [config.NElevators]types.HRAElevState
+		peerCabViews   [config.NElevators][config.NElevators]types.CabOrderTable
+		peerIsAlive    [config.NElevators]bool
+		peerConsistent [config.NElevators]bool
 	)
 
 	for {
 		select {
 		case registry := <-peerEvents:
-			peerIsAlive, systemHallOrders = updatePeerAvailability(registry, peerIsAlive, systemHallOrders, selfID)
-			peerReportedSelfStates, peerObservedCabOrders = resetPeerSnapshots(registry, peerReportedSelfStates, peerObservedCabOrders, selfID)
-			peerIsConsistent = [config.NElevators]bool{}
+			peerIsAlive, hallOrders = updatePeerAvailability(registry, peerIsAlive, hallOrders, selfID)
+			lastPeerStates, peerCabViews = resetPeerSnapshots(registry, lastPeerStates, peerCabViews, selfID)
+			peerConsistent = [config.NElevators]bool{}
 
 		case msg := <-peerMsg:
 			if !isRemotePeerID(msg.SenderID, selfID) {
 				continue
 			}
 
-			peerIsConsistent[msg.SenderID] = peerSelfStateMatchesRecorded(msg, systemHallOrders, peerReportedSelfStates)
-			peerReportedSelfStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
-			peerObservedCabOrders = recordPeerObservedCabOrders(msg, peerObservedCabOrders)
-			systemElevStates = applyPeerReportedElevatorState(msg, systemElevStates)
-			systemHallOrders[msg.SenderID] = msg.HallOrderTable
+			peerConsistent[msg.SenderID] = matchesLastPeerState(msg, hallOrders, lastPeerStates)
+			lastPeerStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
+			peerCabViews = recordPeerCabViews(msg, peerCabViews)
+			elevStates = applyPeerState(msg, elevStates)
+			hallOrders[msg.SenderID] = msg.HallOrderTable
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 		case state := <-localState:
-			systemElevStates[selfID] = state.ElevatorState
-			systemHallOrders[selfID] = state.HallRequests
+			elevStates[selfID] = state.ElevatorState
+			hallOrders[selfID] = state.HallRequests
 			peerIsAlive[selfID] = state.AliveStatus
 		}
 
-		systemHallOrders = advanceHallOrderStates(systemHallOrders, selfID, peerIsAlive)
-		systemElevStates = advanceCabOrderStates(systemElevStates, peerObservedCabOrders, selfID, peerIsAlive)
-		broadcast <- buildBroadcastStateUpdate(selfID, peerIsAlive, systemElevStates, systemHallOrders)
-		if allAlivePeersConsistent(peerIsConsistent, peerIsAlive, selfID) {
-			peerIsConsistent = [config.NElevators]bool{}
-			trySend(converged, buildConvergedSystemState(peerIsAlive, systemElevStates, systemHallOrders))
+		hallOrders = advanceHallOrderStates(hallOrders, selfID, peerIsAlive)
+		elevStates = advanceCabOrderStates(elevStates, peerCabViews, selfID, peerIsAlive)
+		broadcast <- buildBroadcastState(selfID, peerIsAlive, elevStates, hallOrders)
+		if alivePeersConsistent(peerConsistent, peerIsAlive, selfID) {
+			peerConsistent = [config.NElevators]bool{}
+			trySend(converged, buildConvergedState(peerIsAlive, elevStates, hallOrders))
 		}
 	}
 }
