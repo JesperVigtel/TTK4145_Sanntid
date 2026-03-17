@@ -1,7 +1,7 @@
 package dispatch
 
 import (
-	. "elevator/internal/types"
+	"elevator/internal/types"
 )
 
 // ------------------------------------------------------------------------------
@@ -10,37 +10,37 @@ import (
 // ------------------------------------------------------------------------------
 
 func Run(
-	localOrders chan<- LocalOrderTable,
-	localStateCh chan<- LocalSystemState,
-	hallLights chan<- HallOrderTable,
-	elevEvents <-chan ElevatorEvents,
-	convergedSystem <-chan ConvergedSystemState,
+	localOrderUpdates chan<- types.LocalOrderTable,
+	localStateUpdates chan<- types.LocalSystemState,
+	hallLightUpdates chan<- types.HallOrderTable,
+	elevatorEvents <-chan types.ElevatorEvents,
+	convergedStates <-chan types.ConvergedSystemState,
 	elevatorID int,
 ) {
 	var (
-		localState     LocalSystemState
-		previousOrders LocalOrderTable
+		localState         types.LocalSystemState
+		lastAssignedOrders types.LocalOrderTable
 	)
 
-	localState = initLocalSystemState(<-elevEvents, elevatorID)
-	localStateCh <- localState
+	localState = initLocalSystemState(<-elevatorEvents, elevatorID)
+	localStateUpdates <- localState
 
 	for {
 		select {
-		case event := <-elevEvents:
+		case event := <-elevatorEvents:
 			localState = applyElevatorEvent(localState, event)
-			localStateCh <- localState
+			localStateUpdates <- localState
 
-		case globalState := <-convergedSystem:
-			localState = mergeConvergedOrders(localState, globalState)
+		case convergedState := <-convergedStates:
+			localState = mergeConvergedOrders(localState, convergedState)
 
-			assignedOrders := computeAssignedOrders(globalState, localState, elevatorID)
+			assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
 
-			if assignedOrders != previousOrders {
-				localOrders <- assignedOrders
-				previousOrders = assignedOrders
+			if assignedOrders != lastAssignedOrders {
+				localOrderUpdates <- assignedOrders
+				lastAssignedOrders = assignedOrders
 			}
-			hallLights <- globalState.HallOrderTable[elevatorID]
+			hallLightUpdates <- convergedState.HallOrderTable[elevatorID]
 		}
 	}
 }
