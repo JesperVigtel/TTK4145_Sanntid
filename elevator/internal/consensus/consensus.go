@@ -21,11 +21,11 @@ func Run(
 	selfID int,
 ) {
 	var (
-		systemHallOrders [config.NElevators]types.HallOrderTable
-		systemElevStates [config.NElevators]types.HRAElevState
-		peerIsAlive      [config.NElevators]bool
-		peerIsConsistent [config.NElevators]bool
-		recoveryActive   = true
+		systemHallOrders   [config.NElevators]types.HallOrderTable
+		systemElevStates   [config.NElevators]types.HRAElevState
+		peerIsAlive        [config.NElevators]bool
+		peerIsConsistent   [config.NElevators]bool
+		recoveryActive     = true
 		peerDiscoveryReady bool
 	)
 
@@ -42,8 +42,8 @@ func Run(
 				recoveryActive,
 				peerDiscoveryReady,
 				peerIsConsistent,
-				peerIsAlive, 
-				systemElevStates, 
+				peerIsAlive,
+				systemElevStates,
 				systemHallOrders,
 				selfID,
 				broadcast,
@@ -66,8 +66,8 @@ func Run(
 				recoveryActive,
 				peerDiscoveryReady,
 				peerIsConsistent,
-				peerIsAlive, 
-				systemElevStates, 
+				peerIsAlive,
+				systemElevStates,
 				systemHallOrders,
 				selfID,
 				broadcast,
@@ -92,8 +92,8 @@ func Run(
 				recoveryActive,
 				peerDiscoveryReady,
 				peerIsConsistent,
-				peerIsAlive, 
-				systemElevStates, 
+				peerIsAlive,
+				systemElevStates,
 				systemHallOrders,
 				selfID,
 				broadcast,

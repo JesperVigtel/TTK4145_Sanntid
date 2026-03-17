@@ -10,36 +10,6 @@ import (
 	"runtime"
 )
 
-func mergeConvergedOrders(
-	localState LocalSystemState,
-	convergedState ConvergedSystemState,
-	cabRecoveryDone bool,
-	elevatorID int,
-) (LocalSystemState, bool) {
-	if !cabRecoveryDone {
-				localState.ElevatorState.CabRequests = MergeCabRequests(
-					localState.ElevatorState.CabRequests,
-					convergedState.ElevatorList[localState.ElevatorID].CabRequests,
-					)
-				cabRecoveryDone = true
-			}
-
-
-	for floor := range NFloors {
-		for btn := range NButtons {
-			convergedOrder := convergedState.HallOrderTable[elevatorID][floor][btn]
-			localOrder := localState.HallRequests[floor][btn]
-			if localOrder == OrderComplete && convergedOrder == OrderAssigned {
-				continue
-			}
-			localState.HallRequests[floor][btn] = convergedOrder
-		}
-	}
-	return localState, cabRecoveryDone
-}
-
-
-
 func computeAssignedOrders(
 	convergedState ConvergedSystemState,
 	localState LocalSystemState,
@@ -92,7 +62,7 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			elevState.CabRequests = MergeCabRequests(localState.ElevatorState.CabRequests, elevState.CabRequests)
+			elevState.CabRequests = append([]bool(nil), localState.ElevatorState.CabRequests...)
 		}
 		if elevState.Floor < 0 || elevState.Floor >= NFloors {
 			continue
@@ -119,8 +89,6 @@ func getHallRequestAssignerPath() string { //Remove??
 		return filepath.Join(dir, "hall_request_assigner")
 	}
 }
-
-
 
 func buildLocalOrderTable(
 	output map[string][][2]bool,

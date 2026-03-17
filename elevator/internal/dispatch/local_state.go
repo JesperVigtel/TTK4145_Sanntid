@@ -59,13 +59,52 @@ func applyHardwareUpdate(
 	return state
 }
 
+func mergeRecoveredCabRequests(
+	state LocalSystemState,
+	convergedState ConvergedSystemState,
+) (LocalSystemState, bool) {
+	if !convergedState.Recovering {
+		return state, false
+	}
+
+	recoveredCabRequests := MergeCabRequests(
+		state.ElevatorState.CabRequests,
+		convergedState.ElevatorList[state.ElevatorID].CabRequests,
+	)
+	if cabRequestsEqual(state.ElevatorState.CabRequests, recoveredCabRequests) {
+		return state, false
+	}
+
+	state.ElevatorState.CabRequests = recoveredCabRequests
+	return state, true
+}
+
+func mergeConvergedHallOrders(
+	state LocalSystemState,
+	convergedState ConvergedSystemState,
+	elevatorID int,
+) LocalSystemState {
+	for floor := range NFloors {
+		for btn := range NButtons {
+			convergedOrder := convergedState.HallOrderTable[elevatorID][floor][btn]
+			localOrder := state.HallRequests[floor][btn]
+			if localOrder == OrderComplete && convergedOrder == OrderAssigned {
+				continue
+			}
+			state.HallRequests[floor][btn] = convergedOrder
+		}
+	}
+	return state
+}
+
 func makeLightUpdate(
+	localState LocalSystemState,
 	convergedState ConvergedSystemState,
 	elevatorID int,
 ) ButtonLightUpdate {
 	var cabLights [NFloors]bool
 	for floor := range NFloors {
-		cabLights[floor] = convergedState.ElevatorList[elevatorID].CabRequests[floor]
+		cabLights[floor] = localState.ElevatorState.CabRequests[floor]
 	}
 	hallLightUpdate := convergedState.HallOrderTable[elevatorID]
 
@@ -73,4 +112,16 @@ func makeLightUpdate(
 		HallLights: hallLightUpdate,
 		CabLights:  cabLights,
 	}
+}
+
+func cabRequestsEqual(a, b []bool) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

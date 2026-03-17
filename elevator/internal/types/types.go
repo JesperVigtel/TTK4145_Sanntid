@@ -12,6 +12,7 @@ type ConvergedSystemState struct {
 	AliveList      [NElevators]bool
 	ElevatorList   [NElevators]HRAElevState
 	HallOrderTable [NElevators]HallOrderTable
+	Recovering     bool
 }
 
 type LocalSystemState struct {
@@ -26,7 +27,7 @@ type Message struct {
 	ElevatorList   [NElevators]HRAElevState
 	HallOrderTable HallOrderTable
 	AliveStatus    bool
-	Recovering bool
+	Recovering     bool
 }
 
 //Elevator types START:

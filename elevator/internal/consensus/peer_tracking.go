@@ -88,8 +88,8 @@ func publishIfConsistent(
 	broadcast chan<- types.Message,
 	converged chan<- types.ConvergedSystemState,
 ) (bool, [config.NElevators]bool) {
-	snapshot := currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders)
-	
+	snapshot := currentConvergedState(peerIsAlive, systemElevStates, systemHallOrders, recoveryActive)
+
 	readyToPublish := peerDiscoveryReady &&
 		allAlivePeersConsistent(peerIsConsistent, snapshot.AliveList, selfID)
 	if !readyToPublish {
@@ -97,6 +97,11 @@ func publishIfConsistent(
 	}
 
 	peerIsConsistent = [config.NElevators]bool{}
+
+	select {
+	case converged <- snapshot:
+	default:
+	}
 
 	if recoveryActive {
 		recoveryActive = false
@@ -109,25 +114,21 @@ func publishIfConsistent(
 			false,
 		)
 	}
-	select {
-	case converged <- snapshot:
-	default:
-	}
 
 	return recoveryActive, peerIsConsistent
 }
-
-
 
 func currentConvergedState(
 	peerIsAlive [config.NElevators]bool,
 	systemElevStates [config.NElevators]types.HRAElevState,
 	systemHallOrders [config.NElevators]types.HallOrderTable,
+	recoveryActive bool,
 ) types.ConvergedSystemState {
 	return types.ConvergedSystemState{
 		AliveList:      peerIsAlive,
 		ElevatorList:   systemElevStates,
 		HallOrderTable: systemHallOrders,
+		Recovering:     recoveryActive,
 	}
 }
 
