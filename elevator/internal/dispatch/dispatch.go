@@ -8,16 +8,16 @@ import "elevator/internal/types"
 // ------------------------------------------------------------------------------
 
 func Run(
-	localOrderUpdates chan<- types.LocalOrderTable,
+	assignedOrderUpdates chan<- types.AssignedOrderTable,
 	localStateUpdates chan<- types.LocalSystemState,
-	orderLightUpdates chan<- types.OrderTable,
+	lampOrderUpdates chan<- types.OrderTable,
 	elevatorEvents <-chan types.ElevatorEvents,
 	convergedStates <-chan types.ConvergedSystemState,
 	elevatorID int,
 ) {
 	var (
 		localState         types.LocalSystemState
-		lastAssignedOrders types.LocalOrderTable
+		lastAssignedOrders types.AssignedOrderTable
 	)
 
 	localState = initLocalSystemState(<-elevatorEvents, elevatorID)
@@ -35,10 +35,10 @@ func Run(
 			assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
 
 			if assignedOrders != lastAssignedOrders {
-				localOrderUpdates <- assignedOrders
+				assignedOrderUpdates <- assignedOrders
 				lastAssignedOrders = assignedOrders
 			}
-			orderLightUpdates <- convergedState.OrderTables[elevatorID]
+			lampOrderUpdates <- convergedState.OrderTables[elevatorID]
 		}
 	}
 }

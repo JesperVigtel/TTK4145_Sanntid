@@ -14,7 +14,7 @@ func computeAssignedOrders(
 	convergedState types.ConvergedSystemState,
 	localState types.LocalSystemState,
 	elevatorID int,
-) types.LocalOrderTable {
+) types.AssignedOrderTable {
 	input := buildHallAssignerInput(convergedState, localState, elevatorID)
 	if len(input.States) == 0 {
 		// External HRA asserts on empty state sets.
@@ -40,7 +40,7 @@ func computeAssignedOrders(
 		return fallbackAssignedOrders(localState)
 	}
 
-	return buildLocalOrderTable(output, localState, elevatorID)
+	return buildAssignedOrderTable(output, localState, elevatorID)
 }
 
 func buildHallAssignerInput(
@@ -69,7 +69,7 @@ func buildHallAssignerInput(
 		}
 		orders := convergedState.OrderTables[id]
 		if id == elevatorID {
-			orders = localState.Orders
+			orders = localState.OrderStates
 		}
 		input.States[fmt.Sprintf("elevator_%d", id)] = types.NewHRAAssignerState(elevState, orders)
 	}
@@ -94,12 +94,12 @@ func getHallRequestAssignerPath() string {
 	}
 }
 
-func buildLocalOrderTable(
+func buildAssignedOrderTable(
 	output map[string][][2]bool,
 	localState types.LocalSystemState,
 	elevatorID int,
-) types.LocalOrderTable {
-	var result types.LocalOrderTable
+) types.AssignedOrderTable {
+	var result types.AssignedOrderTable
 	idStr := fmt.Sprintf("elevator_%d", elevatorID)
 
 	if assigned, found := output[idStr]; found {
@@ -111,21 +111,21 @@ func buildLocalOrderTable(
 	}
 
 	for floor := range config.NFloors {
-		result[floor][types.BtnCab] = types.IsActiveOrder(localState.Orders[floor][types.BtnCab])
+		result[floor][types.BtnCab] = types.IsActiveOrder(localState.OrderStates[floor][types.BtnCab])
 	}
 
 	return result
 }
 
-func fallbackAssignedOrders(localState types.LocalSystemState) types.LocalOrderTable {
-	var result types.LocalOrderTable
+func fallbackAssignedOrders(localState types.LocalSystemState) types.AssignedOrderTable {
+	var result types.AssignedOrderTable
 	for floor := range config.NFloors {
-		result[floor][types.BtnCab] = types.IsActiveOrder(localState.Orders[floor][types.BtnCab])
+		result[floor][types.BtnCab] = types.IsActiveOrder(localState.OrderStates[floor][types.BtnCab])
 		if !localState.ElevatorState.Assignable {
 			continue
 		}
 		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
-			state := localState.Orders[floor][btn]
+			state := localState.OrderStates[floor][btn]
 			result[floor][btn] = state == types.OrderPending || state == types.OrderAssigned
 		}
 	}

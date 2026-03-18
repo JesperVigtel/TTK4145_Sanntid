@@ -14,7 +14,7 @@ import (
 // -----------------------------------------------------------------------------
 func advanceOrderStates(
 	orderTables [config.NElevators]types.OrderTable,
-	peerOrderViews [config.NElevators][config.NElevators]types.OrderTable,
+	peerOrderSnapshots [config.NElevators][config.NElevators]types.OrderTable,
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
 ) [config.NElevators]types.OrderTable {
@@ -24,7 +24,7 @@ func advanceOrderStates(
 				if btn != types.BtnCab && ownerID != selfID {
 					continue
 				}
-				peerStates := alivePeerOrderStates(selfID, peerIsAlive, orderTables, peerOrderViews, ownerID, floor, btn)
+				peerStates := alivePeerOrderStates(selfID, peerIsAlive, orderTables, peerOrderSnapshots, ownerID, floor, btn)
 				orderTables[ownerID][floor][btn] = nextOrderState(orderTables[ownerID][floor][btn], peerStates)
 			}
 		}
@@ -97,7 +97,7 @@ func alivePeerOrderStates(
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
 	orderTables [config.NElevators]types.OrderTable,
-	peerOrderViews [config.NElevators][config.NElevators]types.OrderTable,
+	peerOrderSnapshots [config.NElevators][config.NElevators]types.OrderTable,
 	ownerID int,
 	floor int,
 	btn types.ButtonType,
@@ -108,7 +108,7 @@ func alivePeerOrderStates(
 			continue
 		}
 		if btn == types.BtnCab {
-			peerStates = append(peerStates, peerOrderViews[peerID][ownerID][floor][btn])
+			peerStates = append(peerStates, peerOrderSnapshots[peerID][ownerID][floor][btn])
 			continue
 		}
 		peerStates = append(peerStates, orderTables[peerID][floor][btn])

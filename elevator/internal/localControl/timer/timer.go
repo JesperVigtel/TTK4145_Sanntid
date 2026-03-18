@@ -5,14 +5,6 @@ import (
 	"time"
 )
 
-type TimerType int
-
-const (
-	DoorTimer TimerType = iota
-	WatchDogTimer
-	MotorRecoveryTimer
-)
-
 func Timer(
 	doorOpenChan <-chan bool,
 	motorActiveChan <-chan bool,
@@ -84,7 +76,7 @@ func Timer(
 				watchDogActive = false
 				motorInactiveChan <- true
 			}
-		// Periodically retries movement after motor timeout 
+		// Periodically retries movement after motor timeout.
 		case <-motorRecoveryTimer.C:
 			if recoveryActive {
 				recoveryTickChan <- true
@@ -94,7 +86,8 @@ func Timer(
 		}
 	}
 }
-// Drain the channel if the timer has fired 
+
+// Drain the channel if the timer has fired.
 func safeStopTimer(timerInstance *time.Timer) {
 	if !timerInstance.Stop() {
 		select {

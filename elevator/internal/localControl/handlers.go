@@ -4,7 +4,6 @@ import (
 	"elevator/internal/config"
 	"elevator/internal/localControl/hardware"
 	"elevator/internal/types"
-	"fmt"
 )
 
 // Floor -1 is unknown position, moves down to nearest floor
@@ -13,7 +12,7 @@ func newElevator() types.Elevator {
 		CurrentFloor:           -1,
 		CurrentTravelDirection: types.Down,
 		PhysicalMotorDirection: types.Down,
-		LocalOrders:            [config.NFloors][config.NButtons]bool{},
+		AssignedOrders:         [config.NFloors][config.NButtons]bool{},
 		Behaviour:              types.ElevatorMoving,
 		ActiveStatus:           true,
 	}
@@ -24,7 +23,7 @@ func stopAndServeFloor(
 	doorOpenChan chan<- bool,
 	motorActiveChan chan<- bool,
 	travelDir types.MotorDirection,
-	lampOrders types.OrderTable,
+	lampOrderStates types.OrderTable,
 ) (types.CompletedOrderTable, bool) {
 
 	hardware.SetMotorDirection(types.Stop)
@@ -35,7 +34,7 @@ func stopAndServeFloor(
 
 	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, travelDir)
 
-	refreshLights(*elevator, true, lampOrders)
+	refreshLights(*elevator, true, lampOrderStates)
 	return completed, needsExtraDoorTime
 }
 
@@ -60,12 +59,8 @@ func startNextMovement(
 
 // Called periodically after motor timeout — retries movement to escape stuck state
 func resumeMovement(elevator *types.Elevator) {
-
 	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 		newDir := chooseDirection(*elevator)
-		fmt.Printf("[Recovery] chooseDir=%v, CurrentTravelDir=%v, floor=%v, orders=%v\n",
-			newDir, elevator.CurrentTravelDirection, elevator.CurrentFloor, elevator.LocalOrders)
-		fmt.Printf("travelDirection is %v\n", elevator.CurrentTravelDirection)
 
 		// No orders found — keep moving in current direction to reach a floor sensor
 		if newDir == types.Stop {
@@ -88,10 +83,9 @@ func stopOnMotorTimeout(elevator *types.Elevator) {
 		elevator.PhysicalMotorDirection = types.Stop
 		hardware.SetMotorDirection(types.Stop)
 	}
-
 }
-func updateActiveStatus(elevator *types.Elevator, obstruction bool) {
 
+func updateActiveStatus(elevator *types.Elevator, obstruction bool) {
 	if elevator.Behaviour == types.ElevatorDoorOpen && obstruction {
 		elevator.ActiveStatus = false
 	} else {
@@ -103,25 +97,24 @@ func sendElevatorUpdate(
 	channel chan<- types.ElevatorEvents,
 	elevator types.Elevator,
 	obstructed bool,
-	completed types.CompletedOrderTable,
-	btn *types.ButtonEvent,
+	completedOrders types.CompletedOrderTable,
+	newButtonPress *types.ButtonEvent,
 ) {
-
 	channel <- types.ElevatorEvents{
-		Elevator:       elevator,
-		CompletedOrder: completed,
-		NewButtonPress: btn,
-		Obstructed:     obstructed,
+		Elevator:        elevator,
+		CompletedOrders: completedOrders,
+		NewButtonPress:  newButtonPress,
+		Obstructed:      obstructed,
 	}
 }
 
 // refreshLights merges the converged hall-order snapshot with the elevator's
-// current local assignments, while floor and door lamps follow local state.
-func refreshLights(elevator types.Elevator, doorOpen bool, lampOrders types.OrderTable) {
+// current assigned orders, while floor and door lamps follow local state.
+func refreshLights(elevator types.Elevator, doorOpen bool, lampOrderStates types.OrderTable) {
 	for floor := range config.NFloors {
-		hardware.SetButtonLamp(types.BtnHallUp, floor, lampOrders[floor][types.BtnHallUp] == types.OrderAssigned)
-		hardware.SetButtonLamp(types.BtnHallDown, floor, lampOrders[floor][types.BtnHallDown] == types.OrderAssigned)
-		hardware.SetButtonLamp(types.BtnCab, floor, elevator.LocalOrders[floor][types.BtnCab])
+		hardware.SetButtonLamp(types.BtnHallUp, floor, lampOrderStates[floor][types.BtnHallUp] == types.OrderAssigned)
+		hardware.SetButtonLamp(types.BtnHallDown, floor, lampOrderStates[floor][types.BtnHallDown] == types.OrderAssigned)
+		hardware.SetButtonLamp(types.BtnCab, floor, elevator.AssignedOrders[floor][types.BtnCab])
 	}
 	if elevator.CurrentFloor >= 0 {
 		hardware.SetFloorIndicator(elevator.CurrentFloor)

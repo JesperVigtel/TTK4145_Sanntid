@@ -71,10 +71,10 @@ type ButtonEvent struct {
 }
 
 type ElevatorEvents struct {
-	Elevator       Elevator
+	Elevator        Elevator
 	CompletedOrders CompletedOrderTable
-	NewButtonPress *ButtonEvent
-	Obstructed     bool
+	NewButtonPress  *ButtonEvent
+	Obstructed      bool
 }
 
 //Elevator types stop
@@ -90,7 +90,9 @@ type GlobalNodeRegistry struct {
 //Network types END:
 
 // ------------------------------------------------------------------------------------
+//
 //	enum types for order domain
+//
 // ------------------------------------------------------------------------------------
 type OrderState int
 

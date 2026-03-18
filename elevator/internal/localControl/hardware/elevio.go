@@ -1,27 +1,20 @@
 package hardware
 
-// Driver-grensesnitt mot simulator/fysisk maskinvare (elevio).
-// Abstraksjonslag som oversetter Go-kanaler til TCP-pakker for simulatoren eller register-skriving for fysisk heis.
-// TODO: Implementer hardware-driver
+// Driver interface for the simulator / elevator server TCP protocol.
 
-import(
-	"time"
-	"sync"
-	"net"
-	"fmt"
-	"elevator/internal/types"
+import (
 	"elevator/internal/config"
+	"elevator/internal/types"
+	"fmt"
+	"net"
+	"sync"
+	"time"
 )
 
-
-const _pollRate = 20 * time.Millisecond
-
-var _initialized    bool = false
-var _numFloors      int = config.NFloors
-var _mtx            sync.Mutex
-var _conn           net.Conn
-
-
+var _initialized bool = false
+var _numFloors int = config.NFloors
+var _mtx sync.Mutex
+var _conn net.Conn
 
 func Init(addr string, numFloors int) {
 	if _initialized {
@@ -37,8 +30,6 @@ func Init(addr string, numFloors int) {
 	}
 	_initialized = true
 }
-
-
 
 func SetMotorDirection(dir types.MotorDirection) {
 	write([4]byte{1, byte(dir), 0, 0})
@@ -56,23 +47,17 @@ func SetDoorOpenLamp(value bool) {
 	write([4]byte{4, toByte(value), 0, 0})
 }
 
-func SetStopLamp(value bool) {
-	write([4]byte{5, toByte(value), 0, 0})
-}
-
-
-
 func PollButtons(receiver chan<- types.ButtonEvent) {
-	prev := make([][3]bool, _numFloors)
+	prev := make([][config.NButtons]bool, _numFloors)
 	for {
-		time.Sleep(_pollRate)
+		time.Sleep(config.PollRateMS)
 		for f := 0; f < _numFloors; f++ {
-			for b := types.ButtonType(0); b < 3; b++ {
-				v := GetButton(b, f)
-				if v != prev[f][b] && v != false {
-					receiver <- types.ButtonEvent{Floor: f, Button: types.ButtonType(b)}
+			for button := types.ButtonType(0); button < types.ButtonType(config.NButtons); button++ {
+				pressed := GetButton(button, f)
+				if pressed && pressed != prev[f][button] {
+					receiver <- types.ButtonEvent{Floor: f, Button: button}
 				}
-				prev[f][b] = v
+				prev[f][button] = pressed
 			}
 		}
 	}
@@ -81,21 +66,9 @@ func PollButtons(receiver chan<- types.ButtonEvent) {
 func PollFloorSensor(receiver chan<- int) {
 	prev := -1
 	for {
-		time.Sleep(_pollRate)
+		time.Sleep(config.PollRateMS)
 		v := GetFloor()
 		if v != prev && v != -1 {
-			receiver <- v
-		}
-		prev = v
-	}
-}
-
-func PollStopButton(receiver chan<- bool) {
-	prev := false
-	for {
-		time.Sleep(_pollRate)
-		v := GetStop()
-		if v != prev {
 			receiver <- v
 		}
 		prev = v
@@ -105,7 +78,7 @@ func PollStopButton(receiver chan<- bool) {
 func PollObstructionSwitch(receiver chan<- bool) {
 	prev := false
 	for {
-		time.Sleep(_pollRate)
+		time.Sleep(config.PollRateMS)
 		v := GetObstruction()
 		if v != prev {
 			receiver <- v
@@ -113,9 +86,6 @@ func PollObstructionSwitch(receiver chan<- bool) {
 		prev = v
 	}
 }
-
-
-
 
 func GetButton(button types.ButtonType, floor int) bool {
 	a := read([4]byte{6, byte(button), byte(floor), 0})
@@ -131,42 +101,38 @@ func GetFloor() int {
 	}
 }
 
-func GetStop() bool {
-	a := read([4]byte{8, 0, 0, 0})
-	return toBool(a[1])
-}
-
 func GetObstruction() bool {
 	a := read([4]byte{9, 0, 0, 0})
 	return toBool(a[1])
 }
 
-
-
-
-
 func read(in [4]byte) [4]byte {
 	_mtx.Lock()
 	defer _mtx.Unlock()
-	
+
 	_, err := _conn.Write(in[:])
-	if err != nil { panic("Lost connection to Elevator Server") }
-	
+	if err != nil {
+		panic("Lost connection to Elevator Server")
+	}
+
 	var out [4]byte
 	_, err = _conn.Read(out[:])
-	if err != nil { panic("Lost connection to Elevator Server") }
-	
+	if err != nil {
+		panic("Lost connection to Elevator Server")
+	}
+
 	return out
 }
 
 func write(in [4]byte) {
 	_mtx.Lock()
 	defer _mtx.Unlock()
-	
-	_, err := _conn.Write(in[:])
-	if err != nil { panic("Lost connection to Elevator Server") }
-}
 
+	_, err := _conn.Write(in[:])
+	if err != nil {
+		panic("Lost connection to Elevator Server")
+	}
+}
 
 func toByte(a bool) byte {
 	var b byte = 0

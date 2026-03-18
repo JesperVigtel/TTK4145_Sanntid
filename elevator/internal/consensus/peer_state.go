@@ -35,8 +35,8 @@ func updatePeerAvailability(
 
 func resetPeerSnapshots(
 	nodeRegistry types.GlobalNodeRegistry,
-	lastPeerStates [config.NElevators]types.HRAElevState,
-	peerOrderViews [config.NElevators][config.NElevators]types.OrderTable,
+	lastPeerElevatorStates [config.NElevators]types.HRAElevState,
+	peerOrderSnapshots [config.NElevators][config.NElevators]types.OrderTable,
 	selfID int,
 ) ([config.NElevators]types.HRAElevState, [config.NElevators][config.NElevators]types.OrderTable) {
 	for _, peerIDs := range [][]int{nodeRegistry.Lost, nodeRegistry.New} {
@@ -44,20 +44,20 @@ func resetPeerSnapshots(
 			if !isRemotePeerID(peerID, selfID) {
 				continue
 			}
-			lastPeerStates[peerID] = types.HRAElevState{}
-			peerOrderViews[peerID] = [config.NElevators]types.OrderTable{}
+			lastPeerElevatorStates[peerID] = types.HRAElevState{}
+			peerOrderSnapshots[peerID] = [config.NElevators]types.OrderTable{}
 		}
 	}
-	return lastPeerStates, peerOrderViews
+	return lastPeerElevatorStates, peerOrderSnapshots
 }
 
-func matchesLastPeerState(
+func matchesLastPeerSnapshot(
 	msg types.Message,
-	peerOrderViews [config.NElevators][config.NElevators]types.OrderTable,
-	lastPeerStates [config.NElevators]types.HRAElevState,
+	peerOrderSnapshots [config.NElevators][config.NElevators]types.OrderTable,
+	lastPeerElevatorStates [config.NElevators]types.HRAElevState,
 ) bool {
-	return peerOrderViews[msg.SenderID][msg.SenderID] == msg.OrderTables[msg.SenderID] &&
-		elevatorStatesEqual(lastPeerStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
+	return peerOrderSnapshots[msg.SenderID][msg.SenderID] == msg.OrderTables[msg.SenderID] &&
+		elevatorStatesEqual(lastPeerElevatorStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
 
 func elevatorStatesEqual(a, b types.HRAElevState) bool {
@@ -119,15 +119,15 @@ func trySend[T any](ch chan<- T, value T) {
 	}
 }
 
-func recordPeerOrderViews(
+func recordPeerOrderSnapshot(
 	msg types.Message,
-	peerOrderViews [config.NElevators][config.NElevators]types.OrderTable,
+	peerOrderSnapshots [config.NElevators][config.NElevators]types.OrderTable,
 ) [config.NElevators][config.NElevators]types.OrderTable {
-	peerOrderViews[msg.SenderID] = msg.OrderTables
-	return peerOrderViews
+	peerOrderSnapshots[msg.SenderID] = msg.OrderTables
+	return peerOrderSnapshots
 }
 
-func applyPeerHallRow(
+func applyPeerHallOrders(
 	msg types.Message,
 	orderTables [config.NElevators]types.OrderTable,
 ) [config.NElevators]types.OrderTable {

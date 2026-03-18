@@ -15,7 +15,7 @@ func initLocalSystemState(
 		// or temporarily unable to take new assignments.
 		AliveStatus:   true,
 		ElevatorState: newReplicatedElevatorState(event),
-		Orders:        types.OrderTable{},
+		OrderStates:   types.OrderTable{},
 	}
 }
 
@@ -23,8 +23,8 @@ func applyButtonPress(
 	state types.LocalSystemState,
 	btn types.ButtonEvent,
 ) types.LocalSystemState {
-	if state.Orders[btn.Floor][btn.Button] == types.OrderStandby {
-		state.Orders[btn.Floor][btn.Button] = types.OrderPending
+	if state.OrderStates[btn.Floor][btn.Button] == types.OrderStandby {
+		state.OrderStates[btn.Floor][btn.Button] = types.OrderPending
 	}
 	return state
 }
@@ -47,10 +47,10 @@ func applyHardwareUpdate(
 
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
-			if !event.CompletedOrder[floor][btn] {
+			if !event.CompletedOrders[floor][btn] {
 				continue
 			}
-			state.Orders[floor][btn] = types.OrderComplete
+			state.OrderStates[floor][btn] = types.OrderComplete
 		}
 	}
 	return state
@@ -70,8 +70,8 @@ func mergeConvergedOrders(
 ) types.LocalSystemState {
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
-			state.Orders[floor][btn] = mergeConvergedOrderState(
-				state.Orders[floor][btn],
+			state.OrderStates[floor][btn] = mergeConvergedOrderState(
+				state.OrderStates[floor][btn],
 				convergedState.OrderTables[state.ElevatorID][floor][btn],
 			)
 		}

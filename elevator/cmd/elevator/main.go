@@ -16,12 +16,10 @@ import (
 
 func main() {
 	selfID, elevAddr := parseArgs()
-	// selfID := parseArgs()
-	// elevAddr := "localhost:15657"
 
 	// -- Channels for LocalControl --
-	localOrders := make(chan types.LocalOrderTable, config.ChannelBufferSize)
-	orderLightUpdates := make(chan types.OrderTable, config.ChannelBufferSize)
+	assignedOrderUpdates := make(chan types.AssignedOrderTable, config.ChannelBufferSize)
+	lampOrderUpdates := make(chan types.OrderTable, config.ChannelBufferSize)
 	elevatorEvents := make(chan types.ElevatorEvents, config.ChannelBufferSize)
 
 	// -- Channels for Decision
@@ -37,15 +35,15 @@ func main() {
 
 	go localControl.Run(
 		elevAddr,
-		localOrders,
-		orderLightUpdates,
+		assignedOrderUpdates,
+		lampOrderUpdates,
 		elevatorEvents,
 	)
 
 	go dispatch.Run(
-		localOrders,
+		assignedOrderUpdates,
 		localSystemState,
-		orderLightUpdates,
+		lampOrderUpdates,
 		elevatorEvents,
 		convergedSystemState,
 		selfID,
@@ -92,10 +90,3 @@ func parseArgs() (int, string) {
 
 	return *id, elevAddr
 }
-
-// func parseArgs() int {
-// 	var nodeID int
-// 	flag.IntVar(&nodeID, "id", 0, "Node ID")
-// 	flag.Parse()
-// 	return nodeID
-// }

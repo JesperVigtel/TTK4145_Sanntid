@@ -19,19 +19,19 @@ func Run(
 	selfID int,
 ) {
 	var (
-		orderTables    [config.NElevators]types.OrderTable
-		elevStates     [config.NElevators]types.HRAElevState
-		lastPeerStates [config.NElevators]types.HRAElevState
-		peerOrderViews [config.NElevators][config.NElevators]types.OrderTable
-		peerIsAlive    [config.NElevators]bool
-		peerConsistent [config.NElevators]bool
+		orderTables            [config.NElevators]types.OrderTable
+		elevStates             [config.NElevators]types.HRAElevState
+		lastPeerElevatorStates [config.NElevators]types.HRAElevState
+		peerOrderSnapshots     [config.NElevators][config.NElevators]types.OrderTable
+		peerIsAlive            [config.NElevators]bool
+		peerConsistent         [config.NElevators]bool
 	)
 
 	for {
 		select {
 		case registry := <-peerEvents:
 			peerIsAlive, orderTables = updatePeerAvailability(registry, peerIsAlive, orderTables, selfID)
-			lastPeerStates, peerOrderViews = resetPeerSnapshots(registry, lastPeerStates, peerOrderViews, selfID)
+			lastPeerElevatorStates, peerOrderSnapshots = resetPeerSnapshots(registry, lastPeerElevatorStates, peerOrderSnapshots, selfID)
 			peerConsistent = [config.NElevators]bool{}
 
 		case msg := <-peerMsg:
@@ -39,20 +39,20 @@ func Run(
 				continue
 			}
 
-			peerConsistent[msg.SenderID] = matchesLastPeerState(msg, peerOrderViews, lastPeerStates)
-			lastPeerStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
-			peerOrderViews = recordPeerOrderViews(msg, peerOrderViews)
+			peerConsistent[msg.SenderID] = matchesLastPeerSnapshot(msg, peerOrderSnapshots, lastPeerElevatorStates)
+			lastPeerElevatorStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
+			peerOrderSnapshots = recordPeerOrderSnapshot(msg, peerOrderSnapshots)
 			elevStates = applyPeerState(msg, elevStates)
-			orderTables = applyPeerHallRow(msg, orderTables)
+			orderTables = applyPeerHallOrders(msg, orderTables)
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 		case state := <-localState:
 			elevStates[selfID] = state.ElevatorState
-			orderTables[selfID] = state.Orders
+			orderTables[selfID] = state.OrderStates
 			peerIsAlive[selfID] = state.AliveStatus
 		}
 
-		orderTables = advanceOrderStates(orderTables, peerOrderViews, selfID, peerIsAlive)
+		orderTables = advanceOrderStates(orderTables, peerOrderSnapshots, selfID, peerIsAlive)
 		broadcast <- buildBroadcastState(selfID, peerIsAlive, elevStates, orderTables)
 		if alivePeersConsistent(peerConsistent, peerIsAlive, selfID) {
 			peerConsistent = [config.NElevators]bool{}
