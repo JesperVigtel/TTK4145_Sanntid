@@ -9,7 +9,7 @@ import "elevator/internal/types"
 
 func Run(
 	assignedOrderChan chan<- types.AssignedOrderTable,
-	localStateChan chan<- types.LocalSystemState,
+	localSystemStateChan chan<- types.LocalSystemState,
 	hallLightChan chan<- types.HallLampTable,
 	elevatorEventsChan <-chan types.ElevatorEvents,
 	convergedStatesChan <-chan types.ConvergedSystemState,
@@ -21,13 +21,13 @@ func Run(
 	)
 
 	localSystemState = initLocalSystemState(<-elevatorEventsChan, elevatorID)
-	localStateChan <- localSystemState
+	localSystemStateChan <- localSystemState
 
 	for {
 		select {
 		case event := <-elevatorEventsChan:
 			localSystemState = applyElevatorEvent(localSystemState, event)
-			localStateChan <- localSystemState
+			localSystemStateChan <- localSystemState
 
 		case convergedState := <-convergedStatesChan:
 			localSystemState = mergeConvergedOrders(localSystemState, convergedState)
