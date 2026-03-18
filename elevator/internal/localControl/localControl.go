@@ -142,8 +142,8 @@ func Run(
 				directionChange = false
 				completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				elevator.CurrentTravelDirection = -elevator.CurrentTravelDirection
-				fmt.Printf("Be advised the elevator will now change direction")
-				
+				fmt.Println("Be advised the elevator will now change direction")
+
 				doorOpenChan <- true
 				sendElevatorUpdate(elevatorEventChan, elevator, obstruction, completedOrders, nil)
 				continue
