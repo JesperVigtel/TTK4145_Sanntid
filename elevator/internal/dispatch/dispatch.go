@@ -8,9 +8,9 @@ import "elevator/internal/types"
 // ------------------------------------------------------------------------------
 
 func Run(
-	assignedOrderChan chan<- types.AssignedOrderTable,
+	assignedOrdersChan chan<- types.AssignedOrderTable,
 	localSystemStateChan chan<- types.LocalSystemState,
-	hallLightChan chan<- types.HallLampTable,
+	hallLightsChan chan<- types.HallLampTable,
 	elevatorEventsChan <-chan types.ElevatorEvents,
 	convergedStatesChan <-chan types.ConvergedSystemState,
 	elevatorID int,
@@ -34,10 +34,10 @@ func Run(
 			assignedOrders := computeAssignedOrders(convergedState, localSystemState, elevatorID)
 
 			if assignedOrders != lastAssignedOrders {
-				assignedOrderChan <- assignedOrders
+				assignedOrdersChan <- assignedOrders
 				lastAssignedOrders = assignedOrders
 			}
-			hallLightChan <- buildHallLampTable(convergedState.OrderTables[elevatorID])
+			hallLightsChan <- buildHallLampTable(convergedState.OrderTables[elevatorID])
 		}
 	}
 }
