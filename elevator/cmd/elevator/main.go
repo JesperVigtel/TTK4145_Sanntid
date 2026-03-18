@@ -12,8 +12,8 @@ import (
 func main() {
 	selfID, elevAddr := config.ParseArgs()
 
-	assignedOrderChan := make(chan types.AssignedOrderTable, config.ChannelBufferSize)
-	hallLightChan := make(chan types.HallLampTable, config.ChannelBufferSize)
+	assignedOrdersChan := make(chan types.AssignedOrderTable, config.ChannelBufferSize)
+	hallLighsChan := make(chan types.HallLampTable, config.ChannelBufferSize)
 	elevatorEventsChan := make(chan types.ElevatorEvents, config.ChannelBufferSize)
 
 	localSystemStateChan := make(chan types.LocalSystemState, config.ChannelBufferSize)
@@ -25,15 +25,15 @@ func main() {
 
 	go localControl.Run(
 		elevAddr,
-		assignedOrderChan,
-		hallLightChan,
+		assignedOrdersChan,
+		hallLighsChan,
 		elevatorEventsChan,
 	)
 
 	go dispatch.Run(
-		assignedOrderChan,
+		assignedOrdersChan,
 		localSystemStateChan,
-		hallLightChan,
+		hallLighsChan,
 		elevatorEventsChan,
 		convergedSystemStateChan,
 		selfID,
