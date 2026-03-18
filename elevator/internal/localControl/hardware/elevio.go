@@ -75,13 +75,13 @@ func PollFloorSensor(receiver chan<- int) {
 	}
 }
 
-func PollObstructionSwitch(receiver chan<- bool) {
+func PollObstructionSwitch(obstructionChan chan<- bool) {
 	prev := false
 	for {
 		time.Sleep(config.PollRateMS)
 		v := GetObstruction()
 		if v != prev {
-			receiver <- v
+			obstructionChan <- v
 		}
 		prev = v
 	}

@@ -21,26 +21,26 @@ func Run(
 	elevatorEvents chan<- types.ElevatorEvents,
 ) {
 	var (
-		floorChan          = make(chan int, config.ChannelBufferSize)
+		currentFloorChan          = make(chan int, config.ChannelBufferSize)
 		doorOpenChan       = make(chan bool, config.ChannelBufferSize)
 		motorActiveChan    = make(chan bool, config.ChannelBufferSize)
 		recoveryEnableChan = make(chan bool, config.ChannelBufferSize)
 		doorClosedChan     = make(chan bool, config.ChannelBufferSize)
 		motorInactiveChan  = make(chan bool, config.ChannelBufferSize)
-		tryRecovery        = make(chan bool, config.ChannelBufferSize)
+		tryRecoveryChan    = make(chan bool, config.ChannelBufferSize)
 		obstructionChan    = make(chan bool, config.ChannelBufferSize)
 		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
 		obstruction        bool
-		hallLamps          types.HallLampTable
 		directionChange    bool
+		hallLamps          types.HallLampTable
 	)
 	hardware.Init(elevAddr, config.NFloors)
 
-	go hardware.PollFloorSensor(floorChan)
+	go hardware.PollFloorSensor(currentFloorChan)
 	go hardware.PollObstructionSwitch(obstructionChan)
 	go hardware.PollButtons(buttonPressChan)
 
-	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan, doorClosedChan, motorInactiveChan, tryRecovery)
+	go timer.Timer(doorOpenChan, motorActiveChan, recoveryEnableChan, doorClosedChan, motorInactiveChan, tryRecoveryChan)
 
 	elevator := newElevator()
 	obstruction = false
@@ -52,7 +52,7 @@ func Run(
 	for {
 		select {
 
-		case floor := <-floorChan:
+		case floor := <-currentFloorChan:
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
@@ -61,6 +61,7 @@ func Run(
 			if elevator.Behaviour == types.ElevatorMoving {
 				motorActiveChan <- true
 			}
+
 			if !hasAssignedOrderAbove(elevator) && !hasAssignedOrderBelow(elevator) &&
 				!hasOrderAtFloor(elevator, floor) {
 				hardware.SetMotorDirection(types.Stop)
@@ -144,6 +145,7 @@ func Run(
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
 			}
+
 			startNextMovement(&elevator, motorActiveChan)
 			refreshLights(elevator, false, hallLamps)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
@@ -153,7 +155,7 @@ func Run(
 			recoveryEnableChan <- true
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
-		case <-tryRecovery:
+		case <-tryRecoveryChan:
 			resumeMovement(&elevator)
 			recoveryEnableChan <- false
 			motorActiveChan <- true
