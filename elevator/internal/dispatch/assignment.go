@@ -29,8 +29,6 @@ func computeAssignedOrders(
 ) types.AssignedOrderTable {
 	input := buildHRAInput(convergedState, localSystemState, elevatorID)
 	if len(input.States) == 0 {
-		// External HRA asserts on empty state sets.
-		fmt.Println("computeAssignedOrders: no alive elevator states, using local fallback assignment")
 		return fallbackAssignedOrders(localSystemState)
 	}
 
