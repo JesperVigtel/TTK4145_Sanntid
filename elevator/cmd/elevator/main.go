@@ -21,7 +21,7 @@ func main() {
 
 	// -- Channels for LocalControl --
 	localOrders := make(chan types.LocalOrderTable, config.ChannelBufferSize)
-	hallLights := make(chan types.HallOrderTable, config.ChannelBufferSize)
+	orderLightUpdates := make(chan types.OrderTable, config.ChannelBufferSize)
 	elevatorEvents := make(chan types.ElevatorEvents, config.ChannelBufferSize)
 
 	// -- Channels for Decision
@@ -38,14 +38,14 @@ func main() {
 	go localControl.Run(
 		elevAddr,
 		localOrders,
-		hallLights,
+		orderLightUpdates,
 		elevatorEvents,
 	)
 
 	go dispatch.Run(
 		localOrders,
 		localSystemState,
-		hallLights,
+		orderLightUpdates,
 		elevatorEvents,
 		convergedSystemState,
 		selfID,
@@ -59,7 +59,6 @@ func main() {
 		convergedSystemState,
 		selfID,
 	)
-
 
 	go network.Run(
 		selfID,

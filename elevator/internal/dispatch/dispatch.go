@@ -1,18 +1,16 @@
 package dispatch
 
-import (
-	"elevator/internal/types"
-)
+import "elevator/internal/types"
 
 // ------------------------------------------------------------------------------
 // Translates converged distributed state and local hardware events into commands
-// for the local elevator: cab order assignments and hall light updates.
+// for the local elevator: execution-order assignments and converged hall-lamp snapshots.
 // ------------------------------------------------------------------------------
 
 func Run(
 	localOrderUpdates chan<- types.LocalOrderTable,
 	localStateUpdates chan<- types.LocalSystemState,
-	hallLightUpdates chan<- types.HallOrderTable,
+	orderLightUpdates chan<- types.OrderTable,
 	elevatorEvents <-chan types.ElevatorEvents,
 	convergedStates <-chan types.ConvergedSystemState,
 	elevatorID int,
@@ -40,7 +38,7 @@ func Run(
 				localOrderUpdates <- assignedOrders
 				lastAssignedOrders = assignedOrders
 			}
-			hallLightUpdates <- convergedState.HallOrderTable[elevatorID]
+			orderLightUpdates <- convergedState.OrderTables[elevatorID]
 		}
 	}
 }

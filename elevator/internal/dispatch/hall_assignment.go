@@ -59,7 +59,7 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			elevState.CabOrders = localState.ElevatorState.CabOrders
+			elevState = localState.ElevatorState
 		}
 		if !elevState.Assignable {
 			continue
@@ -67,12 +67,16 @@ func buildHallAssignerInput(
 		if elevState.Floor < 0 || elevState.Floor >= config.NFloors {
 			continue
 		}
-		input.States[fmt.Sprintf("elevator_%d", id)] = types.NewHRAAssignerState(elevState)
+		orders := convergedState.OrderTables[id]
+		if id == elevatorID {
+			orders = localState.Orders
+		}
+		input.States[fmt.Sprintf("elevator_%d", id)] = types.NewHRAAssignerState(elevState, orders)
 	}
 
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
-			input.HallRequests[floor][btn] = convergedState.HallOrderTable[elevatorID][floor][btn] == types.OrderAssigned
+			input.HallRequests[floor][btn] = convergedState.OrderTables[elevatorID][floor][btn] == types.OrderAssigned
 		}
 	}
 	return input
@@ -107,7 +111,7 @@ func buildLocalOrderTable(
 	}
 
 	for floor := range config.NFloors {
-		result[floor][types.BtnCab] = types.IsActiveOrder(localState.ElevatorState.CabOrders[floor])
+		result[floor][types.BtnCab] = types.IsActiveOrder(localState.Orders[floor][types.BtnCab])
 	}
 
 	return result
@@ -116,12 +120,12 @@ func buildLocalOrderTable(
 func fallbackAssignedOrders(localState types.LocalSystemState) types.LocalOrderTable {
 	var result types.LocalOrderTable
 	for floor := range config.NFloors {
-		result[floor][types.BtnCab] = types.IsActiveOrder(localState.ElevatorState.CabOrders[floor])
+		result[floor][types.BtnCab] = types.IsActiveOrder(localState.Orders[floor][types.BtnCab])
 		if !localState.ElevatorState.Assignable {
 			continue
 		}
 		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
-			state := localState.HallRequests[floor][btn]
+			state := localState.Orders[floor][btn]
 			result[floor][btn] = state == types.OrderPending || state == types.OrderAssigned
 		}
 	}

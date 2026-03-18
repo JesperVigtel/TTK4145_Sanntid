@@ -15,7 +15,7 @@ func initLocalSystemState(
 		// or temporarily unable to take new assignments.
 		AliveStatus:   true,
 		ElevatorState: newReplicatedElevatorState(event),
-		HallRequests:  types.HallOrderTable{},
+		Orders:        types.OrderTable{},
 	}
 }
 
@@ -23,15 +23,8 @@ func applyButtonPress(
 	state types.LocalSystemState,
 	btn types.ButtonEvent,
 ) types.LocalSystemState {
-	switch btn.Button {
-	case types.BtnHallUp, types.BtnHallDown:
-		if state.HallRequests[btn.Floor][btn.Button] == types.OrderStandby {
-			state.HallRequests[btn.Floor][btn.Button] = types.OrderPending
-		}
-	case types.BtnCab:
-		if state.ElevatorState.CabOrders[btn.Floor] == types.OrderStandby {
-			state.ElevatorState.CabOrders[btn.Floor] = types.OrderPending
-		}
+	if state.Orders[btn.Floor][btn.Button] == types.OrderStandby {
+		state.Orders[btn.Floor][btn.Button] = types.OrderPending
 	}
 	return state
 }
@@ -50,23 +43,14 @@ func applyHardwareUpdate(
 	state types.LocalSystemState,
 	event types.ElevatorEvents,
 ) types.LocalSystemState {
-	updatedElevState := newReplicatedElevatorState(event)
-	updatedElevState.CabOrders = state.ElevatorState.CabOrders
-	state.ElevatorState = updatedElevState
+	state.ElevatorState = newReplicatedElevatorState(event)
 
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
 			if !event.CompletedOrder[floor][btn] {
 				continue
 			}
-			switch btn {
-			case types.BtnHallUp:
-				state.HallRequests[floor][types.BtnHallUp] = types.OrderComplete
-			case types.BtnHallDown:
-				state.HallRequests[floor][types.BtnHallDown] = types.OrderComplete
-			case types.BtnCab:
-				state.ElevatorState.CabOrders[floor] = types.OrderComplete
-			}
+			state.Orders[floor][btn] = types.OrderComplete
 		}
 	}
 	return state
@@ -85,16 +69,12 @@ func mergeConvergedOrders(
 	convergedState types.ConvergedSystemState,
 ) types.LocalSystemState {
 	for floor := range config.NFloors {
-		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
-			state.HallRequests[floor][btn] = mergeConvergedOrderState(
-				state.HallRequests[floor][btn],
-				convergedState.HallOrderTable[state.ElevatorID][floor][btn],
+		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
+			state.Orders[floor][btn] = mergeConvergedOrderState(
+				state.Orders[floor][btn],
+				convergedState.OrderTables[state.ElevatorID][floor][btn],
 			)
 		}
-		state.ElevatorState.CabOrders[floor] = mergeConvergedOrderState(
-			state.ElevatorState.CabOrders[floor],
-			convergedState.ElevatorList[state.ElevatorID].CabOrders[floor],
-		)
 	}
 	return state
 }

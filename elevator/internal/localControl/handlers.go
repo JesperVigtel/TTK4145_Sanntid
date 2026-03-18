@@ -24,6 +24,7 @@ func stopAndServeFloor(
 	doorOpenChan chan<- bool,
 	motorActiveChan chan<- bool,
 	travelDir types.MotorDirection,
+	lampOrders types.OrderTable,
 ) (types.CompletedOrderTable, bool) {
 
 	hardware.SetMotorDirection(types.Stop)
@@ -34,7 +35,7 @@ func stopAndServeFloor(
 
 	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, travelDir)
 
-	applyLocalLights(*elevator, true)
+	refreshLights(*elevator, true, lampOrders)
 	return completed, needsExtraDoorTime
 }
 
@@ -114,25 +115,16 @@ func sendElevatorUpdate(
 	}
 }
 
-// Applies lamp outputs that are purely local to this elevator.
-// Cab lamps follow the assigned local orders, while floor and door lamps
-// follow the current physical elevator state.
-func applyLocalLights(elevator types.Elevator, doorOpen bool) {
+// refreshLights merges the converged hall-order snapshot with the elevator's
+// current local assignments, while floor and door lamps follow local state.
+func refreshLights(elevator types.Elevator, doorOpen bool, lampOrders types.OrderTable) {
 	for floor := range config.NFloors {
+		hardware.SetButtonLamp(types.BtnHallUp, floor, lampOrders[floor][types.BtnHallUp] == types.OrderAssigned)
+		hardware.SetButtonLamp(types.BtnHallDown, floor, lampOrders[floor][types.BtnHallDown] == types.OrderAssigned)
 		hardware.SetButtonLamp(types.BtnCab, floor, elevator.LocalOrders[floor][types.BtnCab])
 	}
 	if elevator.CurrentFloor >= 0 {
 		hardware.SetFloorIndicator(elevator.CurrentFloor)
 	}
 	hardware.SetDoorOpenLamp(doorOpen)
-}
-
-// Applies hall lamps from the converged distributed hall-order view.
-// This is kept separate from applyLocalLights so hall lamps only reflect
-// consensus state, not transient local assignment state.
-func applyHallLights(hallLights types.HallOrderTable) {
-	for floor := range config.NFloors {
-		hardware.SetButtonLamp(types.BtnHallUp, floor, hallLights[floor][types.BtnHallUp] == types.OrderAssigned)
-		hardware.SetButtonLamp(types.BtnHallDown, floor, hallLights[floor][types.BtnHallDown] == types.OrderAssigned)
-	}
 }

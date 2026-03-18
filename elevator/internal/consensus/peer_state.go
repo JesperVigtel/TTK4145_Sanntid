@@ -12,15 +12,15 @@ func isRemotePeerID(peerID int, selfID int) bool {
 func updatePeerAvailability(
 	nodeRegistry types.GlobalNodeRegistry,
 	peerIsAlive [config.NElevators]bool,
-	hallOrders [config.NElevators]types.HallOrderTable,
+	orderTables [config.NElevators]types.OrderTable,
 	selfID int,
-) ([config.NElevators]bool, [config.NElevators]types.HallOrderTable) {
+) ([config.NElevators]bool, [config.NElevators]types.OrderTable) {
 	for _, lostPeerID := range nodeRegistry.Lost {
 		if !isRemotePeerID(lostPeerID, selfID) {
 			continue
 		}
 		peerIsAlive[lostPeerID] = false
-		hallOrders[lostPeerID] = types.HallOrderTable{}
+		orderTables = clearPeerHallOrders(orderTables, lostPeerID)
 	}
 
 	for _, newPeerID := range nodeRegistry.New {
@@ -28,35 +28,35 @@ func updatePeerAvailability(
 			continue
 		}
 		peerIsAlive[newPeerID] = true
-		hallOrders[newPeerID] = types.HallOrderTable{}
+		orderTables = clearPeerHallOrders(orderTables, newPeerID)
 	}
-	return peerIsAlive, hallOrders
+	return peerIsAlive, orderTables
 }
 
 func resetPeerSnapshots(
 	nodeRegistry types.GlobalNodeRegistry,
 	lastPeerStates [config.NElevators]types.HRAElevState,
-	peerCabViews [config.NElevators][config.NElevators]types.CabOrderTable,
+	peerOrderViews [config.NElevators][config.NElevators]types.OrderTable,
 	selfID int,
-) ([config.NElevators]types.HRAElevState, [config.NElevators][config.NElevators]types.CabOrderTable) {
+) ([config.NElevators]types.HRAElevState, [config.NElevators][config.NElevators]types.OrderTable) {
 	for _, peerIDs := range [][]int{nodeRegistry.Lost, nodeRegistry.New} {
 		for _, peerID := range peerIDs {
 			if !isRemotePeerID(peerID, selfID) {
 				continue
 			}
 			lastPeerStates[peerID] = types.HRAElevState{}
-			peerCabViews[peerID] = [config.NElevators]types.CabOrderTable{}
+			peerOrderViews[peerID] = [config.NElevators]types.OrderTable{}
 		}
 	}
-	return lastPeerStates, peerCabViews
+	return lastPeerStates, peerOrderViews
 }
 
 func matchesLastPeerState(
 	msg types.Message,
-	hallOrders [config.NElevators]types.HallOrderTable,
+	peerOrderViews [config.NElevators][config.NElevators]types.OrderTable,
 	lastPeerStates [config.NElevators]types.HRAElevState,
 ) bool {
-	return hallOrders[msg.SenderID] == msg.HallOrderTable &&
+	return peerOrderViews[msg.SenderID][msg.SenderID] == msg.OrderTables[msg.SenderID] &&
 		elevatorStatesEqual(lastPeerStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
 }
 
@@ -66,11 +66,6 @@ func elevatorStatesEqual(a, b types.HRAElevState) bool {
 		a.Direction != b.Direction ||
 		a.Assignable != b.Assignable {
 		return false
-	}
-	for floor := range config.NFloors {
-		if a.CabOrders[floor] != b.CabOrders[floor] {
-			return false
-		}
 	}
 	return true
 }
@@ -95,25 +90,25 @@ func buildBroadcastState(
 	selfID int,
 	peerIsAlive [config.NElevators]bool,
 	elevStates [config.NElevators]types.HRAElevState,
-	hallOrders [config.NElevators]types.HallOrderTable,
+	orderTables [config.NElevators]types.OrderTable,
 ) types.Message {
 	return types.Message{
-		SenderID:       selfID,
-		ElevatorList:   elevStates,
-		HallOrderTable: hallOrders[selfID],
-		AliveStatus:    peerIsAlive[selfID],
+		SenderID:     selfID,
+		ElevatorList: elevStates,
+		OrderTables:  orderTables,
+		AliveStatus:  peerIsAlive[selfID],
 	}
 }
 
 func buildConvergedState(
 	peerIsAlive [config.NElevators]bool,
 	elevStates [config.NElevators]types.HRAElevState,
-	hallOrders [config.NElevators]types.HallOrderTable,
+	orderTables [config.NElevators]types.OrderTable,
 ) types.ConvergedSystemState {
 	return types.ConvergedSystemState{
-		AliveList:      peerIsAlive,
-		ElevatorList:   elevStates,
-		HallOrderTable: hallOrders,
+		AliveList:    peerIsAlive,
+		ElevatorList: elevStates,
+		OrderTables:  orderTables,
 	}
 }
 
@@ -124,14 +119,24 @@ func trySend[T any](ch chan<- T, value T) {
 	}
 }
 
-func recordPeerCabViews(
+func recordPeerOrderViews(
 	msg types.Message,
-	peerCabViews [config.NElevators][config.NElevators]types.CabOrderTable,
-) [config.NElevators][config.NElevators]types.CabOrderTable {
-	for ownerID := range config.NElevators {
-		peerCabViews[msg.SenderID][ownerID] = msg.ElevatorList[ownerID].CabOrders
+	peerOrderViews [config.NElevators][config.NElevators]types.OrderTable,
+) [config.NElevators][config.NElevators]types.OrderTable {
+	peerOrderViews[msg.SenderID] = msg.OrderTables
+	return peerOrderViews
+}
+
+func applyPeerHallRow(
+	msg types.Message,
+	orderTables [config.NElevators]types.OrderTable,
+) [config.NElevators]types.OrderTable {
+	for floor := range config.NFloors {
+		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
+			orderTables[msg.SenderID][floor][btn] = msg.OrderTables[msg.SenderID][floor][btn]
+		}
 	}
-	return peerCabViews
+	return orderTables
 }
 
 func applyPeerState(
@@ -144,4 +149,15 @@ func applyPeerState(
 	elevStates[msg.SenderID].Direction = senderState.Direction
 	elevStates[msg.SenderID].Assignable = senderState.Assignable
 	return elevStates
+}
+
+func clearPeerHallOrders(
+	orderTables [config.NElevators]types.OrderTable,
+	peerID int,
+) [config.NElevators]types.OrderTable {
+	for floor := range config.NFloors {
+		orderTables[peerID][floor][types.BtnHallUp] = types.OrderStandby
+		orderTables[peerID][floor][types.BtnHallDown] = types.OrderStandby
+	}
+	return orderTables
 }

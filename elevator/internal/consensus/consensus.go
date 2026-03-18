@@ -6,12 +6,10 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Maintains a converged distributed view of elevator, hall, and cab order state.
-// Alive peers continuously exchange snapshots, and order states advance through
-// the shared cyclic state machine until a consistent system view can be published.
+// Maintains a converged distributed view of elevator state and unified order
+// tables. Alive peers exchange full order snapshots, while the shared cyclic
+// state machine preserves the original hall/cab transition semantics.
 // -----------------------------------------------------------------------------
-
-
 func Run(
 	peerMsg <-chan types.Message,
 	broadcast chan<- types.Message,
@@ -21,10 +19,10 @@ func Run(
 	selfID int,
 ) {
 	var (
-		hallOrders     [config.NElevators]types.HallOrderTable
+		orderTables    [config.NElevators]types.OrderTable
 		elevStates     [config.NElevators]types.HRAElevState
 		lastPeerStates [config.NElevators]types.HRAElevState
-		peerCabViews   [config.NElevators][config.NElevators]types.CabOrderTable
+		peerOrderViews [config.NElevators][config.NElevators]types.OrderTable
 		peerIsAlive    [config.NElevators]bool
 		peerConsistent [config.NElevators]bool
 	)
@@ -32,8 +30,8 @@ func Run(
 	for {
 		select {
 		case registry := <-peerEvents:
-			peerIsAlive, hallOrders = updatePeerAvailability(registry, peerIsAlive, hallOrders, selfID)
-			lastPeerStates, peerCabViews = resetPeerSnapshots(registry, lastPeerStates, peerCabViews, selfID)
+			peerIsAlive, orderTables = updatePeerAvailability(registry, peerIsAlive, orderTables, selfID)
+			lastPeerStates, peerOrderViews = resetPeerSnapshots(registry, lastPeerStates, peerOrderViews, selfID)
 			peerConsistent = [config.NElevators]bool{}
 
 		case msg := <-peerMsg:
@@ -41,25 +39,24 @@ func Run(
 				continue
 			}
 
-			peerConsistent[msg.SenderID] = matchesLastPeerState(msg, hallOrders, lastPeerStates)
+			peerConsistent[msg.SenderID] = matchesLastPeerState(msg, peerOrderViews, lastPeerStates)
 			lastPeerStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
-			peerCabViews = recordPeerCabViews(msg, peerCabViews)
+			peerOrderViews = recordPeerOrderViews(msg, peerOrderViews)
 			elevStates = applyPeerState(msg, elevStates)
-			hallOrders[msg.SenderID] = msg.HallOrderTable
+			orderTables = applyPeerHallRow(msg, orderTables)
 			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 		case state := <-localState:
 			elevStates[selfID] = state.ElevatorState
-			hallOrders[selfID] = state.HallRequests
+			orderTables[selfID] = state.Orders
 			peerIsAlive[selfID] = state.AliveStatus
 		}
 
-		hallOrders = advanceHallOrderStates(hallOrders, selfID, peerIsAlive)
-		elevStates = advanceCabOrderStates(elevStates, peerCabViews, selfID, peerIsAlive)
-		broadcast <- buildBroadcastState(selfID, peerIsAlive, elevStates, hallOrders)
+		orderTables = advanceOrderStates(orderTables, peerOrderViews, selfID, peerIsAlive)
+		broadcast <- buildBroadcastState(selfID, peerIsAlive, elevStates, orderTables)
 		if alivePeersConsistent(peerConsistent, peerIsAlive, selfID) {
 			peerConsistent = [config.NElevators]bool{}
-			trySend(converged, buildConvergedState(peerIsAlive, elevStates, hallOrders))
+			trySend(converged, buildConvergedState(peerIsAlive, elevStates, orderTables))
 		}
 	}
 }
