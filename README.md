@@ -34,11 +34,10 @@ reasonably even when something goes wrong.
   `OrderStandby`.
 - Hall lights follow assigned hall orders, so a lit hall button still
   represents an order that the system believes must be served.
-- If peer snapshots diverge too much, the order falls back to `OrderStandby`
+- If peer snapshots diverge, the order falls back to `OrderStandby`
   instead of keeping a bad distributed state alive.
 - If `hall_request_assigner` is unavailable, `fallbackAssignedOrders` still
   keeps local `BtnCab` requests active and handles hall requests
-  conservatively.
 - A node can still take part in replication even if it is temporarily not
   assignable, for example during obstruction or motor timeout.
 
@@ -119,7 +118,7 @@ elevator/
   cmd/
     elevator/            entry point
   internal/
-    config/              constants, timing, and CLI args
+    config/              constants
     consensus/           peer state and OrderTable convergence
     dispatch/            LocalSystemState and hall assignment
     localControl/        elevator FSM and hardware control
