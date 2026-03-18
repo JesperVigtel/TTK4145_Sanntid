@@ -108,8 +108,6 @@ func sendElevatorUpdate(
 	}
 }
 
-// refreshLights merges the converged hall-order snapshot with the elevator's
-// current assigned orders, while floor and door lamps follow local state.
 func refreshLights(elevator types.Elevator, doorOpen bool, lampOrderStates types.OrderTable) {
 	for floor := range config.NFloors {
 		hardware.SetButtonLamp(types.BtnHallUp, floor, lampOrderStates[floor][types.BtnHallUp] == types.OrderAssigned)

@@ -10,7 +10,6 @@ import (
 func Run(
 	elevAddr string,
 	assignedOrderUpdates <-chan types.AssignedOrderTable,
-	// Converged order snapshots drive hall lamps, while cab lamps stay local.
 	lampOrderUpdates <-chan types.OrderTable,
 	elevatorEvents chan<- types.ElevatorEvents,
 ) {
