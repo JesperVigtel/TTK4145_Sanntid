@@ -16,9 +16,9 @@ import (
 
 func Run(
 	elevAddr string,
-	assignedOrderUpdates <-chan types.AssignedOrderTable,
-	hallLightUpdates <-chan types.HallLampTable,
-	elevatorEvents chan<- types.ElevatorEvents,
+	assignedOrderChan <-chan types.AssignedOrderTable,
+	hallLightChan <-chan types.HallLampTable,
+	elevatorEventChan chan<- types.ElevatorEvents,
 ) {
 	var (
 		currentFloorChan          = make(chan int, config.ChannelBufferSize)
@@ -47,7 +47,7 @@ func Run(
 	refreshLights(elevator, false, hallLamps)
 
 	hardware.SetMotorDirection(types.Down)
-	sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+	sendElevatorUpdate(elevatorEventChan, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 	for {
 		select {
@@ -68,14 +68,14 @@ func Run(
 				elevator.PhysicalMotorDirection = types.Stop
 				elevator.Behaviour = types.ElevatorIdle
 				motorActiveChan <- false
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+				sendElevatorUpdate(elevatorEventChan, elevator, obstruction, types.CompletedOrderTable{}, nil)
 				continue
 			}
 
 			if shouldStopAtCurrentFloor(elevator, floor) {
 				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection, hallLamps)
 				directionChange = directionChange || needsExtraDoorTime
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
+				sendElevatorUpdate(elevatorEventChan, elevator, obstruction, completedOrders, nil)
 				continue
 			}
 
@@ -88,9 +88,9 @@ func Run(
 					hardware.SetMotorDirection(newDir)
 				}
 			}
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+			sendElevatorUpdate(elevatorEventChan, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
-		case assignedOrders := <-assignedOrderUpdates:
+		case assignedOrders := <-assignedOrderChan:
 			elevator.AssignedOrders = assignedOrders
 			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
@@ -99,7 +99,7 @@ func Run(
 				directionChange = directionChange || needsExtraDoorTime
 				doorOpenChan <- true
 				refreshLights(elevator, true, hallLamps)
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
+				sendElevatorUpdate(elevatorEventChan, elevator, obstruction, completedOrders, nil)
 				continue
 			}
 
@@ -114,23 +114,23 @@ func Run(
 			if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection, hallLamps)
 				directionChange = directionChange || needsExtraDoorTime
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
+				sendElevatorUpdate(elevatorEventChan, elevator, obstruction, completedOrders, nil)
 				continue
 			}
 
 			startNextMovement(&elevator, motorActiveChan)
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+			sendElevatorUpdate(elevatorEventChan, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
-		case hallLightState := <-hallLightUpdates:
+		case hallLightState := <-hallLightChan:
 			hallLamps = hallLightState
 			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
 		case obstruction = <-obstructionChan:
 			updateActiveStatus(&elevator, obstruction)
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+			sendElevatorUpdate(elevatorEventChan, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case buttonEvent := <-buttonPressChan:
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, &buttonEvent)
+			sendElevatorUpdate(elevatorEventChan, elevator, obstruction, types.CompletedOrderTable{}, &buttonEvent)
 
 		case <-doorClosedChan:
 			if obstruction {
@@ -142,18 +142,18 @@ func Run(
 				completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				elevator.CurrentTravelDirection = -elevator.CurrentTravelDirection
 				doorOpenChan <- true
-				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
+				sendElevatorUpdate(elevatorEventChan, elevator, obstruction, completedOrders, nil)
 				continue
 			}
 
 			startNextMovement(&elevator, motorActiveChan)
 			refreshLights(elevator, false, hallLamps)
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+			sendElevatorUpdate(elevatorEventChan, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case <-motorInactiveChan:
 			stopOnMotorTimeout(&elevator)
 			recoveryEnableChan <- true
-			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
+			sendElevatorUpdate(elevatorEventChan, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case <-tryRecoveryChan:
 			resumeMovement(&elevator)
