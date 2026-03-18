@@ -3,8 +3,8 @@ package dispatch
 import "elevator/internal/types"
 
 // ------------------------------------------------------------------------------
-// Translates converged distributed state and local hardware events into commands
-// for the local elevator: execution-order assignments and converged hall-lamp snapshots.
+// Translates converged distributed state and local hardware events into local
+// execution orders and converged lamp snapshots.
 // ------------------------------------------------------------------------------
 
 func Run(
@@ -16,8 +16,8 @@ func Run(
 	elevatorID int,
 ) {
 	var (
-		localState         types.LocalSystemState
-		lastAssignedOrders types.AssignedOrderTable
+		localState             types.LocalSystemState
+		previousAssignedOrders types.AssignedOrderTable
 	)
 
 	localState = initLocalSystemState(<-elevatorEvents, elevatorID)
@@ -30,15 +30,15 @@ func Run(
 			localStateUpdates <- localState
 
 		case convergedState := <-convergedStates:
-			localState = mergeConvergedOrders(localState, convergedState)
+			localState = mergeConvergedOrderStates(localState, convergedState)
 
-			assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
+			assignedOrders, lampOrderState := prepareAssignment(convergedState, localState, elevatorID)
 
-			if assignedOrders != lastAssignedOrders {
+			if assignedOrders != previousAssignedOrders {
 				assignedOrderUpdates <- assignedOrders
-				lastAssignedOrders = assignedOrders
+				previousAssignedOrders = assignedOrders
 			}
-			lampOrderUpdates <- convergedState.OrderTables[elevatorID]
+			lampOrderUpdates <- lampOrderState
 		}
 	}
 }

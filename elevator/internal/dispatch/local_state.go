@@ -10,11 +10,9 @@ func initLocalSystemState(
 	elevatorID int,
 ) types.LocalSystemState {
 	return types.LocalSystemState{
-		ElevatorID: elevatorID,
-		// A running node should stay in replication even when it is obstructed
-		// or temporarily unable to take new assignments.
+		ElevatorID:    elevatorID,
 		AliveStatus:   true,
-		ElevatorState: newReplicatedElevatorState(event),
+		ElevatorState: replicatedElevatorStateFromEvent(event),
 		OrderStates:   types.OrderTable{},
 	}
 }
@@ -43,7 +41,7 @@ func applyHardwareUpdate(
 	state types.LocalSystemState,
 	event types.ElevatorEvents,
 ) types.LocalSystemState {
-	state.ElevatorState = newReplicatedElevatorState(event)
+	state.ElevatorState = replicatedElevatorStateFromEvent(event)
 
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
@@ -56,21 +54,13 @@ func applyHardwareUpdate(
 	return state
 }
 
-func newReplicatedElevatorState(event types.ElevatorEvents) types.HRAElevState {
-	return types.NewHRAElevState(event.Elevator, isAvailableForAssignment(event))
-}
-
-func isAvailableForAssignment(event types.ElevatorEvents) bool {
-	return event.Elevator.ActiveStatus && !event.Obstructed
-}
-
-func mergeConvergedOrders(
+func mergeConvergedOrderStates(
 	state types.LocalSystemState,
 	convergedState types.ConvergedSystemState,
 ) types.LocalSystemState {
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
-			state.OrderStates[floor][btn] = mergeConvergedOrderState(
+			state.OrderStates[floor][btn] = mergeOrderState(
 				state.OrderStates[floor][btn],
 				convergedState.OrderTables[state.ElevatorID][floor][btn],
 			)
@@ -79,7 +69,7 @@ func mergeConvergedOrders(
 	return state
 }
 
-func mergeConvergedOrderState(localOrder, convergedOrder types.OrderState) types.OrderState {
+func mergeOrderState(localOrder, convergedOrder types.OrderState) types.OrderState {
 	switch {
 	case localOrder == types.OrderPending && convergedOrder == types.OrderStandby:
 		return localOrder

@@ -71,6 +71,7 @@ func tryCyclicAdvance(currentState types.OrderState, peerStates []types.OrderSta
 			return types.OrderStandby, true
 		}
 	}
+
 	return currentState, false
 }
 
