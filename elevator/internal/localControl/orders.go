@@ -5,6 +5,12 @@ import (
 	"elevator/internal/types"
 )
 
+// -----------------------------------------------------------------------------
+// Encapsulates the assigned-order decision logic for one elevator. It uses the
+// assigned order table to choose direction, decide stop conditions, and clear
+// cab and hall orders after service.
+// -----------------------------------------------------------------------------
+
 func hasAssignedOrderAbove(elevator types.Elevator) bool {
 	for floor := elevator.CurrentFloor + 1; floor < config.NFloors; floor++ {
 		for btn := range config.NButtons {
@@ -60,7 +66,6 @@ func chooseDirection(elevator types.Elevator) types.MotorDirection {
 	return types.Stop
 }
 
-// Stops for opposite-direction hall orders only if no more orders ahead
 func shouldStopAtCurrentFloor(elevator types.Elevator, floor int) bool {
 	if elevator.AssignedOrders[floor][int(types.BtnCab)] {
 		return true
@@ -143,12 +148,10 @@ func clearOrdersAtFloor(
 
 	oppositeDir := -travelDir
 
-	// More orders in travel direction — no direction change needed
 	if hasOrdersInDirection(*elevator, travelDir) {
 		return
 	}
 
-	// Opposite hall order or orders behind: schedule direction change via extra door-open cycle
 	if elevator.AssignedOrders[floor][int(buttonForDirection(oppositeDir))] {
 		if isEndFloor(floor, travelDir) {
 			if clearHallOrder(elevator, floor, oppositeDir) {

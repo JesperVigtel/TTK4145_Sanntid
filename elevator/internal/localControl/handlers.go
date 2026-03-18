@@ -6,6 +6,13 @@ import (
 	"elevator/internal/types"
 )
 
+// -----------------------------------------------------------------------------
+// Collects the local control helper routines that mutate elevator state and
+// apply it to the hardware interface. These handlers cover initialization,
+// motion start/stop, floor serving, timeout recovery, lamp refresh, and
+// propagation of local elevator events to the rest of the system.
+// -----------------------------------------------------------------------------
+
 // Floor -1 is unknown position, moves down to nearest floor
 func newElevator() types.Elevator {
 	return types.Elevator{
@@ -57,12 +64,9 @@ func startNextMovement(
 	}
 }
 
-// Called periodically after motor timeout — retries movement to escape stuck state
 func resumeMovement(elevator *types.Elevator) {
 	if elevator.Behaviour == types.ElevatorIdle && !elevator.ActiveStatus {
 		newDir := chooseDirection(*elevator)
-
-		// No orders found — keep moving in current direction to reach a floor sensor
 		if newDir == types.Stop {
 			elevator.Behaviour = types.ElevatorMoving
 			elevator.PhysicalMotorDirection = elevator.CurrentTravelDirection

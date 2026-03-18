@@ -11,46 +11,46 @@ import (
 
 func Run(
 	selfID int,
-	localState <-chan types.Message, // fra consensus
-	incomingMessages chan<- types.Message, // til consensus
-	nodeRegistry chan<- types.GlobalNodeRegistry, // til consensus
+	localSystemState <-chan types.Message,
+	message chan<- types.Message,
+	nodeRegistry chan<- types.GlobalNodeRegistry,
 ) {
 	ticker := time.NewTicker(config.BroadcastRate)
 	defer ticker.Stop()
 
-	var lastLocalState types.Message
+	var lastLocalSystemState types.Message
 	hasState := false
 
-	msgTx := make(chan types.Message, config.BroadcastBufferSize)
-	msgRx := make(chan types.Message, config.BroadcastBufferSize)
-	peerUpdateCh := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
+	messageTransmitChan := make(chan types.Message, config.BroadcastBufferSize)
+	messageReceiveChan := make(chan types.Message, config.BroadcastBufferSize)
+	peerUpdateChannel := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
 	peerTxEnable := make(chan bool)
 
-	go broadcast.Transmitter(config.BroadcastPort, msgTx)
-	go broadcast.Receiver(config.BroadcastPort, msgRx)
+	go broadcast.Transmitter(config.BroadcastPort, messageTransmitChan)
+	go broadcast.Receiver(config.BroadcastPort, messageReceiveChan)
 	go peers.Transmitter(config.PeersPort, strconv.Itoa(selfID), peerTxEnable)
-	go peers.Receiver(config.PeersPort, peerUpdateCh)
+	go peers.Receiver(config.PeersPort, peerUpdateChannel)
 	peerTxEnable <- true
 
 	for {
 		select {
-		case state := <-localState:
+		case state := <-localSystemState:
 			state.SenderID = selfID
-			lastLocalState = state
+			lastLocalSystemState = state
 			hasState = true
 
 		case <-ticker.C:
 			if hasState {
-				msgTx <- lastLocalState
+				messageTransmitChan <- lastLocalSystemState
 			}
 
-		case msg := <-msgRx:
+		case msg := <-messageReceiveChan:
 			if msg.SenderID == selfID {
 				continue
 			}
-			incomingMessages <- msg // videresend til consensus
+			message <- msg
 
-		case update := <-peerUpdateCh:
+		case update := <-peerUpdateChannel:
 			nodeRegistry <- peers.ConvertPeerUpdate(update)
 		}
 	}

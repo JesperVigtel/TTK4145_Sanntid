@@ -11,7 +11,7 @@ func initLocalSystemState(
 ) types.LocalSystemState {
 	return types.LocalSystemState{
 		ElevatorID:    elevatorID,
-		ElevatorState: replicatedElevatorStateFromEvent(event),
+		ElevatorState: newReplicatedElevatorState(event),
 		OrderStates:   types.OrderTable{},
 	}
 }
@@ -40,7 +40,7 @@ func applyHardwareUpdate(
 	state types.LocalSystemState,
 	event types.ElevatorEvents,
 ) types.LocalSystemState {
-	state.ElevatorState = replicatedElevatorStateFromEvent(event)
+	state.ElevatorState = newReplicatedElevatorState(event)
 
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
@@ -53,13 +53,13 @@ func applyHardwareUpdate(
 	return state
 }
 
-func mergeConvergedOrderStates(
+func mergeConvergedOrders(
 	state types.LocalSystemState,
 	convergedState types.ConvergedSystemState,
 ) types.LocalSystemState {
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
-			state.OrderStates[floor][btn] = mergeOrderState(
+			state.OrderStates[floor][btn] = mergeConvergedOrderState(
 				state.OrderStates[floor][btn],
 				convergedState.OrderTables[state.ElevatorID][floor][btn],
 			)
@@ -68,7 +68,7 @@ func mergeConvergedOrderStates(
 	return state
 }
 
-func mergeOrderState(localOrder, convergedOrder types.OrderState) types.OrderState {
+func mergeConvergedOrderState(localOrder, convergedOrder types.OrderState) types.OrderState {
 	switch {
 	case localOrder == types.OrderPending && convergedOrder == types.OrderStandby:
 		return localOrder

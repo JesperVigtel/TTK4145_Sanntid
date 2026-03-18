@@ -1,12 +1,6 @@
 package types
 
-import (
-	. "elevator/internal/config"
-)
-
-// ------------------------------------------------------------------------------------
-//	enum types for intermodule contracts
-// ------------------------------------------------------------------------------------
+import . "elevator/internal/config"
 
 type ConvergedSystemState struct {
 	AliveList    [NElevators]bool
@@ -25,8 +19,6 @@ type Message struct {
 	ElevatorState HRAElevState
 	OrderTables   [NElevators]OrderTable
 }
-
-//Elevator types START:
 
 type MotorDirection int
 
@@ -75,23 +67,12 @@ type ElevatorEvents struct {
 	Obstructed      bool
 }
 
-//Elevator types stop
-
-//Network types START:
-
 type GlobalNodeRegistry struct {
 	Nodes []int
 	New   []int
 	Lost  []int
 }
 
-//Network types END:
-
-// ------------------------------------------------------------------------------------
-//
-//	enum types for order domain
-//
-// ------------------------------------------------------------------------------------
 type OrderState int
 
 const (
@@ -104,10 +85,6 @@ const (
 type OrderTable [NFloors][NButtons]OrderState
 type AssignedOrderTable [NFloors][NButtons]bool
 type HallLampTable [NFloors][2]bool
-
-// ------------------------------------------------------------------------------------
-//	enum types for assigner
-// ------------------------------------------------------------------------------------
 
 type HRAElevState struct {
 	Behavior   string `json:"behaviour"`

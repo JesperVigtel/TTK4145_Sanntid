@@ -10,40 +10,40 @@ import (
 
 func computeAssignedOrders(
 	convergedState types.ConvergedSystemState,
-	localState types.LocalSystemState,
+	localSystemState types.LocalSystemState,
 	elevatorID int,
 ) types.AssignedOrderTable {
-	input := buildHallAssignerInput(convergedState, localState, elevatorID)
+	input := buildHRAInput(convergedState, localSystemState, elevatorID)
 	if len(input.States) == 0 {
 		// External HRA asserts on empty state sets.
 		fmt.Println("computeAssignedOrders: no alive elevator states, using local fallback assignment")
-		return fallbackAssignedOrders(localState)
+		return fallbackAssignedOrders(localSystemState)
 	}
 
 	jsonBytes, err := json.Marshal(input)
 	if err != nil {
 		fmt.Println("computeAssignedOrders: json.Marshal:", err)
-		return fallbackAssignedOrders(localState)
+		return fallbackAssignedOrders(localSystemState)
 	}
-	hraPath := hallRequestAssignerPath()
+	hraPath := getHRAPath()
 	raw, err := exec.Command(hraPath, "-i", string(jsonBytes)).CombinedOutput()
 	if err != nil {
 		fmt.Println("computeAssignedOrders: exec:", err, string(raw))
-		return fallbackAssignedOrders(localState)
+		return fallbackAssignedOrders(localSystemState)
 	}
 
 	output := make(map[string][][2]bool)
 	if err := json.Unmarshal(raw, &output); err != nil {
 		fmt.Println("computeAssignedOrders: json.Unmarshal:", err)
-		return fallbackAssignedOrders(localState)
+		return fallbackAssignedOrders(localSystemState)
 	}
 
-	return buildAssignedOrderTable(output, localState, elevatorID)
+	return buildAssignedOrderTable(output, localSystemState, elevatorID)
 }
 
-func buildHallAssignerInput(
+func buildHRAInput(
 	convergedState types.ConvergedSystemState,
-	localState types.LocalSystemState,
+	localSystemState types.LocalSystemState,
 	elevatorID int,
 ) types.HRAInput {
 	input := types.HRAInput{
@@ -57,7 +57,7 @@ func buildHallAssignerInput(
 		}
 		elevState := convergedState.ElevatorList[id]
 		if id == elevatorID {
-			elevState = localState.ElevatorState
+			elevState = localSystemState.ElevatorState
 		}
 		if !elevState.Assignable {
 			continue
@@ -67,7 +67,7 @@ func buildHallAssignerInput(
 		}
 		orders := convergedState.OrderTables[id]
 		if id == elevatorID {
-			orders = localState.OrderStates
+			orders = localSystemState.OrderStates
 		}
 		input.States[fmt.Sprintf("elevator_%d", id)] = types.NewHRAAssignerState(elevState, orders)
 	}
@@ -92,7 +92,7 @@ func buildHallLampTable(orderStates types.OrderTable) types.HallLampTable {
 
 func buildAssignedOrderTable(
 	output map[string][][2]bool,
-	localState types.LocalSystemState,
+	localSystemState types.LocalSystemState,
 	elevatorID int,
 ) types.AssignedOrderTable {
 	var result types.AssignedOrderTable
@@ -107,21 +107,21 @@ func buildAssignedOrderTable(
 	}
 
 	for floor := range config.NFloors {
-		result[floor][types.BtnCab] = types.IsActiveOrder(localState.OrderStates[floor][types.BtnCab])
+		result[floor][types.BtnCab] = types.IsActiveOrder(localSystemState.OrderStates[floor][types.BtnCab])
 	}
 
 	return result
 }
 
-func fallbackAssignedOrders(localState types.LocalSystemState) types.AssignedOrderTable {
+func fallbackAssignedOrders(localSystemState types.LocalSystemState) types.AssignedOrderTable {
 	var result types.AssignedOrderTable
 	for floor := range config.NFloors {
-		result[floor][types.BtnCab] = types.IsActiveOrder(localState.OrderStates[floor][types.BtnCab])
-		if !localState.ElevatorState.Assignable {
+		result[floor][types.BtnCab] = types.IsActiveOrder(localSystemState.OrderStates[floor][types.BtnCab])
+		if !localSystemState.ElevatorState.Assignable {
 			continue
 		}
 		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
-			state := localState.OrderStates[floor][btn]
+			state := localSystemState.OrderStates[floor][btn]
 			result[floor][btn] = state == types.OrderPending || state == types.OrderAssigned
 		}
 	}

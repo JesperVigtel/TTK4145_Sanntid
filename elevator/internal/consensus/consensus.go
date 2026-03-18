@@ -14,7 +14,7 @@ func Run(
 	peerMsg <-chan types.Message,
 	broadcast chan<- types.Message,
 	peerEvents <-chan types.GlobalNodeRegistry,
-	localState <-chan types.LocalSystemState,
+	localSystemState <-chan types.LocalSystemState,
 	converged chan<- types.ConvergedSystemState,
 	selfID int,
 ) {
@@ -46,7 +46,7 @@ func Run(
 			elevStates = applyPeerState(msg, elevStates)
 			orderTables = applyPeerHallOrders(msg, orderTables)
 
-		case state := <-localState:
+		case state := <-localSystemState:
 			elevStates[selfID] = state.ElevatorState
 			orderTables[selfID] = state.OrderStates
 		}

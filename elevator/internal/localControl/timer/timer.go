@@ -9,86 +9,75 @@ func Timer(
 	doorOpenChan <-chan bool,
 	motorActiveChan <-chan bool,
 	recoveryEnableChan <-chan bool,
-
 	doorClosedChan chan<- bool,
 	motorInactiveChan chan<- bool,
 	recoveryTickChan chan<- bool,
 ) {
-	var doorActive, watchDogActive, recoveryActive bool
+	var isDoorOpen, isMotorActive, isRecoveryActive bool
 
-	doorTimer := time.NewTimer(config.DoorOpenTime)
-	doorTimer.Stop()
-	motorTimer := time.NewTimer(config.MotorTimeout)
-	motorTimer.Stop()
-	motorRecoveryTimer := time.NewTimer(config.MotorRecoveryTime)
-	motorRecoveryTimer.Stop()
-
-	// Drain any timer events from initialization to prevent false triggers
-	select {
-	case <-doorTimer.C:
-	default:
-	}
-	select {
-	case <-motorTimer.C:
-	default:
-	}
-	select {
-	case <-motorRecoveryTimer.C:
-	default:
-	}
+	doorTimer, motorTimer, motorRecoveryTimer := initTimers()
 
 	for {
 		select {
-		case isDoorOpen := <-doorOpenChan:
-			doorActive = isDoorOpen
-			if doorActive {
-				safeStopTimer(doorTimer)
+		case isDoorOpen = <-doorOpenChan:
+			if isDoorOpen {
+				drainIfFired(doorTimer)
 				doorTimer.Reset(config.DoorOpenTime)
 			} else {
-				safeStopTimer(doorTimer)
+				drainIfFired(doorTimer)
 			}
 
-		case isMotorActive := <-motorActiveChan:
-			watchDogActive = isMotorActive
-			if watchDogActive {
-				safeStopTimer(motorTimer)
+		case isMotorActive = <-motorActiveChan:
+			if isMotorActive {
+				drainIfFired(motorTimer)
 				motorTimer.Reset(config.MotorTimeout)
 			} else {
-				safeStopTimer(motorTimer)
+				drainIfFired(motorTimer)
 			}
-		case isRecoveryActive := <-recoveryEnableChan:
-			recoveryActive = isRecoveryActive
-			if recoveryActive {
-				safeStopTimer(motorRecoveryTimer)
+
+		case isRecoveryActive = <-recoveryEnableChan:
+			if isRecoveryActive {
+				drainIfFired(motorRecoveryTimer)
 				motorRecoveryTimer.Reset(config.MotorRecoveryTime)
 			} else {
-				safeStopTimer(motorRecoveryTimer)
+				drainIfFired(motorRecoveryTimer)
 			}
 
 		case <-doorTimer.C:
-			if doorActive {
-				doorActive = false
+			if isDoorOpen {
+				isDoorOpen = false
 				doorClosedChan <- true
 			}
 
 		case <-motorTimer.C:
-			if watchDogActive {
-				watchDogActive = false
+			if isMotorActive {
+				isMotorActive = false
 				motorInactiveChan <- true
 			}
-		// Periodically retries movement after motor timeout.
+
 		case <-motorRecoveryTimer.C:
-			if recoveryActive {
+			if isRecoveryActive {
 				recoveryTickChan <- true
-				safeStopTimer(motorRecoveryTimer)
+				drainIfFired(motorRecoveryTimer)
 				motorRecoveryTimer.Reset(config.MotorRecoveryTime)
 			}
 		}
 	}
 }
 
-// Drain the channel if the timer has fired.
-func safeStopTimer(timerInstance *time.Timer) {
+func initTimers() (*time.Timer, *time.Timer, *time.Timer) {
+	doorTimer := time.NewTimer(config.DoorOpenTime)
+	motorTimer := time.NewTimer(config.MotorTimeout)
+	motorRecoveryTimer := time.NewTimer(config.MotorRecoveryTime)
+
+	drainIfFired(doorTimer)
+	drainIfFired(motorTimer)
+	drainIfFired(motorRecoveryTimer)
+
+	return doorTimer, motorTimer, motorRecoveryTimer
+}
+
+func drainIfFired(timerInstance *time.Timer) {
 	if !timerInstance.Stop() {
 		select {
 		case <-timerInstance.C:

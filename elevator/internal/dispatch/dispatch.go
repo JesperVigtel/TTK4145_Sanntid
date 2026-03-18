@@ -10,34 +10,34 @@ import "elevator/internal/types"
 func Run(
 	assignedOrderUpdates chan<- types.AssignedOrderTable,
 	localStateUpdates chan<- types.LocalSystemState,
-	hallLampUpdates chan<- types.HallLampTable,
+	hallLightUpdates chan<- types.HallLampTable,
 	elevatorEvents <-chan types.ElevatorEvents,
 	convergedStates <-chan types.ConvergedSystemState,
 	elevatorID int,
 ) {
 	var (
-		localState             types.LocalSystemState
-		previousAssignedOrders types.AssignedOrderTable
+		localSystemState   types.LocalSystemState
+		lastAssignedOrders types.AssignedOrderTable
 	)
 
-	localState = initLocalSystemState(<-elevatorEvents, elevatorID)
-	localStateUpdates <- localState
+	localSystemState = initLocalSystemState(<-elevatorEvents, elevatorID)
+	localStateUpdates <- localSystemState
 
 	for {
 		select {
 		case event := <-elevatorEvents:
-			localState = applyElevatorEvent(localState, event)
-			localStateUpdates <- localState
+			localSystemState = applyElevatorEvent(localSystemState, event)
+			localStateUpdates <- localSystemState
 
 		case convergedState := <-convergedStates:
-			localState = mergeConvergedOrderStates(localState, convergedState)
-			assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
+			localSystemState = mergeConvergedOrders(localSystemState, convergedState)
+			assignedOrders := computeAssignedOrders(convergedState, localSystemState, elevatorID)
 
-			if assignedOrders != previousAssignedOrders {
+			if assignedOrders != lastAssignedOrders {
 				assignedOrderUpdates <- assignedOrders
-				previousAssignedOrders = assignedOrders
+				lastAssignedOrders = assignedOrders
 			}
-			hallLampUpdates <- buildHallLampTable(convergedState.OrderTables[elevatorID])
+			hallLightUpdates <- buildHallLampTable(convergedState.OrderTables[elevatorID])
 		}
 	}
 }

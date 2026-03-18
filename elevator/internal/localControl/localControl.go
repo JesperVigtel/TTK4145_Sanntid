@@ -7,10 +7,17 @@ import (
 	"elevator/internal/types"
 )
 
+// -----------------------------------------------------------------------------
+// Runs the local elevator controller and applies assigned orders plus hall lamp
+// updates to the physical elevator. It combines hardware polling, timer events,
+// recovery handling, and obstruction state to drive motion, serve orders,
+// refresh lamps, and publish local elevator events.
+// -----------------------------------------------------------------------------
+
 func Run(
 	elevAddr string,
 	assignedOrderUpdates <-chan types.AssignedOrderTable,
-	hallLampUpdates <-chan types.HallLampTable,
+	hallLightUpdates <-chan types.HallLampTable,
 	elevatorEvents chan<- types.ElevatorEvents,
 ) {
 	var (
@@ -25,9 +32,7 @@ func Run(
 		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
 		obstruction        bool
 		hallLamps          types.HallLampTable
-
-		// directionChange is set across select iterations — set by clearOrdersAtFloor, used by doorClosedChan
-		directionChange bool
+		directionChange    bool
 	)
 	hardware.Init(elevAddr, config.NFloors)
 
@@ -41,7 +46,6 @@ func Run(
 	obstruction = false
 	refreshLights(elevator, false, hallLamps)
 
-	// Initialize by driving down until a floor sensor is reached
 	hardware.SetMotorDirection(types.Down)
 	sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
@@ -57,7 +61,6 @@ func Run(
 			if elevator.Behaviour == types.ElevatorMoving {
 				motorActiveChan <- true
 			}
-			// No orders to serve - Elevator idle
 			if !hasAssignedOrderAbove(elevator) && !hasAssignedOrderBelow(elevator) &&
 				!hasOrderAtFloor(elevator, floor) {
 				hardware.SetMotorDirection(types.Stop)
@@ -75,7 +78,6 @@ func Run(
 				continue
 			}
 
-			// Passing floor without order, checking if direction should change
 			newDir := chooseDirection(elevator)
 			if newDir != types.Stop {
 				elevator.CurrentTravelDirection = newDir
@@ -104,7 +106,6 @@ func Run(
 				continue
 			}
 
-			// Don't start new movement when stuck between floors — recovery handles that
 			if !elevator.ActiveStatus {
 				continue
 			}
@@ -119,8 +120,8 @@ func Run(
 			startNextMovement(&elevator, motorActiveChan)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
-		case hallLampState := <-hallLampUpdates:
-			hallLamps = hallLampState
+		case hallLightState := <-hallLightUpdates:
+			hallLamps = hallLightState
 			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
 		case obstruction = <-obstructionChan:
@@ -135,7 +136,6 @@ func Run(
 				doorOpenChan <- true
 				continue
 			}
-			// Serve opposite hall order before changing direction — extra door-open cycle required
 			if directionChange {
 				directionChange = false
 				completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)

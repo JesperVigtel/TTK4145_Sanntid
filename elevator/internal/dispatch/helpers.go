@@ -6,15 +6,15 @@ import (
 	"runtime"
 )
 
-func replicatedElevatorStateFromEvent(event types.ElevatorEvents) types.HRAElevState {
-	return types.NewHRAElevState(event.Elevator, isAssignable(event))
+func newReplicatedElevatorState(event types.ElevatorEvents) types.HRAElevState {
+	return types.NewHRAElevState(event.Elevator, isAvailableForAssignment(event))
 }
 
-func isAssignable(event types.ElevatorEvents) bool {
+func isAvailableForAssignment(event types.ElevatorEvents) bool {
 	return event.Elevator.ActiveStatus && !event.Obstructed
 }
 
-func hallRequestAssignerPath() string {
+func getHRAPath() string {
 	_, currentFile, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(currentFile)
 

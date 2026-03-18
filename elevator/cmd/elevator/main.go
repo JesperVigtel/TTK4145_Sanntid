@@ -17,33 +17,28 @@ import (
 func main() {
 	selfID, elevAddr := parseArgs()
 
-	// -- Channels for LocalControl --
 	assignedOrderUpdates := make(chan types.AssignedOrderTable, config.ChannelBufferSize)
-	hallLampUpdates := make(chan types.HallLampTable, config.ChannelBufferSize)
+	hallLightUpdates := make(chan types.HallLampTable, config.ChannelBufferSize)
 	elevatorEvents := make(chan types.ElevatorEvents, config.ChannelBufferSize)
 
-	// -- Channels for Decision
 	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
 	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
 
-	// -- Channels for network
 	peerMsg := make(chan types.Message, config.ChannelBufferSize)
 	broadcast := make(chan types.Message, config.ChannelBufferSize)
 	peerEvents := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
 
-	// -- Goroutines --
-
 	go localControl.Run(
 		elevAddr,
 		assignedOrderUpdates,
-		hallLampUpdates,
+		hallLightUpdates,
 		elevatorEvents,
 	)
 
 	go dispatch.Run(
 		assignedOrderUpdates,
 		localSystemState,
-		hallLampUpdates,
+		hallLightUpdates,
 		elevatorEvents,
 		convergedSystemState,
 		selfID,
