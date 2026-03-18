@@ -21,7 +21,7 @@ func Run(
 	elevatorEventChan chan<- types.ElevatorEvents,
 ) {
 	var (
-		currentFloorChan          = make(chan int, config.ChannelBufferSize)
+		currentFloorChan   = make(chan int, config.ChannelBufferSize)
 		doorOpenChan       = make(chan bool, config.ChannelBufferSize)
 		motorActiveChan    = make(chan bool, config.ChannelBufferSize)
 		recoveryEnableChan = make(chan bool, config.ChannelBufferSize)
