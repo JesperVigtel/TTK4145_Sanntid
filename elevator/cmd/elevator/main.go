@@ -12,47 +12,47 @@ import (
 func main() {
 	selfID, elevAddr := config.ParseArgs()
 
-	assignedOrderUpdates := make(chan types.AssignedOrderTable, config.ChannelBufferSize)
-	hallLightUpdates := make(chan types.HallLampTable, config.ChannelBufferSize)
-	elevatorEvents := make(chan types.ElevatorEvents, config.ChannelBufferSize)
+	assignedOrderChan := make(chan types.AssignedOrderTable, config.ChannelBufferSize)
+	hallLightChan := make(chan types.HallLampTable, config.ChannelBufferSize)
+	elevatorEventsChan := make(chan types.ElevatorEvents, config.ChannelBufferSize)
 
-	localSystemState := make(chan types.LocalSystemState, config.ChannelBufferSize)
-	convergedSystemState := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
+	localSystemStateChan := make(chan types.LocalSystemState, config.ChannelBufferSize)
+	convergedSystemStateChan := make(chan types.ConvergedSystemState, config.ChannelBufferSize)
 
-	peerMsg := make(chan types.Message, config.ChannelBufferSize)
-	broadcast := make(chan types.Message, config.ChannelBufferSize)
-	peerEvents := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
+	peerMsgChan := make(chan types.Message, config.ChannelBufferSize)
+	broadcastChan := make(chan types.Message, config.ChannelBufferSize)
+	peerEventsChan := make(chan types.GlobalNodeRegistry, config.ChannelBufferSize)
 
 	go localControl.Run(
 		elevAddr,
-		assignedOrderUpdates,
-		hallLightUpdates,
-		elevatorEvents,
+		assignedOrderChan,
+		hallLightChan,
+		elevatorEventsChan,
 	)
 
 	go dispatch.Run(
-		assignedOrderUpdates,
-		localSystemState,
-		hallLightUpdates,
-		elevatorEvents,
-		convergedSystemState,
+		assignedOrderChan,
+		localSystemStateChan,
+		hallLightChan,
+		elevatorEventsChan,
+		convergedSystemStateChan,
 		selfID,
 	)
 
 	go consensus.Run(
-		peerMsg,
-		broadcast,
-		peerEvents,
-		localSystemState,
-		convergedSystemState,
+		peerMsgChan,
+		broadcastChan,
+		peerEventsChan,
+		localSystemStateChan,
+		convergedSystemStateChan,
 		selfID,
 	)
 
 	go network.Run(
 		selfID,
-		broadcast,
-		peerMsg,
-		peerEvents,
+		broadcastChan,
+		peerMsgChan,
+		peerEventsChan,
 	)
 
 	select {}

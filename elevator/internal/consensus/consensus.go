@@ -11,11 +11,11 @@ import (
 // state machine preserves the original hall/cab transition semantics.
 // -----------------------------------------------------------------------------
 func Run(
-	peerMsg <-chan types.Message,
-	broadcast chan<- types.Message,
-	peerEvents <-chan types.GlobalNodeRegistry,
-	localSystemState <-chan types.LocalSystemState,
-	converged chan<- types.ConvergedSystemState,
+	peerMsgChan <-chan types.Message,
+	broadcastChan chan<- types.Message,
+	peerEventsChan <-chan types.GlobalNodeRegistry,
+	localSystemStateChan <-chan types.LocalSystemState,
+	convergedChan chan<- types.ConvergedSystemState,
 	selfID int,
 ) {
 	var (
@@ -30,12 +30,12 @@ func Run(
 
 	for {
 		select {
-		case registry := <-peerEvents:
+		case registry := <-peerEventsChan:
 			peerIsAlive, orderTables = updatePeerAvailability(registry, peerIsAlive, orderTables, selfID)
 			lastPeerElevatorStates, peerOrderSnapshots = resetPeerSnapshots(registry, lastPeerElevatorStates, peerOrderSnapshots, selfID)
 			peerConsistent = [config.NElevators]bool{}
 
-		case msg := <-peerMsg:
+		case msg := <-peerMsgChan:
 			if !isRemotePeerID(msg.SenderID, selfID) {
 				continue
 			}
@@ -46,20 +46,20 @@ func Run(
 			elevStates[msg.SenderID] = msg.ElevatorState
 			orderTables = applyPeerHallRow(msg, orderTables)
 
-		case state := <-localSystemState:
-			elevStates[selfID] = state.ElevatorState
-			orderTables[selfID] = state.OrderStates
+		case system := <-localSystemStateChan:
+			elevStates[selfID] = system.ElevatorState
+			orderTables[selfID] = system.OrderStates
 		}
 
 		orderTables = advanceOrderStates(orderTables, peerOrderSnapshots, selfID, peerIsAlive)
-		broadcast <- types.Message{
+		broadcastChan <- types.Message{
 			SenderID:      selfID,
 			ElevatorState: elevStates[selfID],
 			OrderTables:   orderTables,
 		}
 		if alivePeersConsistent(peerConsistent, peerIsAlive, selfID) {
 			peerConsistent = [config.NElevators]bool{}
-			trySend(converged, types.ConvergedSystemState{
+			trySend(convergedChan, types.ConvergedSystemState{
 				AliveList:    peerIsAlive,
 				ElevatorList: elevStates,
 				OrderTables:  orderTables,
