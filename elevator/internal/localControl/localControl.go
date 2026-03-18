@@ -79,14 +79,8 @@ func Run(
 
 			// Passing floor without order, checking if direction should change
 			newDir := chooseDirection(elevator)
-			// if newDir != types.Stop && newDir != elevator.CurrentTravelDirection {
-			// 	elevator.CurrentTravelDirection = newDir
-			// 	elevator.PhysicalMotorDirection = newDir
-			// 	hardware.SetMotorDirection(newDir)
-			// }
 			if newDir != types.Stop {
 				elevator.CurrentTravelDirection = newDir
-				// Restart the motor if the desired direction changed or the motor is stopped.
 				if elevator.PhysicalMotorDirection != newDir || elevator.Behaviour != types.ElevatorMoving {
 					elevator.PhysicalMotorDirection = newDir
 					elevator.Behaviour = types.ElevatorMoving
@@ -145,7 +139,7 @@ func Run(
 				doorOpenChan <- true
 				continue
 			}
-			// Serve opposite hall order before reversing — extra door-open cycle required
+			// Serve opposite hall order before changing direction — extra door-open cycle required
 			if directionChange {
 				directionChange = false
 				completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
