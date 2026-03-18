@@ -24,30 +24,16 @@ func initLocalSystemState(
 	}
 }
 
-func applyButtonPress(
-	state types.LocalSystemState,
-	btn types.ButtonEvent,
-) types.LocalSystemState {
-	if state.OrderStates[btn.Floor][btn.Button] == types.OrderStandby {
-		state.OrderStates[btn.Floor][btn.Button] = types.OrderPending
-	}
-	return state
-}
-
 func applyElevatorEvent(
 	state types.LocalSystemState,
 	event types.ElevatorEvents,
 ) types.LocalSystemState {
 	if event.NewButtonPress != nil {
-		state = applyButtonPress(state, *event.NewButtonPress)
+		button := *event.NewButtonPress
+		if state.OrderStates[button.Floor][button.Button] == types.OrderStandby {
+			state.OrderStates[button.Floor][button.Button] = types.OrderPending
+		}
 	}
-	return applyHardwareUpdate(state, event)
-}
-
-func applyHardwareUpdate(
-	state types.LocalSystemState,
-	event types.ElevatorEvents,
-) types.LocalSystemState {
 	state.ElevatorState = newReplicatedElevatorState(event)
 
 	for floor := range config.NFloors {
