@@ -10,12 +10,9 @@ func initLocalSystemState(
 	elevatorID int,
 ) types.LocalSystemState {
 	return types.LocalSystemState{
-		ElevatorID: elevatorID,
-		// A running node should stay in replication even when it is obstructed
-		// or temporarily unable to take new assignments.
-		AliveStatus:   true,
+		ElevatorID:    elevatorID,
 		ElevatorState: newReplicatedElevatorState(event),
-		HallRequests:  types.HallOrderTable{},
+		OrderStates:   types.OrderTable{},
 	}
 }
 
@@ -23,15 +20,8 @@ func applyButtonPress(
 	state types.LocalSystemState,
 	btn types.ButtonEvent,
 ) types.LocalSystemState {
-	switch btn.Button {
-	case types.BtnHallUp, types.BtnHallDown:
-		if state.HallRequests[btn.Floor][btn.Button] == types.OrderStandby {
-			state.HallRequests[btn.Floor][btn.Button] = types.OrderPending
-		}
-	case types.BtnCab:
-		if state.ElevatorState.CabOrders[btn.Floor] == types.OrderStandby {
-			state.ElevatorState.CabOrders[btn.Floor] = types.OrderPending
-		}
+	if state.OrderStates[btn.Floor][btn.Button] == types.OrderStandby {
+		state.OrderStates[btn.Floor][btn.Button] = types.OrderPending
 	}
 	return state
 }
@@ -50,34 +40,17 @@ func applyHardwareUpdate(
 	state types.LocalSystemState,
 	event types.ElevatorEvents,
 ) types.LocalSystemState {
-	updatedElevState := newReplicatedElevatorState(event)
-	updatedElevState.CabOrders = state.ElevatorState.CabOrders
-	state.ElevatorState = updatedElevState
+	state.ElevatorState = newReplicatedElevatorState(event)
 
 	for floor := range config.NFloors {
 		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
-			if !event.CompletedOrder[floor][btn] {
+			if !event.CompletedOrders[floor][btn] {
 				continue
 			}
-			switch btn {
-			case types.BtnHallUp:
-				state.HallRequests[floor][types.BtnHallUp] = types.OrderComplete
-			case types.BtnHallDown:
-				state.HallRequests[floor][types.BtnHallDown] = types.OrderComplete
-			case types.BtnCab:
-				state.ElevatorState.CabOrders[floor] = types.OrderComplete
-			}
+			state.OrderStates[floor][btn] = types.OrderComplete
 		}
 	}
 	return state
-}
-
-func newReplicatedElevatorState(event types.ElevatorEvents) types.HRAElevState {
-	return types.NewHRAElevState(event.Elevator, isAvailableForAssignment(event))
-}
-
-func isAvailableForAssignment(event types.ElevatorEvents) bool {
-	return event.Elevator.ActiveStatus && !event.Obstructed
 }
 
 func mergeConvergedOrders(
@@ -85,16 +58,12 @@ func mergeConvergedOrders(
 	convergedState types.ConvergedSystemState,
 ) types.LocalSystemState {
 	for floor := range config.NFloors {
-		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
-			state.HallRequests[floor][btn] = mergeConvergedOrderState(
-				state.HallRequests[floor][btn],
-				convergedState.HallOrderTable[state.ElevatorID][floor][btn],
+		for btn := types.BtnHallUp; btn <= types.BtnCab; btn++ {
+			state.OrderStates[floor][btn] = mergeConvergedOrderState(
+				state.OrderStates[floor][btn],
+				convergedState.OrderTables[state.ElevatorID][floor][btn],
 			)
 		}
-		state.ElevatorState.CabOrders[floor] = mergeConvergedOrderState(
-			state.ElevatorState.CabOrders[floor],
-			convergedState.ElevatorList[state.ElevatorID].CabOrders[floor],
-		)
 	}
 	return state
 }

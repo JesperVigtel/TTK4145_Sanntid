@@ -5,10 +5,16 @@ import (
 	"elevator/internal/types"
 )
 
-func hasLocalOrderAbove(elevator types.Elevator) bool {
+// -----------------------------------------------------------------------------
+// Encapsulates the assigned-order decision logic for one elevator. It uses the
+// assigned order table to choose direction, decide stop conditions, and clear
+// cab and hall orders after service.
+// -----------------------------------------------------------------------------
+
+func hasAssignedOrderAbove(elevator types.Elevator) bool {
 	for floor := elevator.CurrentFloor + 1; floor < config.NFloors; floor++ {
 		for btn := range config.NButtons {
-			if elevator.LocalOrders[floor][btn] {
+			if elevator.AssignedOrders[floor][btn] {
 				return true
 			}
 		}
@@ -16,10 +22,10 @@ func hasLocalOrderAbove(elevator types.Elevator) bool {
 	return false
 }
 
-func hasLocalOrderBelow(elevator types.Elevator) bool {
+func hasAssignedOrderBelow(elevator types.Elevator) bool {
 	for floor := elevator.CurrentFloor - 1; floor >= 0; floor-- {
 		for btn := range config.NButtons {
-			if elevator.LocalOrders[floor][btn] {
+			if elevator.AssignedOrders[floor][btn] {
 				return true
 			}
 		}
@@ -28,53 +34,51 @@ func hasLocalOrderBelow(elevator types.Elevator) bool {
 }
 
 func hasOrderAtFloor(elevator types.Elevator, floor int) bool {
-	return elevator.LocalOrders[floor][int(types.BtnCab)] ||
-		elevator.LocalOrders[floor][int(types.BtnHallUp)] ||
-		elevator.LocalOrders[floor][int(types.BtnHallDown)]
+	return elevator.AssignedOrders[floor][int(types.BtnCab)] ||
+		elevator.AssignedOrders[floor][int(types.BtnHallUp)] ||
+		elevator.AssignedOrders[floor][int(types.BtnHallDown)]
 }
-
 
 func chooseDirection(elevator types.Elevator) types.MotorDirection {
 	switch elevator.CurrentTravelDirection {
 	case types.Up:
-		if hasLocalOrderAbove(elevator) {
+		if hasAssignedOrderAbove(elevator) {
 			return types.Up
 		}
-		if hasLocalOrderBelow(elevator) {
+		if hasAssignedOrderBelow(elevator) {
 			return types.Down
 		}
 	case types.Down:
-		if hasLocalOrderBelow(elevator) {
+		if hasAssignedOrderBelow(elevator) {
 			return types.Down
 		}
-		if hasLocalOrderAbove(elevator) {
+		if hasAssignedOrderAbove(elevator) {
 			return types.Up
 		}
 	default:
-		if hasLocalOrderAbove(elevator) {
+		if hasAssignedOrderAbove(elevator) {
 			return types.Up
 		}
-		if hasLocalOrderBelow(elevator) {
+		if hasAssignedOrderBelow(elevator) {
 			return types.Down
 		}
 	}
 	return types.Stop
 }
 
-// Stops for opposite-direction hall orders only if no more orders ahead 
 func shouldStopAtCurrentFloor(elevator types.Elevator, floor int) bool {
-	if elevator.LocalOrders[floor][int(types.BtnCab)] {
+	if elevator.AssignedOrders[floor][int(types.BtnCab)] {
 		return true
 	}
 
-	hallUp := elevator.LocalOrders[floor][int(types.BtnHallUp)]
-	hallDown := elevator.LocalOrders[floor][int(types.BtnHallDown)]
+	hallUp := elevator.AssignedOrders[floor][int(types.BtnHallUp)]
+	hallDown := elevator.AssignedOrders[floor][int(types.BtnHallDown)]
 
 	switch elevator.CurrentTravelDirection {
 	case types.Up:
-		return hallUp || (!hasLocalOrderAbove(elevator) && hallDown)
+		return hallUp || (!hasAssignedOrderAbove(elevator) && hallDown)
 	case types.Down:
-		return hallDown || (!hasLocalOrderBelow(elevator) && hallUp)
+		return hallDown || (!hasAssignedOrderBelow(elevator) && hallUp)
 	default:
 		return hallUp || hallDown
 	}
@@ -89,9 +93,9 @@ func buttonForDirection(dir types.MotorDirection) types.ButtonType {
 
 func hasOrdersInDirection(elevator types.Elevator, dir types.MotorDirection) bool {
 	if dir == types.Up {
-		return hasLocalOrderAbove(elevator)
+		return hasAssignedOrderAbove(elevator)
 	}
-	return hasLocalOrderBelow(elevator)
+	return hasAssignedOrderBelow(elevator)
 }
 
 func isEndFloor(floor int, dir types.MotorDirection) bool {
@@ -102,8 +106,8 @@ func isEndFloor(floor int, dir types.MotorDirection) bool {
 }
 
 func clearCabOrder(elevator *types.Elevator, floor int) bool {
-	if elevator.LocalOrders[floor][int(types.BtnCab)] {
-		elevator.LocalOrders[floor][int(types.BtnCab)] = false
+	if elevator.AssignedOrders[floor][int(types.BtnCab)] {
+		elevator.AssignedOrders[floor][int(types.BtnCab)] = false
 		return true
 	}
 	return false
@@ -111,8 +115,8 @@ func clearCabOrder(elevator *types.Elevator, floor int) bool {
 
 func clearHallOrder(elevator *types.Elevator, floor int, dir types.MotorDirection) bool {
 	btn := buttonForDirection(dir)
-	if elevator.LocalOrders[floor][int(btn)] {
-		elevator.LocalOrders[floor][int(btn)] = false
+	if elevator.AssignedOrders[floor][int(btn)] {
+		elevator.AssignedOrders[floor][int(btn)] = false
 		return true
 	}
 	return false
@@ -144,13 +148,11 @@ func clearOrdersAtFloor(
 
 	oppositeDir := -travelDir
 
-	// More orders in travel direction — no direction change needed
 	if hasOrdersInDirection(*elevator, travelDir) {
 		return
 	}
 
-	// Opposite hall order or orders behind: schedule direction change via extra door-open cycle
-	if elevator.LocalOrders[floor][int(buttonForDirection(oppositeDir))] {
+	if elevator.AssignedOrders[floor][int(buttonForDirection(oppositeDir))] {
 		if isEndFloor(floor, travelDir) {
 			if clearHallOrder(elevator, floor, oppositeDir) {
 				completed[floor][int(buttonForDirection(oppositeDir))] = true

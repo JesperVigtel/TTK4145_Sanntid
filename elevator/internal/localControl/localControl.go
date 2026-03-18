@@ -5,14 +5,19 @@ import (
 	"elevator/internal/localControl/hardware"
 	"elevator/internal/localControl/timer"
 	"elevator/internal/types"
-	"fmt"
 )
+
+// -----------------------------------------------------------------------------
+// Runs the local elevator controller and applies assigned orders plus hall lamp
+// updates to the physical elevator. It combines hardware polling, timer events,
+// recovery handling, and obstruction state to drive motion, serve orders,
+// refresh lamps, and publish local elevator events.
+// -----------------------------------------------------------------------------
 
 func Run(
 	elevAddr string,
-	newOrder <-chan types.LocalOrderTable,
-	// Hall lamps are driven from the converged distributed hall state.
-	hallLights <-chan types.HallOrderTable,
+	assignedOrderUpdates <-chan types.AssignedOrderTable,
+	hallLightUpdates <-chan types.HallLampTable,
 	elevatorEvents chan<- types.ElevatorEvents,
 ) {
 	var (
@@ -26,9 +31,8 @@ func Run(
 		obstructionChan    = make(chan bool, config.ChannelBufferSize)
 		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
 		obstruction        bool
-
-		// directionChange is set across select iterations — set by clearOrdersAtFloor, used by doorClosedChan
-		directionChange bool
+		hallLamps          types.HallLampTable
+		directionChange    bool
 	)
 	hardware.Init(elevAddr, config.NFloors)
 
@@ -40,10 +44,8 @@ func Run(
 
 	elevator := newElevator()
 	obstruction = false
-	//Added light logic to localControl
-	applyLocalLights(elevator, false)
+	refreshLights(elevator, false, hallLamps)
 
-	// Initialize by driving down until a floor sensor is reached
 	hardware.SetMotorDirection(types.Down)
 	sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
@@ -54,13 +56,12 @@ func Run(
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
-			applyLocalLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen)	//Added light logic
+			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
 			if elevator.Behaviour == types.ElevatorMoving {
 				motorActiveChan <- true
 			}
-			// No orders to serve - Elevator idle
-			if !hasLocalOrderAbove(elevator) && !hasLocalOrderBelow(elevator) &&
+			if !hasAssignedOrderAbove(elevator) && !hasAssignedOrderBelow(elevator) &&
 				!hasOrderAtFloor(elevator, floor) {
 				hardware.SetMotorDirection(types.Stop)
 				elevator.PhysicalMotorDirection = types.Stop
@@ -71,13 +72,12 @@ func Run(
 			}
 
 			if shouldStopAtCurrentFloor(elevator, floor) {
-				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection)
+				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection, hallLamps)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
 			}
 
-			// Passing floor without order, checking if direction should change
 			newDir := chooseDirection(elevator)
 			if newDir != types.Stop {
 				elevator.CurrentTravelDirection = newDir
@@ -89,15 +89,15 @@ func Run(
 			}
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
-		case orders := <-newOrder:
-			elevator.LocalOrders = orders
-			applyLocalLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen)
+		case assignedOrders := <-assignedOrderUpdates:
+			elevator.AssignedOrders = assignedOrders
+			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
 			if elevator.Behaviour == types.ElevatorDoorOpen && hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				doorOpenChan <- true
-				applyLocalLights(elevator, true)
+				refreshLights(elevator, true, hallLamps)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
 			}
@@ -106,13 +106,12 @@ func Run(
 				continue
 			}
 
-			// Don't start new movement when stuck between floors — recovery handles that
 			if !elevator.ActiveStatus {
 				continue
 			}
 
 			if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
-				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection)
+				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection, hallLamps)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
@@ -121,13 +120,11 @@ func Run(
 			startNextMovement(&elevator, motorActiveChan)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
-		// Hall lamps are updated separately so they reflect the converged
-		// distributed hall-order state, not just this elevator's local orders.
-		case hallLightUpdate := <-hallLights:
-			applyHallLights(hallLightUpdate)
+		case hallLightState := <-hallLightUpdates:
+			hallLamps = hallLightState
+			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
 		case obstruction = <-obstructionChan:
-			fmt.Printf("[LocalControl] Obstruction changed: %v\n", obstruction)
 			updateActiveStatus(&elevator, obstruction)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
@@ -139,18 +136,16 @@ func Run(
 				doorOpenChan <- true
 				continue
 			}
-			// Serve opposite hall order before changing direction — extra door-open cycle required
 			if directionChange {
 				directionChange = false
 				completedOrders := clearOppositeHallOrder(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				elevator.CurrentTravelDirection = -elevator.CurrentTravelDirection
-				fmt.Printf("Be advised, the elevator will now change traveldirection")
 				doorOpenChan <- true
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
 			}
 			startNextMovement(&elevator, motorActiveChan)
-			applyLocalLights(elevator, false)
+			refreshLights(elevator, false, hallLamps)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case <-motorInactiveChan:

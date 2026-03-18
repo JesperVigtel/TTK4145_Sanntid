@@ -1,34 +1,24 @@
 package types
 
-import (
-	. "elevator/internal/config"
-)
-
-// ------------------------------------------------------------------------------------
-//	enum types for intermodule contracts
-// ------------------------------------------------------------------------------------
+import . "elevator/internal/config"
 
 type ConvergedSystemState struct {
-	AliveList      [NElevators]bool
-	ElevatorList   [NElevators]HRAElevState
-	HallOrderTable [NElevators]HallOrderTable
+	AliveList    [NElevators]bool
+	ElevatorList [NElevators]HRAElevState
+	OrderTables  [NElevators]OrderTable
 }
 
 type LocalSystemState struct {
 	ElevatorID    int
-	AliveStatus   bool
 	ElevatorState HRAElevState
-	HallRequests  HallOrderTable
+	OrderStates   OrderTable
 }
 
 type Message struct {
-	SenderID       int
-	ElevatorList   [NElevators]HRAElevState
-	HallOrderTable HallOrderTable
-	AliveStatus    bool
+	SenderID      int
+	ElevatorState HRAElevState
+	OrderTables   [NElevators]OrderTable
 }
-
-//Elevator types START:
 
 type MotorDirection int
 
@@ -42,7 +32,7 @@ type Elevator struct {
 	CurrentFloor           int
 	CurrentTravelDirection MotorDirection
 	PhysicalMotorDirection MotorDirection
-	LocalOrders            LocalOrderTable
+	AssignedOrders         AssignedOrderTable
 	Behaviour              ElevatorBehaviour
 	ActiveStatus           bool
 }
@@ -71,15 +61,11 @@ type ButtonEvent struct {
 }
 
 type ElevatorEvents struct {
-	Elevator       Elevator
-	CompletedOrder CompletedOrderTable
-	NewButtonPress *ButtonEvent
-	Obstructed     bool
+	Elevator        Elevator
+	CompletedOrders CompletedOrderTable
+	NewButtonPress  *ButtonEvent
+	Obstructed      bool
 }
-
-//Elevator types stop
-
-//Network types START:
 
 type GlobalNodeRegistry struct {
 	Nodes []int
@@ -87,35 +73,6 @@ type GlobalNodeRegistry struct {
 	Lost  []int
 }
 
-//Network types END:
-
-// ------------------------------------------------------------------------------------
-//	enum types for Local Control
-// ------------------------------------------------------------------------------------
-
-type ClearRequestType int
-
-const (
-	ClearAll ClearRequestType = iota
-	ClearInDirn
-)
-
-type Req struct {
-	Active     bool
-	AssignedTo string
-}
-
-type State struct {
-	ID    string
-	State Elevator
-	Time  int64
-}
-
-// ------------------------------------------------------------------------------------
-//
-//	enum types for order domain
-//
-// ------------------------------------------------------------------------------------
 type OrderState int
 
 const (
@@ -125,23 +82,15 @@ const (
 	OrderComplete
 )
 
-type HallOrderTable [NFloors][NButtons]OrderState
-type CabOrderTable [NFloors]OrderState
-type LocalOrderTable [NFloors][NButtons]bool
-
-// er det en ide å lage en completedorders matrise som man kan bruke?? bruk dette til å fjerne matrisehelvete fra
-// sendElevatorUpdate()
-
-// ------------------------------------------------------------------------------------
-//	enum types for assigner
-// ------------------------------------------------------------------------------------
+type OrderTable [NFloors][NButtons]OrderState
+type AssignedOrderTable [NFloors][NButtons]bool
+type HallLampTable [NFloors][2]bool
 
 type HRAElevState struct {
-	Behavior   string        `json:"behaviour"`
-	Floor      int           `json:"floor"`
-	Direction  string        `json:"direction"`
-	Assignable bool          `json:"assignable"`
-	CabOrders  CabOrderTable `json:"cabOrders"`
+	Behavior   string `json:"behaviour"`
+	Floor      int    `json:"floor"`
+	Direction  string `json:"direction"`
+	Assignable bool   `json:"assignable"`
 }
 
 func NewHRAElevState(elev Elevator, assignable bool) HRAElevState {
@@ -160,19 +109,19 @@ type HRAAssignerState struct {
 	CabRequests []bool `json:"cabRequests"`
 }
 
-func NewHRAAssignerState(elevState HRAElevState) HRAAssignerState {
+func NewHRAAssignerState(elevState HRAElevState, orders OrderTable) HRAAssignerState {
 	return HRAAssignerState{
 		Behavior:    elevState.Behavior,
 		Floor:       elevState.Floor,
 		Direction:   elevState.Direction,
-		CabRequests: CabRequestsFromOrders(elevState.CabOrders),
+		CabRequests: CabRequestsFromOrderTable(orders),
 	}
 }
 
-func CabRequestsFromOrders(cabOrders CabOrderTable) []bool {
+func CabRequestsFromOrderTable(orderTable OrderTable) []bool {
 	requests := make([]bool, NFloors)
 	for floor := range NFloors {
-		requests[floor] = IsActiveOrder(cabOrders[floor])
+		requests[floor] = IsActiveOrder(orderTable[floor][BtnCab])
 	}
 	return requests
 }

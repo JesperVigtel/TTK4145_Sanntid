@@ -1,46 +1,43 @@
 package dispatch
 
-import (
-	"elevator/internal/types"
-)
+import "elevator/internal/types"
 
 // ------------------------------------------------------------------------------
-// Translates converged distributed state and local hardware events into commands
-// for the local elevator: cab order assignments and hall light updates.
+// Translates converged distributed state and local hardware events into local
+// execution orders and converged lamp snapshots.
 // ------------------------------------------------------------------------------
 
 func Run(
-	localOrderUpdates chan<- types.LocalOrderTable,
+	assignedOrderUpdates chan<- types.AssignedOrderTable,
 	localStateUpdates chan<- types.LocalSystemState,
-	hallLightUpdates chan<- types.HallOrderTable,
+	hallLightUpdates chan<- types.HallLampTable,
 	elevatorEvents <-chan types.ElevatorEvents,
 	convergedStates <-chan types.ConvergedSystemState,
 	elevatorID int,
 ) {
 	var (
-		localState         types.LocalSystemState
-		lastAssignedOrders types.LocalOrderTable
+		localSystemState   types.LocalSystemState
+		lastAssignedOrders types.AssignedOrderTable
 	)
 
-	localState = initLocalSystemState(<-elevatorEvents, elevatorID)
-	localStateUpdates <- localState
+	localSystemState = initLocalSystemState(<-elevatorEvents, elevatorID)
+	localStateUpdates <- localSystemState
 
 	for {
 		select {
 		case event := <-elevatorEvents:
-			localState = applyElevatorEvent(localState, event)
-			localStateUpdates <- localState
+			localSystemState = applyElevatorEvent(localSystemState, event)
+			localStateUpdates <- localSystemState
 
 		case convergedState := <-convergedStates:
-			localState = mergeConvergedOrders(localState, convergedState)
-
-			assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
+			localSystemState = mergeConvergedOrders(localSystemState, convergedState)
+			assignedOrders := computeAssignedOrders(convergedState, localSystemState, elevatorID)
 
 			if assignedOrders != lastAssignedOrders {
-				localOrderUpdates <- assignedOrders
+				assignedOrderUpdates <- assignedOrders
 				lastAssignedOrders = assignedOrders
 			}
-			hallLightUpdates <- convergedState.HallOrderTable[elevatorID]
+			hallLightUpdates <- buildHallLampTable(convergedState.OrderTables[elevatorID])
 		}
 	}
 }
