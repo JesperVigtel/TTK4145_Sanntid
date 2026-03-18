@@ -89,7 +89,6 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 
 			   sort.Strings(p.Peers)
 			   sort.Strings(p.Lost)
-			   fmt.Println("Current peers:", p.Peers)
 			   peerUpdateCh <- p
 			   sentInitialSnapshot = true
 		}
