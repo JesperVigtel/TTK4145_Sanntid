@@ -17,6 +17,7 @@ type PeerUpdate struct {
 	Lost  []string
 }
 
+
 const interval = config.HeartbeatInterval
 const timeout = config.HeartbeatTimeout
 
@@ -86,10 +87,10 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 				p.Peers = append(p.Peers, k)
 			}
 
-			sort.Strings(p.Peers)
-			sort.Strings(p.Lost)
-			peerUpdateCh <- p
-			sentInitialSnapshot = true
+			   sort.Strings(p.Peers)
+			   sort.Strings(p.Lost)
+			   peerUpdateCh <- p
+			   sentInitialSnapshot = true
 		}
 	}
 }
