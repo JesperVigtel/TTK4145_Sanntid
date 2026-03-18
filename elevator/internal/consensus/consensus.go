@@ -19,12 +19,11 @@ func Run(
 	selfID int,
 ) {
 	var (
-		orderTables            [config.NElevators]types.OrderTable
-		elevStates             [config.NElevators]types.HRAElevState
-		lastPeerElevatorStates [config.NElevators]types.HRAElevState
-		peerOrderSnapshots     [config.NElevators][config.NElevators]types.OrderTable
-		peerIsAlive            [config.NElevators]bool
-		peerConsistent         [config.NElevators]bool
+		orderTables        [config.NElevators]types.OrderTable
+		elevStates         [config.NElevators]types.HRAElevState
+		peerOrderSnapshots [config.NElevators][config.NElevators]types.OrderTable
+		peerIsAlive        [config.NElevators]bool
+		peerConsistent     [config.NElevators]bool
 	)
 	peerIsAlive[selfID] = true
 
@@ -32,7 +31,7 @@ func Run(
 		select {
 		case registry := <-peerEventsChan:
 			peerIsAlive, orderTables = updatePeerAvailability(registry, peerIsAlive, orderTables, selfID)
-			lastPeerElevatorStates, peerOrderSnapshots = resetPeerSnapshots(registry, lastPeerElevatorStates, peerOrderSnapshots, selfID)
+			elevStates, peerOrderSnapshots = resetPeerObservations(registry, elevStates, peerOrderSnapshots, selfID)
 			peerConsistent = [config.NElevators]bool{}
 
 		case msg := <-peerMsgChan:
@@ -40,8 +39,7 @@ func Run(
 				continue
 			}
 
-			peerConsistent[msg.SenderID] = matchesLastPeerSnapshot(msg, peerOrderSnapshots, lastPeerElevatorStates)
-			lastPeerElevatorStates[msg.SenderID] = msg.ElevatorState
+			peerConsistent[msg.SenderID] = matchesLastPeerSnapshot(msg, peerOrderSnapshots, elevStates)
 			peerOrderSnapshots[msg.SenderID] = msg.OrderTables
 			elevStates[msg.SenderID] = msg.ElevatorState
 			orderTables = applyPeerHallRow(msg, orderTables)

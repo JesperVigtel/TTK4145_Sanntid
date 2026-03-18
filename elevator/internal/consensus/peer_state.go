@@ -33,9 +33,9 @@ func updatePeerAvailability(
 	return peerIsAlive, orderTables
 }
 
-func resetPeerSnapshots(
+func resetPeerObservations(
 	nodeRegistry types.GlobalNodeRegistry,
-	lastPeerElevatorStates [config.NElevators]types.HRAElevState,
+	recordedElevatorStates [config.NElevators]types.HRAElevState,
 	peerOrderSnapshots [config.NElevators][config.NElevators]types.OrderTable,
 	selfID int,
 ) ([config.NElevators]types.HRAElevState, [config.NElevators][config.NElevators]types.OrderTable) {
@@ -43,7 +43,7 @@ func resetPeerSnapshots(
 		if !isRemotePeerID(lostPeerID, selfID) {
 			continue
 		}
-		lastPeerElevatorStates[lostPeerID] = types.HRAElevState{}
+		recordedElevatorStates[lostPeerID] = types.HRAElevState{}
 		peerOrderSnapshots[lostPeerID] = [config.NElevators]types.OrderTable{}
 	}
 
@@ -51,19 +51,19 @@ func resetPeerSnapshots(
 		if !isRemotePeerID(newPeerID, selfID) {
 			continue
 		}
-		lastPeerElevatorStates[newPeerID] = types.HRAElevState{}
+		recordedElevatorStates[newPeerID] = types.HRAElevState{}
 		peerOrderSnapshots[newPeerID] = [config.NElevators]types.OrderTable{}
 	}
-	return lastPeerElevatorStates, peerOrderSnapshots
+	return recordedElevatorStates, peerOrderSnapshots
 }
 
 func matchesLastPeerSnapshot(
 	msg types.Message,
 	peerOrderSnapshots [config.NElevators][config.NElevators]types.OrderTable,
-	lastPeerElevatorStates [config.NElevators]types.HRAElevState,
+	recordedElevatorStates [config.NElevators]types.HRAElevState,
 ) bool {
 	return peerOrderSnapshots[msg.SenderID][msg.SenderID] == msg.OrderTables[msg.SenderID] &&
-		lastPeerElevatorStates[msg.SenderID] == msg.ElevatorState
+		recordedElevatorStates[msg.SenderID] == msg.ElevatorState
 }
 
 func alivePeersConsistent(
