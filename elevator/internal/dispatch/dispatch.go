@@ -37,7 +37,7 @@ func Run(
 				assignedOrdersChan <- assignedOrders
 				lastAssignedOrders = assignedOrders
 			}
-			hallLighsChan <- buildHallLampTable(convergedState.OrderTables[elevatorID])
+			hallLightsChan <- buildHallLampTable(convergedState.OrderTables[elevatorID])
 		}
 	}
 }

@@ -5,6 +5,14 @@ import (
 	"elevator/internal/types"
 )
 
+func newReplicatedElevatorState(event types.ElevatorEvents) types.HRAElevState {
+	return types.NewHRAElevState(event.Elevator, isAvailableForAssignment(event))
+}
+
+func isAvailableForAssignment(event types.ElevatorEvents) bool {
+	return event.Elevator.ActiveStatus && !event.Obstructed
+}
+
 func initLocalSystemState(
 	event types.ElevatorEvents,
 	elevatorID int,
