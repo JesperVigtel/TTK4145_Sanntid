@@ -35,7 +35,6 @@ func Run(
 	for {
 		select {
 		case state := <-localSystemState:
-			state.SenderID = selfID
 			lastLocalSystemState = state
 			hasState = true
 
