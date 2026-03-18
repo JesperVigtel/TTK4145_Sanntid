@@ -6,14 +6,6 @@ import (
 	"runtime"
 )
 
-func prepareAssignment(
-	convergedState types.ConvergedSystemState,
-	localState types.LocalSystemState,
-	elevatorID int,
-) (types.AssignedOrderTable, types.OrderTable) {
-	return computeAssignedOrders(convergedState, localState, elevatorID), convergedState.OrderTables[elevatorID]
-}
-
 func replicatedElevatorStateFromEvent(event types.ElevatorEvents) types.HRAElevState {
 	return types.NewHRAElevState(event.Elevator, isAssignable(event))
 }

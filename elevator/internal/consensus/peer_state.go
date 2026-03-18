@@ -57,7 +57,7 @@ func matchesLastPeerSnapshot(
 	lastPeerElevatorStates [config.NElevators]types.HRAElevState,
 ) bool {
 	return peerOrderSnapshots[msg.SenderID][msg.SenderID] == msg.OrderTables[msg.SenderID] &&
-		elevatorStatesEqual(lastPeerElevatorStates[msg.SenderID], msg.ElevatorList[msg.SenderID])
+		elevatorStatesEqual(lastPeerElevatorStates[msg.SenderID], msg.ElevatorState)
 }
 
 func elevatorStatesEqual(a, b types.HRAElevState) bool {
@@ -88,15 +88,13 @@ func alivePeersConsistent(
 
 func buildBroadcastState(
 	selfID int,
-	peerIsAlive [config.NElevators]bool,
-	elevStates [config.NElevators]types.HRAElevState,
+	elevatorState types.HRAElevState,
 	orderTables [config.NElevators]types.OrderTable,
 ) types.Message {
 	return types.Message{
-		SenderID:     selfID,
-		ElevatorList: elevStates,
-		OrderTables:  orderTables,
-		AliveStatus:  peerIsAlive[selfID],
+		SenderID:      selfID,
+		ElevatorState: elevatorState,
+		OrderTables:   orderTables,
 	}
 }
 
@@ -143,11 +141,7 @@ func applyPeerState(
 	msg types.Message,
 	elevStates [config.NElevators]types.HRAElevState,
 ) [config.NElevators]types.HRAElevState {
-	senderState := msg.ElevatorList[msg.SenderID]
-	elevStates[msg.SenderID].Behavior = senderState.Behavior
-	elevStates[msg.SenderID].Floor = senderState.Floor
-	elevStates[msg.SenderID].Direction = senderState.Direction
-	elevStates[msg.SenderID].Assignable = senderState.Assignable
+	elevStates[msg.SenderID] = msg.ElevatorState
 	return elevStates
 }
 

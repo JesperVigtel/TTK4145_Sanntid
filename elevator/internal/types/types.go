@@ -16,16 +16,14 @@ type ConvergedSystemState struct {
 
 type LocalSystemState struct {
 	ElevatorID    int
-	AliveStatus   bool
 	ElevatorState HRAElevState
 	OrderStates   OrderTable
 }
 
 type Message struct {
-	SenderID     int
-	ElevatorList [NElevators]HRAElevState
-	OrderTables  [NElevators]OrderTable
-	AliveStatus  bool
+	SenderID      int
+	ElevatorState HRAElevState
+	OrderTables   [NElevators]OrderTable
 }
 
 //Elevator types START:
@@ -105,6 +103,7 @@ const (
 
 type OrderTable [NFloors][NButtons]OrderState
 type AssignedOrderTable [NFloors][NButtons]bool
+type HallLampTable [NFloors][2]bool
 
 // ------------------------------------------------------------------------------------
 //	enum types for assigner

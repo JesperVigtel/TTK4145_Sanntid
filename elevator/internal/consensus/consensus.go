@@ -26,6 +26,7 @@ func Run(
 		peerIsAlive            [config.NElevators]bool
 		peerConsistent         [config.NElevators]bool
 	)
+	peerIsAlive[selfID] = true
 
 	for {
 		select {
@@ -40,20 +41,18 @@ func Run(
 			}
 
 			peerConsistent[msg.SenderID] = matchesLastPeerSnapshot(msg, peerOrderSnapshots, lastPeerElevatorStates)
-			lastPeerElevatorStates[msg.SenderID] = msg.ElevatorList[msg.SenderID]
+			lastPeerElevatorStates[msg.SenderID] = msg.ElevatorState
 			peerOrderSnapshots = recordPeerOrderSnapshot(msg, peerOrderSnapshots)
 			elevStates = applyPeerState(msg, elevStates)
 			orderTables = applyPeerHallOrders(msg, orderTables)
-			peerIsAlive[msg.SenderID] = msg.AliveStatus
 
 		case state := <-localState:
 			elevStates[selfID] = state.ElevatorState
 			orderTables[selfID] = state.OrderStates
-			peerIsAlive[selfID] = state.AliveStatus
 		}
 
 		orderTables = advanceOrderStates(orderTables, peerOrderSnapshots, selfID, peerIsAlive)
-		broadcast <- buildBroadcastState(selfID, peerIsAlive, elevStates, orderTables)
+		broadcast <- buildBroadcastState(selfID, elevStates[selfID], orderTables)
 		if alivePeersConsistent(peerConsistent, peerIsAlive, selfID) {
 			peerConsistent = [config.NElevators]bool{}
 			trySend(converged, buildConvergedState(peerIsAlive, elevStates, orderTables))

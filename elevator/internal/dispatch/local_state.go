@@ -11,7 +11,6 @@ func initLocalSystemState(
 ) types.LocalSystemState {
 	return types.LocalSystemState{
 		ElevatorID:    elevatorID,
-		AliveStatus:   true,
 		ElevatorState: replicatedElevatorStateFromEvent(event),
 		OrderStates:   types.OrderTable{},
 	}

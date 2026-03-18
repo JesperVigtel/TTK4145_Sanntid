@@ -10,7 +10,7 @@ import (
 func Run(
 	elevAddr string,
 	assignedOrderUpdates <-chan types.AssignedOrderTable,
-	lampOrderUpdates <-chan types.OrderTable,
+	hallLampUpdates <-chan types.HallLampTable,
 	elevatorEvents chan<- types.ElevatorEvents,
 ) {
 	var (
@@ -24,7 +24,7 @@ func Run(
 		obstructionChan    = make(chan bool, config.ChannelBufferSize)
 		buttonPressChan    = make(chan types.ButtonEvent, config.ChannelBufferSize)
 		obstruction        bool
-		lampOrderStates    types.OrderTable
+		hallLamps          types.HallLampTable
 
 		// directionChange is set across select iterations — set by clearOrdersAtFloor, used by doorClosedChan
 		directionChange bool
@@ -39,7 +39,7 @@ func Run(
 
 	elevator := newElevator()
 	obstruction = false
-	refreshLights(elevator, false, lampOrderStates)
+	refreshLights(elevator, false, hallLamps)
 
 	// Initialize by driving down until a floor sensor is reached
 	hardware.SetMotorDirection(types.Down)
@@ -52,7 +52,7 @@ func Run(
 			elevator.CurrentFloor = floor
 			elevator.ActiveStatus = true
 			recoveryEnableChan <- false
-			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, lampOrderStates)
+			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
 			if elevator.Behaviour == types.ElevatorMoving {
 				motorActiveChan <- true
@@ -69,7 +69,7 @@ func Run(
 			}
 
 			if shouldStopAtCurrentFloor(elevator, floor) {
-				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection, lampOrderStates)
+				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection, hallLamps)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
@@ -89,13 +89,13 @@ func Run(
 
 		case assignedOrders := <-assignedOrderUpdates:
 			elevator.AssignedOrders = assignedOrders
-			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, lampOrderStates)
+			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
 			if elevator.Behaviour == types.ElevatorDoorOpen && hasOrderAtFloor(elevator, elevator.CurrentFloor) {
 				completedOrders, needsExtraDoorTime := clearOrdersAtFloor(&elevator, elevator.CurrentFloor, elevator.CurrentTravelDirection)
 				directionChange = directionChange || needsExtraDoorTime
 				doorOpenChan <- true
-				refreshLights(elevator, true, lampOrderStates)
+				refreshLights(elevator, true, hallLamps)
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
 			}
@@ -110,7 +110,7 @@ func Run(
 			}
 
 			if hasOrderAtFloor(elevator, elevator.CurrentFloor) {
-				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection, lampOrderStates)
+				completedOrders, needsExtraDoorTime := stopAndServeFloor(&elevator, doorOpenChan, motorActiveChan, elevator.CurrentTravelDirection, hallLamps)
 				directionChange = directionChange || needsExtraDoorTime
 				sendElevatorUpdate(elevatorEvents, elevator, obstruction, completedOrders, nil)
 				continue
@@ -119,9 +119,9 @@ func Run(
 			startNextMovement(&elevator, motorActiveChan)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
-		case lampOrderState := <-lampOrderUpdates:
-			lampOrderStates = lampOrderState
-			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, lampOrderStates)
+		case hallLampState := <-hallLampUpdates:
+			hallLamps = hallLampState
+			refreshLights(elevator, elevator.Behaviour == types.ElevatorDoorOpen, hallLamps)
 
 		case obstruction = <-obstructionChan:
 			updateActiveStatus(&elevator, obstruction)
@@ -145,7 +145,7 @@ func Run(
 				continue
 			}
 			startNextMovement(&elevator, motorActiveChan)
-			refreshLights(elevator, false, lampOrderStates)
+			refreshLights(elevator, false, hallLamps)
 			sendElevatorUpdate(elevatorEvents, elevator, obstruction, types.CompletedOrderTable{}, nil)
 
 		case <-motorInactiveChan:

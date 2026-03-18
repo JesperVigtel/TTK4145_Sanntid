@@ -80,6 +80,16 @@ func buildHallAssignerInput(
 	return input
 }
 
+func buildHallLampTable(orderStates types.OrderTable) types.HallLampTable {
+	var hallLamps types.HallLampTable
+	for floor := range config.NFloors {
+		for btn := types.BtnHallUp; btn <= types.BtnHallDown; btn++ {
+			hallLamps[floor][btn] = orderStates[floor][btn] == types.OrderAssigned
+		}
+	}
+	return hallLamps
+}
+
 func buildAssignedOrderTable(
 	output map[string][][2]bool,
 	localState types.LocalSystemState,

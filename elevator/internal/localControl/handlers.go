@@ -23,7 +23,7 @@ func stopAndServeFloor(
 	doorOpenChan chan<- bool,
 	motorActiveChan chan<- bool,
 	travelDir types.MotorDirection,
-	lampOrderStates types.OrderTable,
+	hallLamps types.HallLampTable,
 ) (types.CompletedOrderTable, bool) {
 
 	hardware.SetMotorDirection(types.Stop)
@@ -34,7 +34,7 @@ func stopAndServeFloor(
 
 	completed, needsExtraDoorTime := clearOrdersAtFloor(elevator, elevator.CurrentFloor, travelDir)
 
-	refreshLights(*elevator, true, lampOrderStates)
+	refreshLights(*elevator, true, hallLamps)
 	return completed, needsExtraDoorTime
 }
 
@@ -108,10 +108,10 @@ func sendElevatorUpdate(
 	}
 }
 
-func refreshLights(elevator types.Elevator, doorOpen bool, lampOrderStates types.OrderTable) {
+func refreshLights(elevator types.Elevator, doorOpen bool, hallLamps types.HallLampTable) {
 	for floor := range config.NFloors {
-		hardware.SetButtonLamp(types.BtnHallUp, floor, lampOrderStates[floor][types.BtnHallUp] == types.OrderAssigned)
-		hardware.SetButtonLamp(types.BtnHallDown, floor, lampOrderStates[floor][types.BtnHallDown] == types.OrderAssigned)
+		hardware.SetButtonLamp(types.BtnHallUp, floor, hallLamps[floor][types.BtnHallUp])
+		hardware.SetButtonLamp(types.BtnHallDown, floor, hallLamps[floor][types.BtnHallDown])
 		hardware.SetButtonLamp(types.BtnCab, floor, elevator.AssignedOrders[floor][types.BtnCab])
 	}
 	if elevator.CurrentFloor >= 0 {

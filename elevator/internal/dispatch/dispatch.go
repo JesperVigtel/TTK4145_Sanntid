@@ -10,7 +10,7 @@ import "elevator/internal/types"
 func Run(
 	assignedOrderUpdates chan<- types.AssignedOrderTable,
 	localStateUpdates chan<- types.LocalSystemState,
-	lampOrderUpdates chan<- types.OrderTable,
+	hallLampUpdates chan<- types.HallLampTable,
 	elevatorEvents <-chan types.ElevatorEvents,
 	convergedStates <-chan types.ConvergedSystemState,
 	elevatorID int,
@@ -31,14 +31,13 @@ func Run(
 
 		case convergedState := <-convergedStates:
 			localState = mergeConvergedOrderStates(localState, convergedState)
-
-			assignedOrders, lampOrderState := prepareAssignment(convergedState, localState, elevatorID)
+			assignedOrders := computeAssignedOrders(convergedState, localState, elevatorID)
 
 			if assignedOrders != previousAssignedOrders {
 				assignedOrderUpdates <- assignedOrders
 				previousAssignedOrders = assignedOrders
 			}
-			lampOrderUpdates <- lampOrderState
+			hallLampUpdates <- buildHallLampTable(convergedState.OrderTables[elevatorID])
 		}
 	}
 }
