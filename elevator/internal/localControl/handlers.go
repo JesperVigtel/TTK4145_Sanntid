@@ -97,14 +97,15 @@ func updateActiveStatus(elevator *types.Elevator, obstruction bool) {
 	}
 }
 
+
 func sendElevatorUpdate(
-	channel chan<- types.ElevatorEvents,
+	eventsChan chan<- types.ElevatorEvents,
 	elevator types.Elevator,
 	obstructed bool,
 	completedOrders types.CompletedOrderTable,
 	newButtonPress *types.ButtonEvent,
 ) {
-	channel <- types.ElevatorEvents{
+	eventsChan <- types.ElevatorEvents{
 		Elevator:        elevator,
 		CompletedOrders: completedOrders,
 		NewButtonPress:  newButtonPress,
