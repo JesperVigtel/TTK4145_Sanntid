@@ -4,10 +4,10 @@ import (
 	"elevator/internal/config"
 	"elevator/internal/network/conn"
 	"elevator/internal/types"
+	"strconv"
 	"fmt"
 	"net"
 	"sort"
-	"strconv"
 	"time"
 )
 
@@ -19,6 +19,7 @@ type PeerUpdate struct {
 
 const interval = config.HeartbeatInterval
 const timeout = config.HeartbeatTimeout
+
 
 func Transmitter(port int, id string, transmitEnable <-chan bool) {
 
@@ -42,6 +43,8 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 	var buf [1024]byte
 	var p PeerUpdate
 	lastSeen := make(map[string]time.Time)
+	// Emit one snapshot even when no peers are present so consensus can
+	// distinguish "no peers detected" from "peer discovery has not run yet".
 	sentInitialSnapshot := false
 
 	conn := conn.DialBroadcastUDP(port)
@@ -91,30 +94,33 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 	}
 }
 
+
 func ConvertPeerUpdate(update PeerUpdate) types.GlobalNodeRegistry {
 	registry := types.GlobalNodeRegistry{}
 
 	for _, peer := range update.Peers {
-		id, err := strconv.Atoi(peer)
-		if err != nil || id < 0 || id >= config.NElevators {
+		ID, err := strconv.Atoi(peer)
+		if err != nil || ID < 0 || ID >= config.NElevators {
 			continue
 		}
-		registry.Nodes = append(registry.Nodes, id)
+		registry.Nodes = append(registry.Nodes, ID)
 	}
 
+	// Ny heis
 	if update.New != "" {
-		id, err := strconv.Atoi(update.New)
-		if err == nil && id >= 0 && id < config.NElevators {
-			registry.New = append(registry.New, id)
+		ID, err := strconv.Atoi(update.New)
+		if err == nil && ID >= 0 && ID < config.NElevators {
+			registry.New = append(registry.New, ID)
 		}
 	}
 
+	// Heiser som har falt ut
 	for _, lost := range update.Lost {
-		id, err := strconv.Atoi(lost)
-		if err != nil || id < 0 || id >= config.NElevators {
+		ID, err := strconv.Atoi(lost)
+		if err != nil || ID < 0 || ID >= config.NElevators {
 			continue
 		}
-		registry.Lost = append(registry.Lost, id)
+		registry.Lost = append(registry.Lost, ID)
 	}
 
 	return registry

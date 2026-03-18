@@ -11,9 +11,9 @@ import (
 
 func Run(
 	selfID int,
-	localSystemState <-chan types.Message,
-	message chan<- types.Message,
-	nodeRegistry chan<- types.GlobalNodeRegistry,
+	localSystemStateChan <-chan types.Message,
+	messageChan chan<- types.Message,
+	nodeRegistryChan chan<- types.GlobalNodeRegistry,
 ) {
 	ticker := time.NewTicker(config.BroadcastRate)
 	defer ticker.Stop()
@@ -23,18 +23,18 @@ func Run(
 
 	messageTransmitChan := make(chan types.Message, config.BroadcastBufferSize)
 	messageReceiveChan := make(chan types.Message, config.BroadcastBufferSize)
-	peerUpdateChannel := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
+	peerUpdateChan := make(chan peers.PeerUpdate, config.BroadcastBufferSize)
 	peerTxEnable := make(chan bool)
 
 	go broadcast.Transmitter(config.BroadcastPort, messageTransmitChan)
 	go broadcast.Receiver(config.BroadcastPort, messageReceiveChan)
 	go peers.Transmitter(config.PeersPort, strconv.Itoa(selfID), peerTxEnable)
-	go peers.Receiver(config.PeersPort, peerUpdateChannel)
+	go peers.Receiver(config.PeersPort, peerUpdateChan)
 	peerTxEnable <- true
 
 	for {
 		select {
-		case state := <-localSystemState:
+		case state := <-localSystemStateChan:
 			lastLocalSystemState = state
 			hasState = true
 
@@ -47,10 +47,10 @@ func Run(
 			if msg.SenderID == selfID {
 				continue
 			}
-			message <- msg
+			messageChan <- msg
 
-		case update := <-peerUpdateChannel:
-			nodeRegistry <- peers.ConvertPeerUpdate(update)
+		case update := <-peerUpdateChan:
+			nodeRegistryChan <- peers.ConvertPeerUpdate(update)
 		}
 	}
 }
