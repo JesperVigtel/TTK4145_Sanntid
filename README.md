@@ -73,7 +73,7 @@ differently:
 The normal runtime flow is shown below. A PDF copy is also included at
 `docs/flow-diagram.pdf`.
 
-![System flow diagram](docs/flow-diagram.png)
+![System flow diagram](docs/flow-diagram.jpg)
 
 PDF version: [docs/flow-diagram.pdf](docs/flow-diagram.pdf)
 
