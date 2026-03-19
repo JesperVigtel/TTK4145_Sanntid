@@ -109,37 +109,19 @@ elevator/
     network/             UDP broadcast and peer discovery
     types/               shared types
 
-Simulator-v2-master/     simulator binaries, config, and docs
 docs/                    hand-in figures and supporting files
 ```
 
 ## Running
 
-The Go module for the controller lives in `elevator/`.
-
-If you run multiple elevators on one machine, start one simulator per elevator
-with a unique TCP port. Use the simulator binary that matches your platform in
-`Simulator-v2-master/`.
-
-Example:
-
-```bash
-cd Simulator-v2-master
-./SimElevatorServer_mac --port 15657
-./SimElevatorServer_mac --port 15658
-./SimElevatorServer_mac --port 15659
-```
-
-Then start one controller process per elevator:
+Start one controller process per elevator:
 
 ```bash
 cd elevator
-go run ./cmd/elevator --id 0 --port 15657
-go run ./cmd/elevator --id 1 --port 15658
-go run ./cmd/elevator --id 2 --port 15659
+go run ./cmd/elevator --id 0 
+go run ./cmd/elevator --id 1 
+go run ./cmd/elevator --id 2 
 ```
-
-You can also use `--addr host:port` instead of `--port`.
 
 The system size is set in `elevator/internal/config/config.go`, so it is not
 hardcoded to one exact setup. Important defaults are:
