@@ -70,28 +70,12 @@ differently:
 
 ## Architecture
 
-The normal runtime flow is:
+The normal runtime flow is shown below. A PDF copy is also included at
+`docs/flow-diagram.pdf`.
 
-```mermaid
-flowchart TD
-    HW["Hardware / Simulator"]
-    LC["localControl"]
-    DIS["dispatch"]
-    CON["consensus"]
-    HRA["hall_request_assigner"]
-    NET["network"]
+![System flow diagram](docs/flow-diagram.png)
 
-    HW -->|"buttons, floor sensor,\nobstruction, timers"| LC
-    LC -->|"ElevatorEvents"| DIS
-    DIS -->|"LocalSystemState"| CON
-    CON -->|"ConvergedSystemState"| DIS
-    DIS -->|"HRAInput"| HRA
-    HRA -->|"hall assignment output"| DIS
-    DIS -->|"AssignedOrderTable"| LC
-    DIS -->|"HallLampTable"| LC
-    CON -->|"Message"| NET
-    NET -->|"peer Message + GlobalNodeRegistry"| CON
-```
+PDF version: [docs/flow-diagram.pdf](docs/flow-diagram.pdf)
 
 Main modules:
 
@@ -122,10 +106,11 @@ elevator/
     consensus/           peer state and OrderTable convergence
     dispatch/            LocalSystemState and hall assignment
     localControl/        elevator FSM and hardware control
-    network/             UDP broadcast, peers, packet loss tools
+    network/             UDP broadcast and peer discovery
     types/               shared types
 
 Simulator-v2-master/     simulator binaries, config, and docs
+docs/                    hand-in figures and supporting files
 ```
 
 ## Running
@@ -166,21 +151,3 @@ hardcoded to one exact setup. Important defaults are:
 - `PeersPort = 13334`
 - `DoorOpenTime = 3s`
 - `MotorTimeout = 4s`
-
-## Packet Loss Testing
-
-The repository includes `elevator/internal/network/packet_loss/packetloss.sh`.
-It uses `iptables`, so it is mainly intended for Linux.
-
-Example:
-
-```bash
-sudo ./elevator/internal/network/packet_loss/packetloss.sh 30 -i 13333 13334
-```
-
-This is useful for testing:
-
-- delayed convergence
-- restart recovery
-- repeated messages
-- divergence between peer snapshots
